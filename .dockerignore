@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.git
+.gitignore
+backend/connections.db
+backend/app/__pycache__/
+frontend/node_modules/
+frontend/dist/
+.DS_Store
+.vscode/
