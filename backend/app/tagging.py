@@ -1,5 +1,7 @@
 """Auto-classify question sentiment based on text content."""
 
+from __future__ import annotations
+
 def classify_sentiment(text: str) -> str:
     """Return a sentiment tag for a connections question.
 

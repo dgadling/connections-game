@@ -76,11 +76,9 @@ class GameMember(Base):
     sort_order = Column(Integer, nullable=False, default=0)
     created_at = Column(TIMESTAMP, default=now, nullable=False)
     deleted_at = Column(TIMESTAMP, nullable=True)
-    __table_args__ = (
-        UniqueConstraint("game_id", "name", name="uq_game_member_name_active"),
-        # partial unique index for discord_id created in migration, can't express WHERE in ORM easily
-        Index("ix_game_members_game_discord", "game_id", "discord_id"),
-    )
+    # Partial unique indexes created in Alembic migration:
+    #   uq_game_member_name_active ON (game_id, name) WHERE deleted_at IS NULL
+    #   uq_game_member_discord_active ON (game_id, discord_id) WHERE deleted_at IS NULL AND discord_id IS NOT NULL
 
 class ConnQuestion(Base):
     __tablename__ = "conn_questions"
