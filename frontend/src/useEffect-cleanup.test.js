@@ -96,3 +96,71 @@ test('App.jsx – QuestionsTab and MembersTab useEffect calls are wrapped (speci
     `The useEffect cleanup crash fix may have regressed.`
   )
 })
+
+test('App() – no hooks after conditional early return (React #310)', () => {
+  // Regression test for React error #310: "Rendered more hooks than during the previous render"
+  // Bug (commit 2d25e44, fixed in 65f0875): isOwner bounce useEffect was placed AFTER
+  //   if (!user) return (<SignIn />)
+  // Result: first render (user=null) runs 0 hooks past the early return,
+  //         second render (user={...}) runs useEffect → hook count mismatch → crash, blank page.
+  //
+  // Rules of Hooks: hooks must be called unconditionally, in the same order every render.
+  // Any useState/useEffect/useMemo/etc. AFTER an early return violates this.
+  //
+  // This test scans the App() function body and ensures ALL hook calls occur
+  // BEFORE the first conditional early return.
+
+  // Extract App() function body (export default function App() { ... })
+  const appStart = src.indexOf('export default function App()')
+  assert.ok(appStart >= 0, 'Could not find App() function')
+  const braceOpen = src.indexOf('{', appStart)
+  assert.ok(braceOpen >= 0)
+
+  // Find matching closing brace for App() – it's the first top-level function, next is "function GameList"
+  const gameListStart = src.indexOf('\nfunction GameList', braceOpen)
+  assert.ok(gameListStart >= 0, 'Could not find GameList – App() body end detection failed')
+  const appBody = src.slice(braceOpen, gameListStart)
+
+  const lines = appBody.split('\n')
+  let firstEarlyReturnLine = -1
+  let depth = 0
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    // Track brace depth to only catch top-level returns in App(), not nested functions
+    const opens = (line.match(/\{/g) || []).length
+    const closes = (line.match(/\}/g) || []).length
+    // Check for early return BEFORE updating depth (so we catch "if (…) return" at depth 1)
+    if (depth === 1) {
+      // Match: if (!user) return (   /   if (!game) return
+      // Allow leading whitespace
+      if (/^\s*if\s*\([^)]+\)\s*return\b/.test(line)) {
+        firstEarlyReturnLine = i
+        break
+      }
+    }
+    depth += opens - closes
+  }
+
+  assert.ok(firstEarlyReturnLine >= 0, 'Could not find conditional early return in App() – test needs updating if App structure changed')
+
+  // Now check for hook calls AFTER firstEarlyReturnLine
+  const hookPattern = /\b(useState|useEffect|useMemo|useCallback|useRef|useContext|useReducer|useLayoutEffect)\s*\(/
+  const offenders = []
+  for (let i = firstEarlyReturnLine; i < lines.length; i++) {
+    const line = lines[i]
+    const m = line.match(hookPattern)
+    if (m) {
+      offenders.push(`line ~${i + 1} in App() body: ${line.trim().slice(0, 60)}`)
+    }
+  }
+
+  assert.equal(
+    offenders.length,
+    0,
+    `Found ${offenders.length} hook call(s) AFTER a conditional early return in App(). ` +
+    `This violates React Rules of Hooks and causes error #310 "Rendered more hooks than during the previous render" – blank white page on login.\n` +
+    `Move ALL hooks to the top of the component, before ANY conditional returns.\n` +
+    `Offenders:\n  - ` + offenders.join('\n  - ')
+  )
+})
