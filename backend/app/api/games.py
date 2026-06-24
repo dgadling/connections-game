@@ -557,17 +557,41 @@ def revoke_admin(game_id: int, discord_id: str, db: Session = Depends(get_db), u
 @router.get("/api/games/{game_id}/history")
 def game_history(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
-    plays = db.query(models.ConnPlay, models.ConnQuestion).outerjoin(
+    plays = db.query(models.ConnPlay, models.ConnQuestion, models.DiscordUser).outerjoin(
         models.ConnQuestion, models.ConnPlay.question_id == models.ConnQuestion.id
+    ).outerjoin(
+        models.DiscordUser, models.ConnPlay.played_by == models.DiscordUser.discord_id
     ).filter(models.ConnPlay.game_id == game_id).order_by(models.ConnPlay.round_num.desc()).all()
+    # preload all members for pairing name resolution
+    member_map = {m.id: m for m in db.query(models.GameMember).filter(models.GameMember.game_id == game_id).all()}
     out = []
-    for play, q in plays:
+    for play, q, du in plays:
+        # get pairings for this round
+        pairs = db.query(models.ConnPairing).filter(
+            models.ConnPairing.game_id == game_id,
+            models.ConnPairing.round_num == play.round_num
+        ).all()
+        pairings_out = []
+        for p in pairs:
+            asker = member_map.get(p.asker_member_id)
+            target = member_map.get(p.target_member_id)
+            if asker and target:
+                pairings_out.append({
+                    "asker_id": asker.id, "asker_name": asker.name, "asker_discord_id": asker.discord_id,
+                    "target_id": target.id, "target_name": target.name, "target_discord_id": target.discord_id
+                })
+        played_by_username = None
+        if du:
+            played_by_username = du.global_name or du.username
         out.append({
             "round_num": play.round_num,
-            "played_at": play.played_at,
+            "played_at": play.played_at.isoformat() if play.played_at else None,
             "played_by": play.played_by,
+            "played_by_username": played_by_username,
             "question_id": play.question_id,
             "question_text": q.text if q else None,
+            "question_tag": q.tag if q else None,
+            "pairings": pairings_out,
         })
     return out
 
