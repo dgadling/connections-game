@@ -1,7 +1,6 @@
 import { useEffect, useState, Component } from 'react'
 
 function csrf() {
-// … rest unchanged
   return document.cookie.split('; ').find(c => c.startsWith('csrf_token='))?.split('=')[1] || ''
 }
 
@@ -20,27 +19,23 @@ async function api(path, opts={}) {
 
 const TAGS = ['warm','secretive','reflective','tension','vulnerable','loyal']
 const TAG_COLORS = {
-  warm: 'bg-amber-100 text-amber-800',
-  secretive: 'bg-purple-100 text-purple-800',
-  reflective: 'bg-blue-100 text-blue-800',
-  tension: 'bg-red-100 text-red-800',
-  vulnerable: 'bg-pink-100 text-pink-800',
-  loyal: 'bg-green-100 text-green-800',
+  warm: 'bg-amber-100 text-amber-900 ring-1 ring-amber-200',
+  secretive: 'bg-violet-100 text-violet-900 ring-1 ring-violet-200',
+  reflective: 'bg-sky-100 text-sky-900 ring-1 ring-sky-200',
+  tension: 'bg-rose-100 text-rose-900 ring-1 ring-rose-200',
+  vulnerable: 'bg-pink-100 text-pink-900 ring-1 ring-pink-200',
+  loyal: 'bg-emerald-100 text-emerald-900 ring-1 ring-emerald-200',
 }
 
 const arr = (d) => Array.isArray(d) ? d : []
 
-// --- debug ErrorBoundary – remove after crash is fixed ---
 class ErrorBoundary extends Component {
   constructor(p){ super(p); this.state = { err: null } }
   static getDerivedStateFromError(err){ return { err } }
-  componentDidCatch(err, info){
-    console.error('💥 React crash:', err)
-    console.error('Component stack:', info.componentStack)
-  }
+  componentDidCatch(err, info){ console.error('💥 React crash:', err, info.componentStack) }
   render(){
     if (this.state.err) {
-      return <div className="p-4 bg-red-50 border border-red-300 rounded text-sm">
+      return <div className="p-4 bg-red-50 border border-red-300 rounded-xl text-sm">
         <div className="font-bold text-red-800 mb-2">Render crash caught</div>
         <pre className="whitespace-pre-wrap text-xs">{String(this.state.err.stack || this.state.err)}</pre>
         <button onClick={()=>this.setState({err:null})} className="mt-2 px-2 py-1 border rounded text-xs">Retry</button>
@@ -49,7 +44,6 @@ class ErrorBoundary extends Component {
     return this.props.children
   }
 }
-// --- end debug ---
 
 export default function App() {
   const [user, setUser] = useState(null)
@@ -58,16 +52,13 @@ export default function App() {
   const [tab, setTab] = useState('round')
   const [claimNeeded, setClaimNeeded] = useState(null)
 
-  useEffect(() => {
-    api('/auth/me').then(setUser).catch(()=>setUser(null))
-  }, [])
+  useEffect(() => { api('/auth/me').then(setUser).catch(()=>setUser(null)) }, [])
 
   const loadGames = () => {
     if (user) api('/api/games').then(d => setGames(arr(d))).catch(()=>setGames([]))
   }
   useEffect(() => { loadGames() }, [user])
 
-  // check claim status when entering a game
   useEffect(() => {
     if (!game || !user) return
     api(`/api/games/${game.game_id}/members`).then(d => {
@@ -85,15 +76,14 @@ export default function App() {
 
   const isOwner = game?.role === 'owner'
 
-  // bounce off admin tab if not owner
-  useEffect(() => {
-    if (tab === 'admin' && !isOwner) setTab('round')
-  }, [tab, isOwner])
+  useEffect(() => { if (tab === 'admin' && !isOwner) setTab('round') }, [tab, isOwner])
 
   if (!user) return (
-    <div className="min-h-screen flex items-center justify-center bg-neutral-50">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold mb-4">Connections Game</h1>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-violet-50 px-4">
+      <div className="text-center max-w-sm w-full">
+        <div className="text-5xl mb-3">🤝</div>
+        <h1 className="text-2xl font-bold tracking-tight text-neutral-900 mb-2">Connections</h1>
+        <p className="text-neutral-600 text-sm mb-6">The character bonding game for your table</p>
         <button
           onClick={async () => {
             const redirect_after = window.location.pathname + window.location.search
@@ -101,314 +91,175 @@ export default function App() {
             const {auth_url} = await r.json()
             window.location = auth_url
           }}
-          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          className="w-full px-4 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium shadow-sm"
         >Sign in with Discord</button>
       </div>
     </div>
   )
 
   if (!game) return <GameList user={user} games={games} setGame={setGame} onRefresh={loadGames} />
-
   if (claimNeeded) return <ClaimGate gameId={game.game_id} gameName={game.name} unclaimed={claimNeeded.unclaimed} onDone={()=>setClaimNeeded(null)} />
 
   const tabs = [
-    ['round','Current Round'],
-    ['questions','Questions'],
-    ['members','Members'],
-    ['history','History'],
-    ...(isOwner ? [['admin','Admin']] : []),
+    ['round','Round', '🎲'],
+    ['questions','Questions', '❓'],
+    ['members','Members', '👥'],
+    ['history','History', '📜'],
+    ...(isOwner ? [['admin','Admin', '⚙️']] : []),
   ]
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6">
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <button onClick={()=>setGame(null)} className="text-sm text-neutral-600 hover:text-neutral-900">← games</button>
-        <h1 className="text-xl font-bold">{game.name}</h1>
-        <span className="text-xs text-neutral-500 ml-auto">{user.global_name || user.username}</span>
+    <div className="min-h-screen bg-neutral-50">
+      <header className="bg-white border-b border-neutral-200 sticky top-0 z-30">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+          <button onClick={()=>setGame(null)} className="text-sm text-neutral-500 hover:text-neutral-900">← games</button>
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-neutral-900 truncate">{game.name}</h1>
+          <span className="text-xs text-neutral-500 ml-auto hidden sm:inline">{user.global_name || user.username}</span>
+        </div>
+      </header>
+
+      <div className="max-w-4xl mx-auto px-4 pt-3">
+        <nav className="flex gap-1 sm:gap-2 text-sm overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-0 border-b border-neutral-200">
+          {tabs.map(([t,label,icon]) => (
+            <button key={t} onClick={()=>setTab(t)}
+              className={`flex items-center gap-1.5 px-3 py-2.5 whitespace-nowrap rounded-t-lg border-b-2 -mb-px transition-colors ${
+                tab===t ? 'border-indigo-600 text-indigo-700 font-semibold bg-white' : 'border-transparent text-neutral-600 hover:text-neutral-900'
+              }`}>
+              <span>{icon}</span><span>{label}</span>
+            </button>
+          ))}
+        </nav>
       </div>
-      <div className="border-b mb-4 flex gap-4 text-sm overflow-x-auto">
-        {tabs.map(([t,label]) => (
-          <button key={t} onClick={()=>setTab(t)} className={`pb-2 whitespace-nowrap ${tab===t ? 'border-b-2 border-indigo-600 font-semibold' : 'text-neutral-600 hover:text-neutral-900'}`}>
-            {label}
-          </button>
-        ))}
-      </div>
-      <ErrorBoundary key={tab}>
-      {tab === 'round' && <RoundTab gameId={game.game_id} gameName={game.name} />}
-      {tab === 'questions' && <QuestionsTab gameId={game.game_id} />}
-      {tab === 'members' && <MembersTab gameId={game.game_id} />}
-      {tab === 'history' && <HistoryTab gameId={game.game_id} />}
-      {tab === 'admin' && isOwner && <AdminTab gameId={game.game_id} game={game} onGameUpdate={g => setGame({...game, ...g})} />}
-      </ErrorBoundary>
+
+      <main className="max-w-4xl mx-auto px-4 py-4 sm:py-6 pb-20 sm:pb-6">
+        <ErrorBoundary>
+          {tab === 'round' && <RoundTab gameId={game.game_id} />}
+          {tab === 'questions' && <QuestionsTab gameId={game.game_id} />}
+          {tab === 'members' && <MembersTab gameId={game.game_id} />}
+          {tab === 'history' && <HistoryTab gameId={game.game_id} />}
+          {tab === 'admin' && <AdminTab gameId={game.game_id} game={game} onGameUpdate={g => setGame({...game, ...g})} />}
+        </ErrorBoundary>
+      </main>
     </div>
   )
 }
 
 function GameList({ user, games, setGame, onRefresh }) {
-  const [showCreate, setShowCreate] = useState(false)
   const [name, setName] = useState('')
-  const [showJoin, setShowJoin] = useState(false)
-  const [inviteToken, setInviteToken] = useState('')
-  const [joining, setJoining] = useState(false)
-
   const createGame = async () => {
     if (!name.trim()) return
     const g = await api('/api/games', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: name.trim()})})
-    setShowCreate(false); setName('')
-    onRefresh()
-    // find full game object
-    const list = await api('/api/games').then(arr).catch(()=>[])
-    const full = list.find(x => x.slug === g.slug)
-    if (full) setGame(full)
+    setName(''); onRefresh()
+    setGame({game_id: g.id, slug: g.slug, name: g.name, role: 'owner'})
   }
-
-  const extractToken = (input) => {
-    if (!input) return ''
-    const s = input.trim()
-    // try URL ?invite=TOKEN
-    try {
-      const url = new URL(s, window.location.origin)
-      const q = url.searchParams.get('invite')
-      if (q) return q
-    } catch { /* not a URL, fall through to regex */ }
-    // regex fallback
-    const m = s.match(/invite=([A-Za-z0-9_-]+)/)
-    if (m) return m[1]
-    return s
-  }
-
-  const joinGame = async (tokenArg) => {
-    const raw = tokenArg !== undefined ? tokenArg : inviteToken
-    const token = extractToken(raw)
-    if (!token || joining) return
-    setJoining(true)
-    try {
-      const res = await api('/api/games/join', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({invite_token: token})})
-      setShowJoin(false); setInviteToken('')
-      onRefresh()
-      // navigate to game
-      const list = await api('/api/games').then(arr).catch(()=>[])
-      const full = list.find(x => x.game_id === res.game_id)
-      if (full) setGame(full)
-    } catch(e) {
-      alert('Join failed: ' + e.message)
-    } finally { setJoining(false) }
-  }
-
-  // auto-join via ?invite=TOKEN
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const invite = params.get('invite')
-    if (invite && !joining) {
-      params.delete('invite')
-      const newSearch = params.toString()
-      const newUrl = window.location.pathname + (newSearch ? '?' + newSearch : '') + window.location.hash
-      window.history.replaceState({}, '', newUrl)
-      joinGame(invite)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const gameList = arr(games)
-  const activeGames = gameList.filter(g=>!g.archived_at)
-  const archivedCount = gameList.filter(g=>g.archived_at).length
-
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold">Your Games</h1>
-        <span className="text-sm text-neutral-600">{user.global_name || user.username}</span>
-      </div>
-      <div className="flex gap-2 mb-4">
-        <button onClick={()=>setShowCreate(!showCreate)} className="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm">+ New game</button>
-        <button onClick={()=>setShowJoin(!showJoin)} className="px-3 py-1.5 border rounded text-sm">Join with invite</button>
-      </div>
-      {showCreate && (
-        <div className="mb-4 p-3 border rounded bg-neutral-50 flex gap-2">
-          <input value={name} onChange={e=>setName(e.target.value)} placeholder="Game name" className="flex-1 px-2 py-1 border rounded text-sm" onKeyDown={e=>e.key==='Enter'&&createGame()} autoFocus />
-          <button onClick={createGame} className="px-3 py-1 bg-indigo-600 text-white rounded text-sm">Create</button>
-          <button onClick={()=>setShowCreate(false)} className="px-3 py-1 border rounded text-sm">Cancel</button>
+    <div className="min-h-screen bg-neutral-50">
+      <header className="bg-white border-b border-neutral-200">
+        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+          <h1 className="text-xl font-bold">🤝 Connections</h1>
+          <span className="text-sm text-neutral-600">{user.global_name || user.username}</span>
         </div>
-      )}
-      {showJoin && (
-        <div className="mb-4 p-3 border rounded bg-neutral-50 flex gap-2">
-          <input value={inviteToken} onChange={e=>setInviteToken(e.target.value)} placeholder="Paste invite link or token" className="flex-1 px-2 py-1 border rounded text-sm font-mono" />
-          <button onClick={()=>joinGame()} disabled={joining} className="px-3 py-1 bg-indigo-600 text-white rounded text-sm disabled:opacity-50">{joining?'…':'Join'}</button>
-          <button onClick={()=>setShowJoin(false)} className="px-3 py-1 border rounded text-sm">Cancel</button>
+      </header>
+      <main className="max-w-3xl mx-auto px-4 py-6">
+        <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5 mb-5">
+          <div className="font-semibold mb-2">New game</div>
+          <div className="flex gap-2">
+            <input value={name} onChange={e=>setName(e.target.value)} placeholder="Campaign name…" className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" onKeyDown={e=>e.key==='Enter'&&createGame()} />
+            <button onClick={createGame} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 whitespace-nowrap">Create</button>
+          </div>
         </div>
-      )}
-      <ul className="space-y-2">
-        {activeGames.map(g => <li key={g.game_id}><button onClick={()=>setGame(g)} className="w-full text-left px-3 py-2 border rounded hover:bg-neutral-50">{g.name} <span className="text-xs text-neutral-500 ml-2">{g.role}</span></button></li>)}
-        {activeGames.length === 0 && <li className="text-neutral-500 text-sm">No games yet – create one or join with an invite.</li>}
-      </ul>
-      {archivedCount > 0 && <div className="mt-6 text-xs text-neutral-500">{archivedCount} archived game(s) hidden</div>}
+        <div className="space-y-2">
+          {arr(games).map(g => (
+            <button key={g.id} onClick={()=>setGame({game_id: g.id, slug: g.slug, name: g.name, role: g.role})}
+              className="w-full text-left bg-white rounded-xl shadow-sm border border-neutral-200 p-4 hover:border-indigo-300 transition-colors">
+              <div className="font-medium">{g.name}</div>
+              <div className="text-xs text-neutral-500 mt-0.5">{g.role === 'owner' ? 'Owner' : 'Admin'} · /{g.slug}</div>
+            </button>
+          ))}
+          {arr(games).length===0 && <div className="text-neutral-500 text-sm bg-white rounded-xl shadow-sm border border-neutral-200 p-4">No games yet — create one above.</div>}
+        </div>
+      </main>
     </div>
   )
 }
 
 function ClaimGate({ gameId, gameName, unclaimed, onDone }) {
-  const [selected, setSelected] = useState('')
-  const [newName, setNewName] = useState('')
-  const unclaimedList = arr(unclaimed)
-  const [mode, setMode] = useState(unclaimedList.length > 0 ? 'claim' : 'new')
-  const [busy, setBusy] = useState(false)
-
+  const [picked, setPicked] = useState('')
+  const [name, setName] = useState('')
   const submit = async () => {
-    if (busy) return
-    setBusy(true)
-    try {
-      if (mode === 'claim' && selected) {
-        await api(`/api/games/${gameId}/members/claim`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({member_id: parseInt(selected)})})
-      } else if (mode === 'new' && newName.trim()) {
-        await api(`/api/games/${gameId}/members/claim`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: newName.trim()})})
-      } else return
-      onDone()
-    } catch(e) { alert('Claim failed: ' + e.message); setBusy(false) }
+    const body = picked ? {member_id: parseInt(picked)} : {name: name.trim()}
+    if (!picked && !body.name) return
+    await api(`/api/games/${gameId}/claim`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
+    onDone()
   }
-
   return (
-    <div className="max-w-md mx-auto p-6 mt-12">
-      <h1 className="text-xl font-bold mb-2">Welcome to {gameName}</h1>
-      <p className="text-sm text-neutral-600 mb-4">Claim your character or add yourself as a new player.</p>
-      {unclaimedList.length > 0 && (
-        <div className="mb-3">
-          <label className="flex items-center gap-2 mb-2"><input type="radio" checked={mode==='claim'} onChange={()=>setMode('claim')} /> Claim an existing character</label>
-          {mode==='claim' && (
-            <select value={selected} onChange={e=>setSelected(e.target.value)} className="w-full border rounded px-2 py-1.5 text-sm">
-              <option value="">— pick —</option>
-              {unclaimedList.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+    <div className="min-h-screen bg-neutral-50 flex items-center justify-center px-4">
+      <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-5 max-w-md w-full">
+        <div className="font-bold text-lg mb-1">Join {gameName}</div>
+        <div className="text-sm text-neutral-600 mb-4">Claim an existing character, or create a new one.</div>
+        {arr(unclaimed).length > 0 && (
+          <div className="mb-3">
+            <div className="text-xs font-medium text-neutral-600 mb-1.5">Claim a character</div>
+            <select value={picked} onChange={e=>setPicked(e.target.value)} className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm">
+              <option value="">— pick one —</option>
+              {arr(unclaimed).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
-          )}
-        </div>
-      )}
-      <div className="mb-4">
-        <label className="flex items-center gap-2 mb-2"><input type="radio" checked={mode==='new'} onChange={()=>setMode('new')} /> Add yourself as new player</label>
-        {mode==='new' && <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Your character / player name" className="w-full border rounded px-2 py-1.5 text-sm" />}
+          </div>
+        )}
+        <div className="text-xs text-neutral-500 my-2 text-center">or</div>
+        <input value={name} onChange={e=>setName(e.target.value)} placeholder="New character name" disabled={!!picked}
+          className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm mb-3 disabled:bg-neutral-50" />
+        <button onClick={submit} className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700">Join game</button>
       </div>
-      <button onClick={submit} disabled={busy || (mode==='claim' && !selected) || (mode==='new' && !newName.trim())} className="px-4 py-1.5 bg-indigo-600 text-white rounded text-sm disabled:opacity-50">{busy?'…':'Continue'}</button>
     </div>
   )
 }
 
-function RoundTab({ gameId, gameName }) {
+// --- Round Tab ---
+function RoundTab({ gameId }) {
   const [data, setData] = useState(null)
-  const [completing, setCompleting] = useState(false)
-  const [copied, setCopied] = useState(false)
-  const [futureRounds, setFutureRounds] = useState([])
-  const [futureCount, setFutureCount] = useState(2)
-
-  const load = () => api(`/api/games/${gameId}/round`).then(d => setData(d || {})).catch(()=>setData({pairings:[]}))
+  const load = () => api(`/api/games/${gameId}/round`).then(setData).catch(()=>setData(null))
   useEffect(() => { load() }, [gameId])
+  const complete = async () => { await api(`/api/games/${gameId}/round/complete`, {method:'POST'}); load() }
 
-  const roundNum = data?.round_num || 1
-
-  // load future pairings
-  useEffect(() => {
-    if (!roundNum) return
-    let cancelled = false
-    const loadFuture = async () => {
-      const results = []
-      for (let n = 1; n <= futureCount; n++) {
-        const r = roundNum + n
-        try {
-          const fr = await api(`/api/games/${gameId}/pairings?round=${r}`)
-          if (arr(fr.pairings).length > 0) {
-            results.push({ round_num: r, pairings: fr.pairings })
-          } else {
-            break
-          }
-        } catch { break }
-      }
-      if (!cancelled) setFutureRounds(results)
-    }
-    loadFuture()
-    return () => { cancelled = true }
-  }, [gameId, roundNum, futureCount])
-
-  if (!data) return <div>Loading…</div>
-  const pairings = arr(data.pairings)
-
-  const copyDiscord = () => {
-    const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    const lines = [
-      `🤝 Connections — ${gameName} — ${dateStr}`,
-      '',
-      `> ${data.question?.text || '(no question)'}`,
-      '',
-    ]
-    pairings.forEach(p => {
-      const asker = p.asker_discord_id ? `<@${p.asker_discord_id}>` : p.asker_name
-      const target = p.target_discord_id ? `<@${p.target_discord_id}>` : p.target_name
-      lines.push(`• ${asker} answers about ${target}`)
-    })
-    navigator.clipboard.writeText(lines.join('\n'))
-    setCopied(true)
-    setTimeout(()=>setCopied(false), 1500)
-  }
-
-  const complete = async () => {
-    if (completing) return
-    setCompleting(true)
-    try {
-      await api(`/api/games/${gameId}/round/complete`, {method:'POST'})
-      await load()
-      setFutureCount(2)
-    } catch(e) {
-      alert('Complete failed: ' + e.message)
-    } finally { setCompleting(false) }
-  }
-
-  const dateStr = new Date().toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' })
+  if (!data) return <div className="text-neutral-500">Loading…</div>
 
   return (
-    <div>
-      <div className="mb-3 flex justify-between items-center flex-wrap gap-2">
-        <div className="text-sm text-neutral-600">Round {roundNum} – {dateStr}</div>
-        <button onClick={copyDiscord} className="text-sm px-3 py-1 border rounded hover:bg-neutral-50">{copied ? 'Copied!' : 'Copy to Discord'}</button>
-      </div>
-      <div className="mb-4 p-3 bg-neutral-50 rounded text-[15px]">{data.question?.text || 'No question set – add questions in the Questions tab.'}</div>
-      {pairings.length === 0 ? (
-        <div className="text-sm text-neutral-500">No pairings yet – add at least 3 members.</div>
-      ) : (
-        <ul className="space-y-1.5 text-sm">
-          {pairings.map(p => (
-            <li key={p.asker_id} className="flex items-center gap-2">
-              <span className="font-medium">{p.asker_name}</span>
-              <span className="text-neutral-500">answers about</span>
-              <span className="font-medium">{p.target_name}</span>
-              {p.asker_discord_id && <span className="text-xs text-neutral-400">✓</span>}
-            </li>
-          ))}
-        </ul>
-      )}
-      <button onClick={complete} disabled={completing || pairings.length===0} className="mt-4 px-4 py-1.5 bg-indigo-600 text-white rounded text-sm disabled:opacity-50">
-        {completing ? '…' : 'Mark Complete'}
-      </button>
-
-      <div className="mt-8 pt-6 border-t">
-        <div className="text-sm font-semibold mb-2 text-neutral-700">Future Rounds</div>
-        {futureRounds.length === 0 ? (
-          <div className="text-sm text-neutral-500">No more rounds scheduled – add members to generate more pairings.</div>
+    <div className="space-y-4">
+      <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-neutral-900">Round {data.round_num}</h2>
+          <button onClick={load} className="text-xs text-neutral-500 hover:text-neutral-700">↻ refresh</button>
+        </div>
+        {data.question ? (
+          <>
+            <div className="flex items-start gap-2 mb-4">
+              <span className={`text-[11px] px-2 py-1 rounded-full font-medium ${TAG_COLORS[data.question.tag]||'bg-neutral-100 text-neutral-700'}`}>{data.question.tag}</span>
+            </div>
+            <div className="text-[17px] sm:text-lg text-neutral-900 leading-relaxed mb-4">{data.question.text}</div>
+          </>
         ) : (
-          <div className="space-y-4">
-            {futureRounds.map(fr => (
-              <div key={fr.round_num} className="text-sm text-neutral-500">
-                <div className="font-medium text-neutral-600 mb-1">Round {fr.round_num}</div>
-                <ul className="space-y-0.5 text-xs">
-                  {fr.pairings.map(p => (
-                    <li key={p.asker_id}>{p.asker_name} → {p.target_name}</li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-            <button onClick={()=>setFutureCount(c => c + 3)} className="text-xs text-neutral-600 hover:text-neutral-900 underline">Show more</button>
-          </div>
+          <div className="text-neutral-500 mb-4">No question set — add questions in the Questions tab.</div>
+        )}
+        <div className="space-y-2">
+          {arr(data.pairings).map(p => (
+            <div key={`${p.asker_id}-${p.target_id}`} className="flex items-center gap-2 text-sm py-2 px-3 bg-neutral-50 rounded-lg">
+              <span className="font-medium">{p.asker_name}</span>
+              <span className="text-neutral-400">→</span>
+              <span className="text-neutral-700">{p.target_name}</span>
+            </div>
+          ))}
+          {arr(data.pairings).length === 0 && <div className="text-sm text-neutral-500">No pairings yet — add 3+ members.</div>}
+        </div>
+        {data.question && arr(data.pairings).length > 0 && (
+          <button onClick={complete} className="mt-4 w-full sm:w-auto px-4 py-2.5 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700">Mark round complete</button>
         )}
       </div>
     </div>
   )
 }
 
+// --- Questions Tab ---
 function QuestionsTab({ gameId }) {
   const [status, setStatus] = useState('upcoming')
   const [qs, setQs] = useState([])
@@ -485,7 +336,7 @@ function QuestionsTab({ gameId }) {
   }
 
   const seedQuestions = async () => {
-    if (!confirm('Load the 38-question starter pack? Duplicates will be skipped.')) return
+    if (!confirm('Load the 38-question Corvessa starter pack? Duplicates will be skipped.')) return
     setBusy(true)
     try {
       const r = await api(`/api/games/${gameId}/questions/seed`, {method:'POST'})
@@ -501,7 +352,7 @@ function QuestionsTab({ gameId }) {
     setBusy(true)
     try {
       const r = await api(`/api/games/${gameId}/questions/import`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({questions: lines})})
-      alert(`Imported ${r.inserted} questions` + (r.skipped ? `, ${r.skipped} skipped` : ''))
+      alert(`Imported ${r.inserted} questions` + (r.skipped ? `, ${r.skipped} skipped (duplicate / too long / empty)` : ''))
       setImportText(''); setShowImport(false); load()
     } catch(e) { alert('Import failed: ' + e.message) }
     finally { setBusy(false) }
@@ -519,92 +370,115 @@ function QuestionsTab({ gameId }) {
   }
 
   return (
-    <div>
-      <div className="flex gap-3 text-sm border-b mb-3 items-center flex-wrap">
-        {['upcoming','used','graveyard'].map(s => (
-          <button key={s} onClick={()=>setStatus(s)} className={`pb-1.5 capitalize ${status===s ? 'border-b-2 border-indigo-600 font-semibold' : 'text-neutral-600'}`}>{s}</button>
-        ))}
-        <span className="ml-auto text-neutral-500 text-xs">{qs.length} questions</span>
-        {status === 'upcoming' && qs.length > 1 && (
-          <button onClick={shuffleQuestions} className="text-xs px-2 py-1 border rounded hover:bg-neutral-50">🔀 Shuffle</button>
+    <div className="space-y-4">
+      {/* status tabs + tools */}
+      <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-3 sm:p-4">
+        <div className="flex items-center gap-4 border-b border-neutral-200 pb-3 mb-3">
+          {['upcoming','used','graveyard'].map(s => (
+            <button key={s} onClick={()=>setStatus(s)}
+              className={`pb-1 -mb-3 border-b-2 text-sm capitalize transition-colors ${status===s ? 'border-indigo-600 font-semibold text-neutral-900' : 'border-transparent text-neutral-600 hover:text-neutral-900'}`}>{s}</button>
+          ))}
+          <span className="ml-auto text-xs text-neutral-500">{qs.length}</span>
+        </div>
+
+        {status === 'upcoming' && (
+          <>
+            <div className="flex gap-2 mb-3">
+              <input value={newText} onChange={e=>setNewText(e.target.value)} placeholder="Add a question…"
+                maxLength={500}
+                className="flex-1 border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                onKeyDown={e=>e.key==='Enter'&&addQuestion()} />
+              <button onClick={addQuestion} className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 whitespace-nowrap">Add</button>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <button onClick={seedQuestions} disabled={busy} className="px-3 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50 disabled:opacity-50">📦 Load starter pack</button>
+              <button onClick={()=>setShowImport(v=>!v)} className="px-3 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50">📥 Import</button>
+              <button onClick={doExport} className="px-3 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50">📤 Export</button>
+              {qs.length > 1 && <button onClick={shuffleQuestions} className="px-3 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50 ml-auto">🔀 Shuffle</button>}
+            </div>
+            {showImport && (
+              <div className="mt-3 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
+                <div className="text-xs font-medium text-neutral-700 mb-1.5">Paste questions, one per line</div>
+                <textarea value={importText} onChange={e=>setImportText(e.target.value)}
+                  placeholder={"What scares you?\nWhat's your fondest memory?\n…"}
+                  className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm h-32 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <div className="flex gap-2 mt-2">
+                  <button onClick={doImport} disabled={busy} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 disabled:opacity-50">Import</button>
+                  <button onClick={()=>{setShowImport(false); setImportText('')}} className="px-3 py-1.5 border border-neutral-300 rounded-lg text-xs hover:bg-white">Cancel</button>
+                  <span className="text-[11px] text-neutral-500 ml-auto self-center">Tags auto-classified · duplicates skipped</span>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+        {status !== 'upcoming' && (
+          <div className="flex gap-2 text-xs">
+            <button onClick={doExport} className="px-3 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50">📤 Export {status}</button>
+          </div>
         )}
       </div>
 
-      {status === 'upcoming' && (
-        <>
-        <div className="mb-3 flex gap-2">
-          <input value={newText} onChange={e=>setNewText(e.target.value)} placeholder="Add a new question… (max 500 chars)" maxLength={500} className="flex-1 border rounded px-2 py-1.5 text-sm" onKeyDown={e=>e.key==='Enter'&&addQuestion()} />
-          <button onClick={addQuestion} className="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm">Add</button>
-        </div>
-        <div className="mb-3 flex flex-wrap gap-2 text-xs">
-          <button onClick={seedQuestions} disabled={busy} className="px-2 py-1 border rounded hover:bg-neutral-50 disabled:opacity-50">📦 Load starter pack</button>
-          <button onClick={()=>setShowImport(v=>!v)} className="px-2 py-1 border rounded hover:bg-neutral-50">📥 Import</button>
-          <button onClick={doExport} className="px-2 py-1 border rounded hover:bg-neutral-50">📤 Export</button>
-        </div>
-        {showImport && (
-          <div className="mb-3 p-3 bg-neutral-50 border rounded text-sm">
-            <div className="text-xs font-medium mb-1">Paste questions, one per line</div>
-            <textarea value={importText} onChange={e=>setImportText(e.target.value)} placeholder={"What scares you?\nWhat's your fondest memory?\n…"} className="w-full border rounded px-2 py-1.5 text-sm h-28" />
-            <div className="flex gap-2 mt-2">
-              <button onClick={doImport} disabled={busy} className="px-3 py-1 bg-indigo-600 text-white rounded text-xs disabled:opacity-50">Import</button>
-              <button onClick={()=>{setShowImport(false); setImportText('')}} className="px-3 py-1 border rounded text-xs">Cancel</button>
-              <span className="text-[11px] text-neutral-500 ml-auto self-center">Tags auto-classified · duplicates skipped</span>
-            </div>
-          </div>
-        )}
-        </>
-      )}
-      {status !== 'upcoming' && (
-        <div className="mb-3">
-          <button onClick={doExport} className="text-xs px-2 py-1 border rounded hover:bg-neutral-50">📤 Export {status}</button>
-        </div>
-      )}
-
-      <ul className="space-y-2">
+      {/* question list */}
+      <div className="space-y-2.5">
         {qs.map((q, idx) => (
-          <li key={q.id} className="border rounded p-3 text-sm">
+          <div key={q.id} className="bg-white rounded-xl shadow-sm border border-neutral-200 p-3 sm:p-4">
             {editing === q.id ? (
-              <div className="flex gap-2">
-                <input value={editText} onChange={e=>setEditText(e.target.value)} maxLength={500} className="flex-1 border rounded px-2 py-1 text-sm" />
-                <button onClick={()=>saveEdit(q)} className="px-2 py-1 bg-indigo-600 text-white rounded text-xs">Save</button>
-                <button onClick={()=>setEditing(null)} className="px-2 py-1 border rounded text-xs">Cancel</button>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input value={editText} onChange={e=>setEditText(e.target.value)} maxLength={500} className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" autoFocus />
+                <div className="flex gap-2">
+                  <button onClick={()=>saveEdit(q)} className="flex-1 sm:flex-initial px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Save</button>
+                  <button onClick={()=>setEditing(null)} className="flex-1 sm:flex-initial px-3 py-2 border border-neutral-300 rounded-lg text-sm">Cancel</button>
+                </div>
               </div>
             ) : (
               <>
-                <div className="flex items-start gap-2 mb-1">
-                  <button onClick={()=>cycleTag(q)} title="Click to override tag" className={`text-[11px] px-1.5 py-0.5 rounded ${TAG_COLORS[q.tag]||'bg-neutral-100'}`}>{q.tag}</button>
-                  {!q.tag_auto && <button onClick={()=>revertTag(q)} title="Revert to auto-tag" className="text-[11px] text-neutral-500 hover:text-neutral-800">↺</button>}
-                  <span className="flex-1">{q.text}</span>
+                <div className="flex items-start gap-2.5 mb-2">
+                  <button onClick={()=>cycleTag(q)} title="Click to change tag"
+                    className={`text-[11px] px-2 py-1 rounded-full font-medium shrink-0 ${TAG_COLORS[q.tag]||'bg-neutral-100 text-neutral-700'}`}>
+                    {q.tag}
+                  </button>
+                  {!q.tag_auto && <button onClick={()=>revertTag(q)} title="Revert to auto" className="text-[11px] text-neutral-400 hover:text-neutral-600 mt-0.5">↺</button>}
+                  <span className="flex-1 text-[15px] leading-snug text-neutral-900">{q.text}</span>
                 </div>
-                <div className="flex gap-3 text-xs text-neutral-500 items-center">
-                  <button onClick={()=>{setEditing(q.id); setEditText(q.text)}} className="hover:text-neutral-800">Edit</button>
-                  <button onClick={()=>openHistory(q)} className="hover:text-neutral-800">History</button>
-                  {status==='upcoming' && <button onClick={()=>graveyard(q)} className="hover:text-neutral-800">Graveyard</button>}
-                  {status==='graveyard' && <><button onClick={()=>restore(q)} className="hover:text-neutral-800">Restore</button><button onClick={()=>del(q)} className="hover:text-red-600">Delete</button></>}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-500 pt-1 border-t border-neutral-100">
+                  <button onClick={()=>{setEditing(q.id); setEditText(q.text)}} className="hover:text-neutral-900 py-1">Edit</button>
+                  <button onClick={()=>openHistory(q)} className="hover:text-neutral-900 py-1">History</button>
+                  {status==='upcoming' && <button onClick={()=>graveyard(q)} className="hover:text-neutral-900 py-1">Graveyard</button>}
+                  {status==='graveyard' && <>
+                    <button onClick={()=>restore(q)} className="hover:text-neutral-900 py-1">Restore</button>
+                    <button onClick={()=>del(q)} className="hover:text-red-600 py-1">Delete</button>
+                  </>}
                   {status==='upcoming' && (
-                    <span className="ml-auto flex gap-1">
-                      <button onClick={()=>moveQuestion(q.id, -1)} disabled={idx===0} className="px-1 hover:text-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed" title="Move up">↑</button>
-                      <button onClick={()=>moveQuestion(q.id, 1)} disabled={idx===qs.length-1} className="px-1 hover:text-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed" title="Move down">↓</button>
+                    <span className="ml-auto flex gap-0.5">
+                      <button onClick={()=>moveQuestion(q.id, -1)} disabled={idx===0} className="w-7 h-7 flex items-center justify-center rounded hover:bg-neutral-100 disabled:opacity-30" title="Move up">↑</button>
+                      <button onClick={()=>moveQuestion(q.id, 1)} disabled={idx===qs.length-1} className="w-7 h-7 flex items-center justify-center rounded hover:bg-neutral-100 disabled:opacity-30" title="Move down">↓</button>
                     </span>
                   )}
                 </div>
               </>
             )}
-          </li>
+          </div>
         ))}
-        {qs.length===0 && <li className="text-neutral-500 text-sm">No {status} questions.{status==='upcoming' && ' Add one above, or load the starter pack.'}</li>}
-      </ul>
+        {qs.length===0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-8 text-center">
+            <div className="text-3xl mb-2">📝</div>
+            <div className="text-neutral-700 font-medium mb-1">No {status} questions yet</div>
+            {status === 'upcoming' && <div className="text-sm text-neutral-500">Add one above, or load the 38-question starter pack.</div>}
+          </div>
+        )}
+      </div>
 
       {historyQ && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4" onClick={()=>setHistoryQ(null)}>
-          <div className="bg-white rounded p-4 max-w-lg w-full text-sm" onClick={e=>e.stopPropagation()}>
-            <div className="font-semibold mb-2">Edit history – {historyQ.text.slice(0,40)}…</div>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-40" onClick={()=>setHistoryQ(null)}>
+          <div className="bg-white rounded-xl shadow-xl p-4 sm:p-5 max-w-lg w-full text-sm" onClick={e=>e.stopPropagation()}>
+            <div className="font-semibold mb-3">Edit history</div>
+            <div className="text-xs text-neutral-500 mb-2 truncate">{historyQ.text}</div>
             {arr(history).length===0 ? <div className="text-neutral-500">No edits yet.</div> : (
               <ul className="space-y-2 max-h-64 overflow-auto">
-                {arr(history).map(h => <li key={h.id} className="border-b pb-1"><div className="text-neutral-500 text-xs">{h.edited_at ? new Date(h.edited_at).toLocaleString() : ''} – {h.edited_by}</div><div><span className="text-neutral-500">was:</span> [{h.old_tag}] {h.old_text}</div></li>)}
+                {arr(history).map(h => <li key={h.id} className="border-b border-neutral-100 pb-2 text-xs"><div className="text-neutral-500">{h.edited_at ? new Date(h.edited_at).toLocaleString() : ''} · {h.edited_by}</div><div className="text-neutral-700"><span className="text-neutral-400">was:</span> [{h.old_tag}] {h.old_text}</div></li>)}
               </ul>
             )}
-            <button onClick={()=>setHistoryQ(null)} className="mt-3 px-3 py-1 border rounded text-sm">Close</button>
+            <button onClick={()=>setHistoryQ(null)} className="mt-3 px-3 py-2 border border-neutral-300 rounded-lg text-sm w-full sm:w-auto">Close</button>
           </div>
         </div>
       )}
@@ -612,6 +486,7 @@ function QuestionsTab({ gameId }) {
   )
 }
 
+// --- Members Tab ---
 function MembersTab({ gameId }) {
   const [members, setMembers] = useState([])
   const [showDeleted, setShowDeleted] = useState(false)
@@ -642,8 +517,7 @@ function MembersTab({ gameId }) {
     if (disc !== (m.discord_id||'')) body.discord_id = disc || null
     try {
       await api(`/api/games/${gameId}/members/${m.id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
-      setEditing(null)
-      load()
+      setEditing(null); load()
     } catch(e) { alert('Save failed: ' + e.message) }
   }
 
@@ -652,65 +526,66 @@ function MembersTab({ gameId }) {
     await api(`/api/games/${gameId}/members/${m.id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({discord_id: null})})
     load()
   }
-
-  const delMember = async (m) => {
-    await api(`/api/games/${gameId}/members/${m.id}`, {method:'DELETE'})
-    load()
-  }
-  const restore = async (m) => {
-    try {
-      await api(`/api/games/${gameId}/members/${m.id}/restore`, {method:'POST'})
-      load()
-    } catch(e) { alert('Restore failed: ' + e.message) }
-  }
+  const delMember = async (m) => { await api(`/api/games/${gameId}/members/${m.id}`, {method:'DELETE'}); load() }
+  const restore = async (m) => { try { await api(`/api/games/${gameId}/members/${m.id}/restore`, {method:'POST'}); load() } catch(e) { alert('Restore failed: ' + e.message) } }
 
   const memberList = arr(members)
   const active = memberList.filter(m=>!m.deleted_at)
   const deleted = memberList.filter(m=>m.deleted_at)
 
   return (
-    <div>
-      <div className="mb-4 p-3 border rounded bg-neutral-50 space-y-2 text-sm">
-        <div className="font-medium">Add member</div>
-        <div className="flex gap-2 flex-wrap">
-          <input value={name} onChange={e=>setName(e.target.value)} placeholder="Name" className="flex-1 min-w-[140px] border rounded px-2 py-1" />
-          <input value={discordId} onChange={e=>setDiscordId(e.target.value)} placeholder="Discord ID (optional – leave blank for unclaimed)" className="flex-1 min-w-[220px] border rounded px-2 py-1 font-mono text-xs" />
-          <button onClick={addMember} className="px-3 py-1 bg-indigo-600 text-white rounded text-sm">Add</button>
+    <div className="space-y-4">
+      <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5">
+        <div className="font-semibold mb-3 text-neutral-900">Add member</div>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input value={name} onChange={e=>setName(e.target.value)} placeholder="Character name"
+            className="flex-1 border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <input value={discordId} onChange={e=>setDiscordId(e.target.value)} placeholder="Discord ID (optional)"
+            className="flex-1 border border-neutral-300 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <button onClick={addMember} className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">Add</button>
         </div>
-        <div className="text-xs text-neutral-500">Discord ID = numeric snowflake only (17–20 digits). <a href="https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID" target="_blank" rel="noreferrer" className="underline">How to find it?</a> Leave blank to create an unclaimed character slot.</div>
+        <div className="text-xs text-neutral-500 mt-2">Leave Discord ID blank for an unclaimed character slot. Numeric snowflake only (17–20 digits).</div>
       </div>
 
-      <ul className="space-y-1 text-sm">
+      <div className="bg-white rounded-xl shadow-sm border border-neutral-200 divide-y divide-neutral-100">
         {active.map(m => (
-          <li key={m.id} className="border-b py-2">
+          <div key={m.id} className="p-3 sm:p-4">
             {editing === m.id ? (
-              <div className="flex gap-2 flex-wrap items-center">
-                <input value={editName} onChange={e=>setEditName(e.target.value)} className="border rounded px-2 py-1 text-sm" />
-                <input value={editDiscord} onChange={e=>setEditDiscord(e.target.value)} placeholder="Discord ID or blank" className="border rounded px-2 py-1 text-sm font-mono" />
-                <button onClick={()=>saveEdit(m)} className="px-2 py-1 bg-indigo-600 text-white rounded text-xs">Save</button>
-                <button onClick={()=>setEditing(null)} className="px-2 py-1 border rounded text-xs">Cancel</button>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input value={editName} onChange={e=>setEditName(e.target.value)} className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm" />
+                <input value={editDiscord} onChange={e=>setEditDiscord(e.target.value)} placeholder="Discord ID or blank" className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm font-mono" />
+                <div className="flex gap-2">
+                  <button onClick={()=>saveEdit(m)} className="flex-1 sm:flex-initial px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Save</button>
+                  <button onClick={()=>setEditing(null)} className="flex-1 sm:flex-initial px-3 py-2 border border-neutral-300 rounded-lg text-sm">Cancel</button>
+                </div>
               </div>
             ) : (
-              <div className="flex justify-between items-center gap-2">
-                <div><span className="font-medium">{m.name}</span> {m.discord_id ? <span className="text-xs text-green-700 ml-2">✓ claimed <span className="font-mono text-neutral-500">{m.discord_id.slice(0,6)}…</span></span> : <span className="text-xs text-neutral-500 ml-2">unclaimed</span>}</div>
-                <div className="flex gap-3 text-xs text-neutral-500">
-                  <button onClick={()=>{setEditing(m.id); setEditName(m.name); setEditDiscord(m.discord_id||'')}} className="hover:text-neutral-800">Edit</button>
-                  {m.discord_id && <button onClick={()=>unclaim(m)} className="hover:text-neutral-800">Unclaim</button>}
-                  <button onClick={()=>delMember(m)} className="hover:text-red-600">Delete</button>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="font-medium text-neutral-900">{m.name}</span>
+                  {m.discord_id ? <span className="text-xs text-emerald-700 ml-2">✓ claimed</span> : <span className="text-xs text-neutral-500 ml-2">unclaimed</span>}
+                </div>
+                <div className="flex gap-4 text-xs text-neutral-500">
+                  <button onClick={()=>{setEditing(m.id); setEditName(m.name); setEditDiscord(m.discord_id||'')}} className="hover:text-neutral-900 py-1">Edit</button>
+                  {m.discord_id && <button onClick={()=>unclaim(m)} className="hover:text-neutral-900 py-1">Unclaim</button>}
+                  <button onClick={()=>delMember(m)} className="hover:text-red-600 py-1">Delete</button>
                 </div>
               </div>
             )}
-          </li>
+          </div>
         ))}
-        {active.length===0 && <li className="text-neutral-500">No members yet.</li>}
-      </ul>
+        {active.length===0 && <div className="p-4 text-neutral-500 text-sm">No members yet.</div>}
+      </div>
 
       {deleted.length > 0 && (
-        <div className="mt-4">
-          <label className="text-xs text-neutral-600 flex items-center gap-2"><input type="checkbox" checked={showDeleted} onChange={e=>setShowDeleted(e.target.checked)} /> Show deleted ({deleted.length})</label>
+        <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4">
+          <label className="text-xs text-neutral-600 flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={showDeleted} onChange={e=>setShowDeleted(e.target.checked)} />
+            Show deleted ({deleted.length})
+          </label>
           {showDeleted && (
             <ul className="mt-2 space-y-1 text-sm text-neutral-500">
-              {deleted.map(m => <li key={m.id} className="flex justify-between border-b py-1"><span>{m.name} <em>deleted</em></span><button onClick={()=>restore(m)} className="text-xs hover:text-neutral-800">Restore</button></li>)}
+              {deleted.map(m => <li key={m.id} className="flex justify-between py-1.5 border-t border-neutral-100"><span>{m.name}</span><button onClick={()=>restore(m)} className="text-xs hover:text-neutral-800">Restore</button></li>)}
             </ul>
           )}
         </div>
@@ -719,6 +594,7 @@ function MembersTab({ gameId }) {
   )
 }
 
+// --- History Tab ---
 function HistoryTab({ gameId }) {
   const [rows, setRows] = useState([])
   const [copiedRound, setCopiedRound] = useState(null)
@@ -727,68 +603,56 @@ function HistoryTab({ gameId }) {
 
   const copyDiscord = (r) => {
     const dateStr = r.played_at ? new Date(r.played_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
-    const lines = [
-      `🤝 Connections — Round ${r.round_num}${dateStr ? ' — ' + dateStr : ''}`,
-      '',
-      `> ${r.question_text || '(no question)'}`,
-      '',
-    ]
+    const lines = [`🤝 Connections — Round ${r.round_num}${dateStr ? ' — ' + dateStr : ''}`, '', `> ${r.question_text || '(no question)'}`, '']
     arr(r.pairings).forEach(p => {
       const asker = p.asker_discord_id ? `<@${p.asker_discord_id}>` : p.asker_name
       const target = p.target_discord_id ? `<@${p.target_discord_id}>` : p.target_name
       lines.push(`• ${asker} answers about ${target}`)
     })
     navigator.clipboard.writeText(lines.join('\n'))
-    setCopiedRound(r.round_num)
-    setTimeout(()=>setCopiedRound(null), 1500)
+    setCopiedRound(r.round_num); setTimeout(()=>setCopiedRound(null), 1500)
   }
 
   return (
-    <div>
-      <div className="text-sm text-neutral-600 mb-2">{rowList.length} rounds played</div>
-      <ul className="space-y-3 text-sm">
-        {rowList.map(r => (
-          <li key={r.round_num} className="border rounded p-3">
-            <div className="flex justify-between items-start mb-2">
-              <div className="font-medium">Round {r.round_num} – {r.played_at ? new Date(r.played_at).toLocaleDateString() : ''}</div>
-              <button onClick={()=>copyDiscord(r)} className="text-xs px-2 py-0.5 border rounded hover:bg-neutral-50">{copiedRound === r.round_num ? 'Copied!' : 'Copy to Discord'}</button>
-            </div>
-            <div className="mb-2 flex items-start gap-2">
-              {r.question_tag && <span className={`text-[11px] px-1.5 py-0.5 rounded ${TAG_COLORS[r.question_tag]||'bg-neutral-100'}`}>{r.question_tag}</span>}
-              <span className="text-neutral-700 flex-1">{r.question_text || <em>question deleted</em>}</span>
-            </div>
-            {arr(r.pairings).length > 0 && (
-              <ul className="text-xs text-neutral-600 space-y-0.5 mb-2">
-                {arr(r.pairings).map(p => (
-                  <li key={p.asker_id}>{p.asker_name} → {p.target_name}</li>
-                ))}
-              </ul>
-            )}
-            {r.played_by_username && <div className="text-xs text-neutral-500">Completed by {r.played_by_username}</div>}
-          </li>
-        ))}
-        {rowList.length===0 && <li className="text-neutral-500">No rounds played yet.</li>}
-      </ul>
+    <div className="space-y-3">
+      <div className="text-sm text-neutral-600">{rowList.length} rounds played</div>
+      {rowList.map(r => (
+        <div key={r.round_num} className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4">
+          <div className="flex justify-between items-start mb-2 gap-2">
+            <div className="font-semibold text-neutral-900">Round {r.round_num} <span className="text-neutral-500 font-normal text-sm">· {r.played_at ? new Date(r.played_at).toLocaleDateString() : ''}</span></div>
+            <button onClick={()=>copyDiscord(r)} className="text-xs px-2.5 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50 whitespace-nowrap shrink-0">{copiedRound === r.round_num ? 'Copied!' : 'Copy'}</button>
+          </div>
+          <div className="flex items-start gap-2 mb-2">
+            {r.question_tag && <span className={`text-[11px] px-2 py-1 rounded-full font-medium ${TAG_COLORS[r.question_tag]||'bg-neutral-100'}`}>{r.question_tag}</span>}
+            <span className="text-neutral-800 flex-1">{r.question_text || <em>question deleted</em>}</span>
+          </div>
+          {arr(r.pairings).length > 0 && (
+            <ul className="text-xs text-neutral-600 space-y-0.5 mb-1 bg-neutral-50 rounded-lg px-3 py-2">
+              {arr(r.pairings).map(p => <li key={p.asker_id}>{p.asker_name} → {p.target_name}</li>)}
+            </ul>
+          )}
+          {r.played_by_username && <div className="text-xs text-neutral-500">by {r.played_by_username}</div>}
+        </div>
+      ))}
+      {rowList.length===0 && <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-8 text-center text-neutral-500 text-sm">No rounds played yet.</div>}
     </div>
   )
 }
 
+// --- Admin Tab ---
 function AdminTab({ gameId, game, onGameUpdate }) {
   const [invites, setInvites] = useState([])
   const [admins, setAdmins] = useState([])
   const [inviteUrl, setInviteUrl] = useState('')
   const [rename, setRename] = useState(game.name)
-  const [busy, setBusy] = useState(false)
 
   const loadInvites = () => api(`/api/games/${gameId}/invites`).then(d => setInvites(arr(d))).catch(()=>setInvites([]))
   const loadAdmins = () => api(`/api/games/${gameId}/admins`).then(d => setAdmins(arr(d))).catch(()=>setAdmins([]))
-
   useEffect(()=>{ loadInvites(); loadAdmins() }, [gameId])
 
   const createInvite = async () => {
     const res = await api(`/api/games/${gameId}/invites`, {method:'POST'})
-    const url = window.location.origin + '/?invite=' + res.invite_token
-    setInviteUrl(url)
+    setInviteUrl(window.location.origin + '/?invite=' + res.invite_token)
     loadInvites()
   }
   const revokeInvite = async (id) => { await api(`/api/games/${gameId}/invites/${id}`, {method:'DELETE'}); loadInvites() }
@@ -799,8 +663,7 @@ function AdminTab({ gameId, game, onGameUpdate }) {
   const doRename = async () => {
     if (!rename.trim() || rename === game.name) return
     await api(`/api/games/${gameId}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: rename.trim()})})
-    onGameUpdate({name: rename.trim()})
-    alert('Renamed.')
+    onGameUpdate({name: rename.trim()}); alert('Renamed.')
   }
   const doArchive = async (archived) => {
     await api(`/api/games/${gameId}/${archived ? 'archive' : 'unarchive'}`, {method:'POST'})
@@ -808,67 +671,61 @@ function AdminTab({ gameId, game, onGameUpdate }) {
     alert(archived ? 'Archived.' : 'Unarchived.')
   }
 
-  const inviteList = arr(invites)
-  const adminList = arr(admins)
-
   return (
-    <div className="space-y-6 text-sm">
-      <div>
-        <div className="font-semibold mb-2">Game settings</div>
-        <div className="flex gap-2 mb-2">
-          <input value={rename} onChange={e=>setRename(e.target.value)} className="border rounded px-2 py-1 text-sm flex-1" />
-          <button onClick={doRename} className="px-3 py-1 border rounded text-sm">Rename</button>
+    <div className="space-y-4">
+      <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5">
+        <div className="font-semibold mb-3 text-neutral-900">Game settings</div>
+        <div className="flex flex-col sm:flex-row gap-2 mb-3">
+          <input value={rename} onChange={e=>setRename(e.target.value)} className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <button onClick={doRename} className="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Rename</button>
         </div>
-        <div className="flex gap-2 items-center">
-          {!game.archived_at ? (
-            <button onClick={()=>doArchive(true)} className="px-3 py-1 border rounded text-sm">Archive game</button>
-          ) : (
-            <button onClick={()=>doArchive(false)} className="px-3 py-1 border rounded text-sm bg-amber-50">Unarchive game</button>
-          )}
-        </div>
+        {!game.archived_at
+          ? <button onClick={()=>doArchive(true)} className="px-3 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Archive game</button>
+          : <button onClick={()=>doArchive(false)} className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm hover:bg-amber-100">Unarchive game</button>
+        }
       </div>
 
-      <div>
-        <div className="font-semibold mb-2">Invite links</div>
-        <button onClick={createInvite} className="px-3 py-1 bg-indigo-600 text-white rounded text-sm mb-2">Generate invite</button>
+      <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5">
+        <div className="font-semibold mb-3 text-neutral-900">Invite links</div>
+        <button onClick={createInvite} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 mb-3">Generate invite</button>
         {inviteUrl && (
-          <div className="mb-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs font-mono break-all">
-            {inviteUrl}
-            <button onClick={()=>{navigator.clipboard.writeText(inviteUrl); alert('Copied')}} className="ml-2 underline">copy</button>
-            <button onClick={()=>setInviteUrl('')} className="ml-2 underline">hide</button>
-            <div className="text-neutral-600 font-sans mt-1">Share this link – single-use, expires in 7 days.</div>
+          <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs">
+            <div className="font-mono break-all mb-1">{inviteUrl}</div>
+            <div className="flex gap-3">
+              <button onClick={()=>{navigator.clipboard.writeText(inviteUrl); alert('Copied')}} className="underline">copy</button>
+              <button onClick={()=>setInviteUrl('')} className="underline">hide</button>
+              <span className="text-neutral-600 ml-auto">single-use · 7 days</span>
+            </div>
           </div>
         )}
-        <ul className="space-y-1 text-xs">
-          {inviteList.map(inv => (
-            <li key={inv.id} className="flex justify-between border-b py-1">
-              <span>{inv.token_prefix}… – {inv.used_by ? `used by ${inv.used_by}` : inv.revoked_at ? 'revoked' : `expires ${inv.expires_at ? new Date(inv.expires_at).toLocaleDateString() : ''}`}</span>
+        <ul className="space-y-1 text-xs divide-y divide-neutral-100">
+          {arr(invites).map(inv => (
+            <li key={inv.id} className="flex justify-between py-2">
+              <span className="text-neutral-600">{inv.token_prefix}… · {inv.used_by ? `used by ${inv.used_by}` : inv.revoked_at ? 'revoked' : `expires ${inv.expires_at ? new Date(inv.expires_at).toLocaleDateString() : ''}`}</span>
               {!inv.used_by && !inv.revoked_at && <button onClick={()=>revokeInvite(inv.id)} className="text-red-600 hover:underline">revoke</button>}
             </li>
           ))}
-          {inviteList.length===0 && <li className="text-neutral-500">No invites yet.</li>}
+          {arr(invites).length===0 && <li className="text-neutral-500 py-2">No invites yet.</li>}
         </ul>
       </div>
 
-      <div>
-        <div className="font-semibold mb-2">Admins</div>
-        <ul className="space-y-1">
-          {adminList.map(a => (
-            <li key={a.discord_id} className="flex justify-between border-b py-1">
-              <span>{a.global_name || a.username} <span className="text-neutral-500 text-xs">({a.role})</span></span>
-              {a.role !== 'owner' && <button onClick={()=>revokeAdmin(a.discord_id)} className="text-xs text-red-600 hover:underline">revoke access</button>}
+      <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5">
+        <div className="font-semibold mb-3 text-neutral-900">Admins</div>
+        <ul className="space-y-2 text-sm divide-y divide-neutral-100">
+          {arr(admins).map(a => (
+            <li key={a.discord_id} className="flex justify-between py-2">
+              <span>{a.global_name || a.username} <span className="text-neutral-500 text-xs">· {a.role}</span></span>
+              {a.role !== 'owner' && <button onClick={()=>revokeAdmin(a.discord_id)} className="text-xs text-red-600 hover:underline">revoke</button>}
             </li>
           ))}
         </ul>
       </div>
 
-      <div className="text-xs text-neutral-500 pt-4 border-t">
-        <a href="/privacy" target="_blank" rel="noreferrer" className="underline">Privacy Policy</a>
+      <div className="text-xs text-neutral-500 px-1">
+        <a href="/privacy" target="_blank" rel="noreferrer" className="underline hover:text-neutral-700">Privacy Policy</a>
       </div>
     </div>
   )
 }
 
-// Test exports – used by App.test.jsx regression test for useEffect cleanup crash
-// These are tree-shaken out of production builds (not imported by main.jsx)
 export { QuestionsTab, MembersTab, RoundTab }
