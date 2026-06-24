@@ -97,9 +97,15 @@ async def auth_discord_callback(
                 url=f"/auth/discord/start?force_consent=1&redirect_after={quote(redirect_after, safe='')}",
                 status_code=302,
             )
-        # Non-retryable error
+        # Non-retryable error - consume state
         db.delete(oauth_state)
         db.commit()
+        if error == "access_denied":
+            from fastapi.responses import HTMLResponse
+            return HTMLResponse(
+                "<html><body><h1>Login cancelled</h1><p>You cancelled Discord login. <a href='/'>Return home</a></p></body></html>",
+                status_code=200,
+            )
         raise HTTPException(400, f"OAuth error: {error}")
 
     # Normal success path - require code and state
