@@ -97,7 +97,8 @@ export default function App() {
   }, [])
 
   const loadGames = () => {
-    if (user) api('/api/games').then(d => setGames(arr(d))).catch(()=>setGames([]))
+    if (!user) return
+    api('/api/games').then(d => setGames(arr(d))).catch(()=>setGames([]))
   }
   useEffect(() => { loadGames() }, [user])
 
@@ -194,6 +195,12 @@ export default function App() {
         </div>
       </header>
 
+      {game.archived_at && (
+        <div className="bg-amber-50 border-b border-amber-200 text-amber-900 text-sm px-4 py-2 text-center">
+          📦 This game is archived – read-only
+        </div>
+      )}
+
       <div className="max-w-4xl mx-auto px-4 pt-3">
         <nav className="flex gap-0.5 sm:gap-2 text-[11px] sm:text-sm overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pb-0 border-b border-neutral-200">
           {tabs.map(([t,label,icon]) => (
@@ -209,9 +216,9 @@ export default function App() {
 
       <main className="max-w-4xl mx-auto px-4 py-4 sm:py-6 pb-20 sm:pb-6">
         <ErrorBoundary>
-          {tab === 'round' && <RoundTab gameId={game.id} />}
-          {tab === 'questions' && <QuestionsTab gameId={game.id} />}
-          {tab === 'members' && <MembersTab gameId={game.id} />}
+          {tab === 'round' && <RoundTab gameId={game.id} archived={!!game.archived_at} />}
+          {tab === 'questions' && <QuestionsTab gameId={game.id} archived={!!game.archived_at} />}
+          {tab === 'members' && <MembersTab gameId={game.id} archived={!!game.archived_at} />}
           {tab === 'history' && <HistoryTab gameId={game.id} />}
           {tab === 'admin' && <AdminTab gameId={game.id} game={game} onGameUpdate={g => setGame({...game, ...g})} />}
         </ErrorBoundary>
@@ -226,7 +233,7 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
     if (!name.trim()) return
     const g = await api('/api/games', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: name.trim()})})
     setName(''); onRefresh()
-    setGame({id: g.id, name: g.name})
+    setGame({id: g.id, name: g.name, archived_at: g.archived_at})
   }
   const [inviteCode, setInviteCode] = useState('')
   const [joinError, setJoinError] = useState('')
@@ -241,7 +248,7 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
       })
       setInviteCode('')
       onRefresh()
-      setGame({ id: res.game_id, name: '' })
+      setGame({ id: res.game_id, name: '', archived_at: null })
     } catch (e) {
       setJoinError(e.message || 'Join failed')
     }
@@ -278,22 +285,39 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
           </div>
           {joinError && <div className="text-sm text-red-600 mt-2">{joinError}</div>}
         </div>
+        <div className="flex items-center justify-between mb-2 px-1">
+          <div className="text-sm text-neutral-600">{arr(games).filter(g=>!g.archived_at).length} active game{arr(games).filter(g=>!g.archived_at).length===1?"":"s"}</div>
+        </div>
         <div className="space-y-2">
-          {arr(games).map(g => (
-            <button key={g.id} onClick={()=>setGame({id: g.id, name: g.name})}
+          {arr(games).filter(g=>!g.archived_at).map(g => (
+            <button key={g.id} onClick={()=>setGame({id: g.id, name: g.name, archived_at: g.archived_at})}
               className="w-full text-left bg-white rounded-xl shadow-sm border border-neutral-200 p-4 hover:border-indigo-300 transition-colors">
               <div className="font-medium">{g.name}</div>
             </button>
           ))}
-          {arr(games).length===0 && <div className="text-neutral-500 text-sm bg-white rounded-xl shadow-sm border border-neutral-200 p-4">No games yet — create one or join with an invite code above.</div>}
+          {arr(games).filter(g=>!g.archived_at).length===0 && <div className="text-neutral-500 text-sm bg-white rounded-xl shadow-sm border border-neutral-200 p-4">No active games — create one or join with an invite code above.</div>}
         </div>
+
+        {arr(games).filter(g=>g.archived_at).length > 0 && (
+          <>
+            <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mt-6 mb-2 px-1">Archived</div>
+            <div className="space-y-2">
+              {arr(games).filter(g=>g.archived_at).map(g => (
+                <button key={g.id} onClick={()=>setGame({id: g.id, name: g.name, archived_at: g.archived_at})}
+                  className="w-full text-left bg-white rounded-xl shadow-sm border border-neutral-200 p-4 hover:border-neutral-300 transition-colors opacity-75">
+                  <div className="font-medium text-neutral-700">{g.name}</div>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </main>
     </div>
   )
 }
 
 // --- Round Tab ---
-function RoundTab({ gameId }) {
+function RoundTab({ gameId, archived }) {
   const [data, setData] = useState(null)
   const [copied, setCopied] = useState(false)
   const load = () => api(`/api/games/${gameId}/round`).then(setData).catch(()=>setData(null))
@@ -345,7 +369,7 @@ function RoundTab({ gameId }) {
           ))}
           {arr(data.pairings).length === 0 && <div className="text-sm text-neutral-500">No pairings yet — add 3+ members.</div>}
         </div>
-        {data.question && arr(data.pairings).length > 0 && (
+        {data.question && arr(data.pairings).length > 0 && !archived && (
           <button onClick={complete} className="mt-4 w-full sm:w-auto px-4 py-2.5 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700">Mark round complete</button>
         )}
       </div>
@@ -354,7 +378,7 @@ function RoundTab({ gameId }) {
 }
 
 // --- Questions Tab ---
-function QuestionsTab({ gameId }) {
+function QuestionsTab({ gameId, archived }) {
   const [status, setStatus] = useState('upcoming')
   const [qs, setQs] = useState([])
   const [newText, setNewText] = useState('')
@@ -564,7 +588,7 @@ function QuestionsTab({ gameId }) {
           <span className="ml-auto text-xs text-neutral-500">{qs.length}</span>
         </div>
 
-        {status === 'upcoming' && (
+        {status === 'upcoming' && !archived && (
           <>
             <div className="flex gap-2 mb-3">
               <input value={newText} onChange={e=>setNewText(e.target.value)} placeholder="Add a question…"
@@ -628,7 +652,7 @@ function QuestionsTab({ gameId }) {
               <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-8 text-center">
                 <div className="text-3xl mb-2">📝</div>
                 <div className="text-neutral-700 font-medium mb-1">No {status} questions yet</div>
-                {status === 'upcoming' && (
+                {status === 'upcoming' && !archived && (
                   usedCount > 0 ? (
                     <div className="space-y-2">
                       <div className="text-sm text-neutral-500">{usedCount} question{usedCount===1?'':'s'} in used pool</div>
@@ -663,7 +687,7 @@ function QuestionsTab({ gameId }) {
 }
 
 // --- Members Tab ---
-function MembersTab({ gameId }) {
+function MembersTab({ gameId, archived }) {
   const [members, setMembers] = useState([])
   const [showDeleted, setShowDeleted] = useState(false)
   const [name, setName] = useState('')
@@ -711,7 +735,7 @@ function MembersTab({ gameId }) {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5">
+{!archived && <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5">
         <div className="font-semibold mb-3 text-neutral-900">Add member</div>
         <div className="flex flex-col sm:flex-row gap-2">
           <input value={name} onChange={e=>setName(e.target.value)} placeholder="Character name"
@@ -721,7 +745,7 @@ function MembersTab({ gameId }) {
           <button onClick={addMember} className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">Add</button>
         </div>
         <div className="text-xs text-neutral-500 mt-2">Leave Discord ID blank for an unclaimed character slot. Numeric snowflake only (17–20 digits).</div>
-      </div>
+      </div>}
 
       <div className="bg-white rounded-xl shadow-sm border border-neutral-200 divide-y divide-neutral-100">
         {active.map(m => (
@@ -741,11 +765,11 @@ function MembersTab({ gameId }) {
                   <span className="font-medium text-neutral-900">{m.name}</span>
                   {m.discord_id ? <span className="text-xs text-emerald-700 ml-2">✓ claimed</span> : <span className="text-xs text-neutral-500 ml-2">unclaimed</span>}
                 </div>
-                <div className="flex gap-4 text-xs text-neutral-500">
+                {!archived && <div className="flex gap-4 text-xs text-neutral-500">
                   <button onClick={()=>{setEditing(m.id); setEditName(m.name); setEditDiscord(m.discord_id||'')}} className="hover:text-neutral-900 py-1">Edit</button>
                   {m.discord_id && <button onClick={()=>unclaim(m)} className="hover:text-neutral-900 py-1">Unclaim</button>}
                   <button onClick={()=>delMember(m)} className="hover:text-red-600 py-1">Delete</button>
-                </div>
+                </div>}
               </div>
             )}
           </div>

@@ -71,6 +71,7 @@ def get_game(game_id: int, db: Session = Depends(get_db), user: models.DiscordUs
 @router.patch("/api/games/{game_id}")
 def rename_game(game_id: int, payload: dict, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_game_admin(game_id, user.discord_id, db)
+    require_game_writable(game_id, db)
     game = db.query(models.Game).filter(models.Game.id == game_id).first()
     name = payload.get("name")
     if name:
@@ -102,6 +103,7 @@ def list_members(game_id: int, include_deleted: bool = False, db: Session = Depe
 @router.post("/api/games/{game_id}/members")
 def create_member(game_id: int, payload: schemas.MemberCreate, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
+    require_game_writable(game_id, db)
     if payload.discord_id:
         validate_discord_id(payload.discord_id)
     m = models.GameMember(game_id=game_id, name=payload.name, discord_id=payload.discord_id)
@@ -118,6 +120,7 @@ def create_member(game_id: int, payload: schemas.MemberCreate, db: Session = Dep
 @router.patch("/api/games/{game_id}/members/{member_id}")
 def patch_member(game_id: int, member_id: int, payload: schemas.MemberPatch, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
+    require_game_writable(game_id, db)
     m = db.query(models.GameMember).filter(models.GameMember.id == member_id, models.GameMember.game_id == game_id).first()
     if not m:
         raise HTTPException(404)
@@ -138,6 +141,7 @@ def patch_member(game_id: int, member_id: int, payload: schemas.MemberPatch, db:
 @router.delete("/api/games/{game_id}/members/{member_id}")
 def delete_member(game_id: int, member_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
+    require_game_writable(game_id, db)
     m = db.query(models.GameMember).filter(models.GameMember.id == member_id, models.GameMember.game_id == game_id).first()
     if not m:
         raise HTTPException(404)
@@ -149,6 +153,7 @@ def delete_member(game_id: int, member_id: int, db: Session = Depends(get_db), u
 @router.post("/api/games/{game_id}/members/{member_id}/restore")
 def restore_member(game_id: int, member_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
+    require_game_writable(game_id, db)
     m = db.query(models.GameMember).filter(models.GameMember.id == member_id, models.GameMember.game_id == game_id).first()
     if not m:
         raise HTTPException(404)
@@ -175,6 +180,7 @@ def unclaimed_members(game_id: int, db: Session = Depends(get_db), user: models.
 @router.post("/api/games/{game_id}/members/claim")
 def claim_member(game_id: int, payload: schemas.ClaimRequest, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
+    require_game_writable(game_id, db)
     if bool(payload.member_id) == bool(payload.name):
         raise HTTPException(400, "provide member_id XOR name")
     if payload.member_id:
@@ -240,6 +246,7 @@ def list_questions(game_id: int, status: str = "upcoming", db: Session = Depends
 @router.post("/api/games/{game_id}/questions")
 def create_question(game_id: int, payload: schemas.QuestionCreate, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
+    require_game_writable(game_id, db)
     max_sort = db.query(models.ConnQuestion.sort_order).filter(models.ConnQuestion.game_id == game_id, models.ConnQuestion.status == "upcoming").order_by(models.ConnQuestion.sort_order.desc()).first()
     sort_order = (max_sort[0] + 1) if max_sort else 0
     tag = classify_sentiment(payload.text)
@@ -252,6 +259,7 @@ def create_question(game_id: int, payload: schemas.QuestionCreate, db: Session =
 @router.patch("/api/games/{game_id}/questions/{qid}")
 def patch_question(game_id: int, qid: int, payload: schemas.QuestionPatch, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
+    require_game_writable(game_id, db)
     q = db.query(models.ConnQuestion).filter(models.ConnQuestion.id == qid, models.ConnQuestion.game_id == game_id).first()
     if not q:
         raise HTTPException(404)
@@ -310,6 +318,7 @@ def question_history(game_id: int, qid: int, db: Session = Depends(get_db), user
 @router.post("/api/games/{game_id}/questions/{qid}/graveyard")
 def graveyard_question(game_id: int, qid: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
+    require_game_writable(game_id, db)
     q = db.query(models.ConnQuestion).filter(models.ConnQuestion.id == qid, models.ConnQuestion.game_id == game_id).first()
     if q:
         q.status = "graveyard"
@@ -319,6 +328,7 @@ def graveyard_question(game_id: int, qid: int, db: Session = Depends(get_db), us
 @router.post("/api/games/{game_id}/questions/{qid}/restore")
 def restore_question(game_id: int, qid: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
+    require_game_writable(game_id, db)
     q = db.query(models.ConnQuestion).filter(models.ConnQuestion.id == qid, models.ConnQuestion.game_id == game_id).first()
     if not q:
         raise HTTPException(404)
@@ -333,6 +343,7 @@ def restore_question(game_id: int, qid: int, db: Session = Depends(get_db), user
 @router.delete("/api/games/{game_id}/questions/{qid}")
 def delete_question(game_id: int, qid: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
+    require_game_writable(game_id, db)
     q = db.query(models.ConnQuestion).filter(models.ConnQuestion.id == qid, models.ConnQuestion.game_id == game_id).first()
     if q:
         if q.status != "graveyard":
@@ -344,6 +355,7 @@ def delete_question(game_id: int, qid: int, db: Session = Depends(get_db), user:
 @router.post("/api/games/{game_id}/questions/reorder")
 def reorder_questions(game_id: int, payload: schemas.ReorderRequest, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
+    require_game_writable(game_id, db)
     for i, qid in enumerate(payload.question_ids):
         db.query(models.ConnQuestion).filter(models.ConnQuestion.id == qid, models.ConnQuestion.game_id == game_id).update({"sort_order": i})
     db.commit()
@@ -353,6 +365,7 @@ def reorder_questions(game_id: int, payload: schemas.ReorderRequest, db: Session
 @router.post("/api/games/{game_id}/questions/recycle")
 def recycle_questions(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
+    require_game_writable(game_id, db)
     # find max sort_order among existing upcoming questions
     max_sort = db.query(models.ConnQuestion.sort_order).filter(
         models.ConnQuestion.game_id == game_id,
@@ -375,6 +388,7 @@ def recycle_questions(game_id: int, db: Session = Depends(get_db), user: models.
 @router.post("/api/games/{game_id}/questions/seed")
 def seed_questions(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
+    require_game_writable(game_id, db)
     from ..question_bank import STARTER_QUESTIONS
     # append after existing upcoming questions
     max_sort = db.query(models.ConnQuestion.sort_order).filter(
@@ -407,6 +421,7 @@ def seed_questions(game_id: int, db: Session = Depends(get_db), user: models.Dis
 @router.post("/api/games/{game_id}/questions/import")
 def import_questions(game_id: int, payload: schemas.QuestionImport, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
+    require_game_writable(game_id, db)
     max_sort = db.query(models.ConnQuestion.sort_order).filter(
         models.ConnQuestion.game_id == game_id,
         models.ConnQuestion.status == "upcoming"
@@ -518,6 +533,7 @@ def get_round(game_id: int, db: Session = Depends(get_db), user: models.DiscordU
 
 @router.post("/api/games/{game_id}/round/complete")
 def complete_round(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
+    require_game_writable(game_id, db)
     require_membership(game_id, user.discord_id, db)
     state = db.query(models.ConnState).filter(models.ConnState.game_id == game_id).first()
     if not state:
@@ -577,6 +593,13 @@ def require_game_admin(game_id: int, discord_id: str, db: Session):
     return mem
 
 
+def require_game_writable(game_id: int, db: Session):
+    game = db.query(models.Game).filter(models.Game.id == game_id).first()
+    if game and game.archived_at is not None:
+        raise HTTPException(403, "game is archived")
+    return game
+
+
 @router.post("/api/games/join")
 def join_game(payload: schemas.JoinRequest, request: Request, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     # rate limiting enforced in middleware
@@ -586,6 +609,7 @@ def join_game(payload: schemas.JoinRequest, request: Request, db: Session = Depe
     if not invite or invite.expires_at < now:
         raise HTTPException(403, "invalid or expired invite")
     game_id = invite.game_id
+    require_game_writable(game_id, db)
     # grant membership if not already
     existing = db.query(models.GameMembership).filter(models.GameMembership.game_id == game_id, models.GameMembership.discord_id == user.discord_id).first()
     if not existing:
@@ -612,6 +636,7 @@ def join_game(payload: schemas.JoinRequest, request: Request, db: Session = Depe
 @router.post("/api/games/{game_id}/invites")
 def create_invite(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_game_admin(game_id, user.discord_id, db)
+    require_game_writable(game_id, db)
     token = secrets.token_urlsafe(12)
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     now = datetime.utcnow()
@@ -651,6 +676,7 @@ def list_invites(game_id: int, db: Session = Depends(get_db), user: models.Disco
 @router.delete("/api/games/{game_id}/invites/{invite_id}")
 def revoke_invite(game_id: int, invite_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_game_admin(game_id, user.discord_id, db)
+    require_game_writable(game_id, db)
     inv = db.query(models.GameInvite).filter(models.GameInvite.id == invite_id, models.GameInvite.game_id == game_id).first()
     if not inv:
         raise HTTPException(404)
@@ -689,6 +715,7 @@ def list_admins(game_id: int, db: Session = Depends(get_db), user: models.Discor
 @router.delete("/api/games/{game_id}/admins/{discord_id}")
 def revoke_admin(game_id: int, discord_id: str, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_game_admin(game_id, user.discord_id, db)
+    require_game_writable(game_id, db)
     if discord_id == user.discord_id:
         raise HTTPException(400, "cannot revoke yourself")
     mem = db.query(models.GameMembership).filter(models.GameMembership.game_id == game_id, models.GameMembership.discord_id == discord_id).first()
