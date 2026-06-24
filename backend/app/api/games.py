@@ -333,6 +333,8 @@ def delete_question(game_id: int, qid: int, db: Session = Depends(get_db), user:
     require_membership(game_id, user.discord_id, db)
     q = db.query(models.ConnQuestion).filter(models.ConnQuestion.id == qid, models.ConnQuestion.game_id == game_id).first()
     if q:
+        if q.status != "graveyard":
+            raise HTTPException(400, "Question must be archived before permanent deletion")
         db.delete(q)
         db.commit()
     return {"ok": True}
