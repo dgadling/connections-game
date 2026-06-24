@@ -150,7 +150,7 @@ function GameList({ user, games, setGame, onRefresh }) {
     if (!name.trim()) return
     const g = await api('/api/games', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: name.trim()})})
     setName(''); onRefresh()
-    setGame({game_id: g.id, slug: g.slug, name: g.name, role: 'owner'})
+    setGame({game_id: g.id ?? g.game_id, slug: g.slug, name: g.name, role: 'owner'})
   }
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -169,13 +169,15 @@ function GameList({ user, games, setGame, onRefresh }) {
           </div>
         </div>
         <div className="space-y-2">
-          {arr(games).map(g => (
-            <button key={g.id} onClick={()=>setGame({game_id: g.id, slug: g.slug, name: g.name, role: g.role})}
+          {arr(games).map(g => {
+            const gid = g.game_id ?? g.id
+            return (
+            <button key={gid} onClick={()=>setGame({game_id: gid, slug: g.slug, name: g.name, role: g.role})}
               className="w-full text-left bg-white rounded-xl shadow-sm border border-neutral-200 p-4 hover:border-indigo-300 transition-colors">
               <div className="font-medium">{g.name}</div>
               <div className="text-xs text-neutral-500 mt-0.5">{g.role === 'owner' ? 'Owner' : 'Admin'} · /{g.slug}</div>
             </button>
-          ))}
+          )})}
           {arr(games).length===0 && <div className="text-neutral-500 text-sm bg-white rounded-xl shadow-sm border border-neutral-200 p-4">No games yet — create one above.</div>}
         </div>
       </main>
