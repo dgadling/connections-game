@@ -28,4 +28,5 @@ ENV PYTHONPATH=/app/backend
 WORKDIR /app/backend
 # run migrations then start server – workers=1 required for in-app rate limiter
 # litestream replicates /data/connections.db → GCS, restore on cold start
-CMD sh -c "mkdir -p /data && litestream restore -if-replica-exists -if-db-not-exists -config /etc/litestream.yml /data/connections.db && alembic -c alembic.ini upgrade head && exec litestream replicate -exec \"uvicorn app.main:app --host 0.0.0.0 --port \${PORT:-8080} --workers 1\" -config /etc/litestream.yml"
+# litestream.yml is at /etc/litestream.yml (default config path)
+CMD sh -c "mkdir -p /data && litestream restore -if-replica-exists /data/connections.db || true && alembic -c alembic.ini upgrade head && exec litestream replicate -exec \"uvicorn app.main:app --host 0.0.0.0 --port \${PORT:-8080} --workers 1\""
