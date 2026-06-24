@@ -83,6 +83,13 @@ export default function App() {
     }).catch(()=>{})
   }, [game, user])
 
+  const isOwner = game?.role === 'owner'
+
+  // bounce off admin tab if not owner
+  useEffect(() => {
+    if (tab === 'admin' && !isOwner) setTab('round')
+  }, [tab, isOwner])
+
   if (!user) return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-50">
       <div className="text-center">
@@ -99,13 +106,6 @@ export default function App() {
       </div>
     </div>
   )
-
-  const isOwner = game?.role === 'owner'
-
-  // bounce off admin tab if not owner
-  useEffect(() => {
-    if (tab === 'admin' && !isOwner) setTab('round')
-  }, [tab, isOwner])
 
   if (!game) return <GameList user={user} games={games} setGame={setGame} onRefresh={loadGames} />
 
