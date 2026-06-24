@@ -19,13 +19,15 @@ if [ -n "$api_changed" ]; then
   fi
 fi
 
-# backend: ruff
+# backend: venv check + ruff + pytest
+if [ ! -x backend/.venv/bin/python ]; then
+  echo "❌ backend/.venv missing – run: cd backend && python3 -m venv .venv && .venv/bin/pip install -r ../requirements.txt -r requirements-test.txt"; exit 1
+fi
 echo "  backend: ruff"
-(cd backend && python3 -m ruff check . 2>&1) || { echo "❌ ruff failed"; exit 1; }
+(cd backend && .venv/bin/python -m ruff check . 2>&1) || { echo "❌ ruff failed"; exit 1; }
 
-# backend: pytest
 echo "  backend: pytest"
-(cd backend && python3 -m pytest -q -W ignore) || { echo "❌ pytest failed"; exit 1; }
+(cd backend && .venv/bin/python -m pytest -q -W ignore) || { echo "❌ pytest failed"; exit 1; }
 
 # frontend: eslint
 if [ -d frontend/node_modules ]; then
