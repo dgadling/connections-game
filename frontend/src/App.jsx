@@ -65,7 +65,7 @@ export default function App() {
   const loadGames = () => {
     if (user) api('/api/games').then(d => setGames(arr(d))).catch(()=>setGames([]))
   }
-  useEffect(loadGames, [user])
+  useEffect(() => { loadGames() }, [user])
 
   // check claim status when entering a game
   useEffect(() => {
@@ -676,3 +676,7 @@ function AdminTab({ gameId, game, onGameUpdate }) {
     </div>
   )
 }
+
+// Test exports – used by App.test.jsx regression test for useEffect cleanup crash
+// These are tree-shaken out of production builds (not imported by main.jsx)
+export { QuestionsTab, MembersTab, RoundTab }
