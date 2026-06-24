@@ -294,9 +294,36 @@ function RoundTab({ gameId, gameName }) {
   const [data, setData] = useState(null)
   const [completing, setCompleting] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [futureRounds, setFutureRounds] = useState([])
+  const [futureCount, setFutureCount] = useState(2)
 
   const load = () => api(`/api/games/${gameId}/round`).then(d => setData(d || {})).catch(()=>setData({pairings:[]}))
   useEffect(() => { load() }, [gameId])
+
+  const roundNum = data?.round_num || 1
+
+  // load future pairings
+  useEffect(() => {
+    if (!roundNum) return
+    let cancelled = false
+    const loadFuture = async () => {
+      const results = []
+      for (let n = 1; n <= futureCount; n++) {
+        const r = roundNum + n
+        try {
+          const fr = await api(`/api/games/${gameId}/pairings?round=${r}`)
+          if (arr(fr.pairings).length > 0) {
+            results.push({ round_num: r, pairings: fr.pairings })
+          } else {
+            break
+          }
+        } catch { break }
+      }
+      if (!cancelled) setFutureRounds(results)
+    }
+    loadFuture()
+    return () => { cancelled = true }
+  }, [gameId, roundNum, futureCount])
 
   if (!data) return <div>Loading…</div>
   const pairings = arr(data.pairings)
@@ -325,6 +352,7 @@ function RoundTab({ gameId, gameName }) {
     try {
       await api(`/api/games/${gameId}/round/complete`, {method:'POST'})
       await load()
+      setFutureCount(2)
     } catch(e) {
       alert('Complete failed: ' + e.message)
     } finally { setCompleting(false) }
@@ -335,7 +363,7 @@ function RoundTab({ gameId, gameName }) {
   return (
     <div>
       <div className="mb-3 flex justify-between items-center flex-wrap gap-2">
-        <div className="text-sm text-neutral-600">{dateStr}</div>
+        <div className="text-sm text-neutral-600">Round {roundNum} – {dateStr}</div>
         <button onClick={copyDiscord} className="text-sm px-3 py-1 border rounded hover:bg-neutral-50">{copied ? 'Copied!' : 'Copy to Discord'}</button>
       </div>
       <div className="mb-4 p-3 bg-neutral-50 rounded text-[15px]">{data.question?.text || 'No question set – add questions in the Questions tab.'}</div>
@@ -356,6 +384,27 @@ function RoundTab({ gameId, gameName }) {
       <button onClick={complete} disabled={completing || pairings.length===0} className="mt-4 px-4 py-1.5 bg-indigo-600 text-white rounded text-sm disabled:opacity-50">
         {completing ? '…' : 'Mark Complete'}
       </button>
+
+      <div className="mt-8 pt-6 border-t">
+        <div className="text-sm font-semibold mb-2 text-neutral-700">Future Rounds</div>
+        {futureRounds.length === 0 ? (
+          <div className="text-sm text-neutral-500">No more rounds scheduled – add members to generate more pairings.</div>
+        ) : (
+          <div className="space-y-4">
+            {futureRounds.map(fr => (
+              <div key={fr.round_num} className="text-sm text-neutral-500">
+                <div className="font-medium text-neutral-600 mb-1">Round {fr.round_num}</div>
+                <ul className="space-y-0.5 text-xs">
+                  {fr.pairings.map(p => (
+                    <li key={p.asker_id}>{p.asker_name} → {p.target_name}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+            <button onClick={()=>setFutureCount(c => c + 3)} className="text-xs text-neutral-600 hover:text-neutral-900 underline">Show more</button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -612,16 +661,50 @@ function MembersTab({ gameId }) {
 
 function HistoryTab({ gameId }) {
   const [rows, setRows] = useState([])
+  const [copiedRound, setCopiedRound] = useState(null)
   useEffect(()=>{ api(`/api/games/${gameId}/history`).then(d => setRows(arr(d))).catch(()=>setRows([])) }, [gameId])
   const rowList = arr(rows)
+
+  const copyDiscord = (r) => {
+    const dateStr = r.played_at ? new Date(r.played_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
+    const lines = [
+      `🤝 Connections — Round ${r.round_num}${dateStr ? ' — ' + dateStr : ''}`,
+      '',
+      `> ${r.question_text || '(no question)'}`,
+      '',
+    ]
+    arr(r.pairings).forEach(p => {
+      const asker = p.asker_discord_id ? `<@${p.asker_discord_id}>` : p.asker_name
+      const target = p.target_discord_id ? `<@${p.target_discord_id}>` : p.target_name
+      lines.push(`• ${asker} answers about ${target}`)
+    })
+    navigator.clipboard.writeText(lines.join('\n'))
+    setCopiedRound(r.round_num)
+    setTimeout(()=>setCopiedRound(null), 1500)
+  }
+
   return (
     <div>
       <div className="text-sm text-neutral-600 mb-2">{rowList.length} rounds played</div>
-      <ul className="space-y-2 text-sm">
+      <ul className="space-y-3 text-sm">
         {rowList.map(r => (
-          <li key={r.round_num} className="border rounded p-2">
-            <div className="font-medium">Round {r.round_num} – {r.played_at ? new Date(r.played_at).toLocaleDateString() : ''}</div>
-            <div className="text-neutral-700">{r.question_text || <em>question deleted</em>}</div>
+          <li key={r.round_num} className="border rounded p-3">
+            <div className="flex justify-between items-start mb-2">
+              <div className="font-medium">Round {r.round_num} – {r.played_at ? new Date(r.played_at).toLocaleDateString() : ''}</div>
+              <button onClick={()=>copyDiscord(r)} className="text-xs px-2 py-0.5 border rounded hover:bg-neutral-50">{copiedRound === r.round_num ? 'Copied!' : 'Copy to Discord'}</button>
+            </div>
+            <div className="mb-2 flex items-start gap-2">
+              {r.question_tag && <span className={`text-[11px] px-1.5 py-0.5 rounded ${TAG_COLORS[r.question_tag]||'bg-neutral-100'}`}>{r.question_tag}</span>}
+              <span className="text-neutral-700 flex-1">{r.question_text || <em>question deleted</em>}</span>
+            </div>
+            {arr(r.pairings).length > 0 && (
+              <ul className="text-xs text-neutral-600 space-y-0.5 mb-2">
+                {arr(r.pairings).map(p => (
+                  <li key={p.asker_id}>{p.asker_name} → {p.target_name}</li>
+                ))}
+              </ul>
+            )}
+            {r.played_by_username && <div className="text-xs text-neutral-500">Completed by {r.played_by_username}</div>}
           </li>
         ))}
         {rowList.length===0 && <li className="text-neutral-500">No rounds played yet.</li>}
