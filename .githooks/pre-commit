@@ -3,6 +3,22 @@
 set -e
 echo "▶ pre-commit: ruff + pytest + eslint + frontend-test"
 
+# --- TDD enforcement: API changes must include test changes ---
+# If any backend/app/api/*.py is staged, at least one backend/tests/test_*.py must also be staged
+api_changed=$(git diff --cached --name-only | grep -E '^backend/app/api/.*\.py$' || true)
+if [ -n "$api_changed" ]; then
+  tests_changed=$(git diff --cached --name-only | grep -E '^backend/tests/test_.*\.py$' || true)
+  if [ -z "$tests_changed" ]; then
+    echo "❌ TDD enforcement: backend API files changed but no test files staged"
+    echo "Changed API files:"
+    echo "$api_changed" | sed 's/^/  /'
+    echo ""
+    echo "Add regression tests for your changes, then commit again."
+    echo "To bypass (emergency only): git commit --no-verify"
+    exit 1
+  fi
+fi
+
 # backend: ruff
 echo "  backend: ruff"
 (cd backend && python3 -m ruff check . 2>&1) || { echo "❌ ruff failed"; exit 1; }

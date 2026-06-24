@@ -9,7 +9,6 @@ Result: 404, unhandled rejection, "Join game" button did nothing.
 Also verifies claim endpoint behavior for future frontend use
 (Members tab Edit can claim via PATCH, but direct claim endpoint still exists).
 """
-import pytest
 
 
 def test_claim_member_by_id(client, test_user, game, db_session):
@@ -54,7 +53,7 @@ def test_claim_already_claimed_fails(client, test_user, game, db_session):
     db_session.commit()
     db_session.refresh(m)
 
-    # try claiming alice again – already claimed
+    # try claiming alice again - already claimed
     r = client.post(f"/api/games/{game.id}/members/claim", json={"member_id": m.id})
     assert r.status_code == 400
 
