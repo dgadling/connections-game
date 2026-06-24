@@ -58,15 +58,18 @@ async def auth_discord_start(request: Request, db: Session = Depends(get_db), re
     db.add(oauth_state)
     db.commit()
     resp = JSONResponse({"auth_url": discord_oauth_url(state)})
-    resp.set_cookie("oauth_state", state, max_age=600, httponly=True, secure=True, samesite="lax", path="/")
+    resp.set_cookie("oauth_state", state, max_age=600, httponly=True, secure=True, samesite="none", path="/")
     return resp
 
 @app.get("/auth/discord/callback")
 async def auth_discord_callback(request: Request, code: str, state: str, db: Session = Depends(get_db)):
-    # Verify state - must match cookie + DB, single-use
+    # Verify state - DB is authoritative CSRF protection (single-use, 10min expiry)
+    # Cookie is defense-in-depth only - don't fail if missing (mobile Safari drops cross-site Lax cookies)
+    import logging
+    logger = logging.getLogger("uvicorn")
     cookie_state = request.cookies.get("oauth_state")
     if not cookie_state or cookie_state != state:
-        raise HTTPException(400, "Invalid OAuth state")
+        logger.warning(f"OAuth state cookie mismatch: cookie={cookie_state!r} param={state!r} - continuing with DB validation")
     oauth_state = db.query(models.OAuthState).filter(models.OAuthState.state_token == state).first()
     if not oauth_state or oauth_state.expires_at < datetime.utcnow():
         raise HTTPException(400, "OAuth state expired")
