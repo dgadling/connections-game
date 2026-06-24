@@ -389,18 +389,29 @@ function QuestionsTab({ gameId }) {
   const restore = async (q) => { await api(`/api/games/${gameId}/questions/${q.id}/restore`, {method:'POST'}); load() }
   const del = async (q) => { if (!confirm('Delete permanently?')) return; await api(`/api/games/${gameId}/questions/${q.id}`, {method:'DELETE'}); load() }
 
-  const moveQuestion = async (qid, delta) => {
-    const idx = qs.findIndex(q => q.id === qid)
-    if (idx < 0) return
-    const newIdx = idx + delta
-    if (newIdx < 0 || newIdx >= qs.length) return
-    const newQs = [...qs]
-    const [item] = newQs.splice(idx, 1)
-    newQs.splice(newIdx, 0, item)
+  const [dragIdx, setDragIdx] = useState(null)
+  const [dragOverIdx, setDragOverIdx] = useState(null)
+
+  const reorderQuestions = async (newQs) => {
     const question_ids = newQs.map(q => q.id)
     await api(`/api/games/${gameId}/questions/reorder`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({question_ids})})
     load()
   }
+
+  const handleDragStart = (idx) => { setDragIdx(idx) }
+  const handleDragOver = (e, idx) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== idx) setDragOverIdx(idx) }
+  const handleDragLeave = () => { setDragOverIdx(null) }
+  const handleDrop = async (e, dropIdx) => {
+    e.preventDefault()
+    if (dragIdx === null || dragIdx === dropIdx) { setDragIdx(null); setDragOverIdx(null); return }
+    const newQs = [...qs]
+    const [item] = newQs.splice(dragIdx, 1)
+    newQs.splice(dropIdx, 0, item)
+    setDragIdx(null); setDragOverIdx(null)
+    setQs(newQs)
+    await reorderQuestions(newQs)
+  }
+  const handleDragEnd = () => { setDragIdx(null); setDragOverIdx(null) }
 
   const shuffleQuestions = async () => {
     // Balanced shuffle: group by tag, round-robin interleave to prevent tag repetition
@@ -536,8 +547,18 @@ function QuestionsTab({ gameId }) {
 
       {/* question list */}
       <div className="space-y-1.5">
-        {qs.map((q, idx) => (
-          <div key={q.id} className="bg-white rounded-lg shadow-sm border border-neutral-200 px-3 py-2.5">
+        {qs.map((q, idx) => {
+          const isDragging = dragIdx === idx
+          const isDragOver = dragOverIdx === idx && dragIdx !== null && dragIdx !== idx
+          return (
+          <div key={q.id}
+            draggable={status==='upcoming' && editing !== q.id}
+            onDragStart={()=> status==='upcoming' && handleDragStart(idx)}
+            onDragOver={(e)=> status==='upcoming' && handleDragOver(e, idx)}
+            onDragLeave={()=> status==='upcoming' && handleDragLeave()}
+            onDrop={(e)=> status==='upcoming' && handleDrop(e, idx)}
+            onDragEnd={handleDragEnd}
+            className={`bg-white rounded-lg shadow-sm border border-neutral-200 px-3 py-2.5 transition-all ${isDragging ? 'opacity-40' : ''} ${isDragOver ? 'ring-2 ring-indigo-400 ring-offset-1' : ''} ${status==='upcoming' ? 'cursor-grab active:cursor-grabbing' : ''}`}>
             {editing === q.id ? (
               <div className="flex flex-col sm:flex-row gap-2">
                 <input value={editText} onChange={e=>setEditText(e.target.value)} maxLength={500} className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" autoFocus />
@@ -547,22 +568,17 @@ function QuestionsTab({ gameId }) {
                 </div>
               </div>
             ) : (
-              <>
-                <div className="flex items-start gap-1.5 flex-wrap">
-                  <button onClick={()=>cycleTag(q)} title="Click to change tag"
-                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${TAG_COLORS[q.tag]||'bg-neutral-100 text-neutral-700'}`}>
-                    {q.tag}
-                  </button>
-                  {!q.tag_auto && <button onClick={()=>revertTag(q)} title="Revert to auto" className="text-[10px] text-neutral-400 hover:text-neutral-600">↺</button>}
-                  <span className="flex-1 text-[14px] leading-snug text-neutral-900 min-w-[120px]">{q.text}</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-neutral-500 mt-1.5">
-                  {status==='upcoming' && (
-                    <span className="flex gap-0.5 mr-1">
-                      <button onClick={()=>moveQuestion(q.id, -1)} disabled={idx===0} className="w-5 h-5 flex items-center justify-center rounded hover:bg-neutral-100 disabled:opacity-30" title="Move up">↑</button>
-                      <button onClick={()=>moveQuestion(q.id, 1)} disabled={idx===qs.length-1} className="w-5 h-5 flex items-center justify-center rounded hover:bg-neutral-100 disabled:opacity-30" title="Move down">↓</button>
-                    </span>
-                  )}
+              <div className="flex items-center gap-2">
+                {status==='upcoming' && (
+                  <span className="text-neutral-300 hover:text-neutral-500 shrink-0 cursor-grab select-none text-[14px] leading-none" title="Drag to reorder" draggable={false} onMouseDown={e=>e.stopPropagation()}>⋮⋮</span>
+                )}
+                <button onClick={()=>cycleTag(q)} title="Click to change tag"
+                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${TAG_COLORS[q.tag]||'bg-neutral-100 text-neutral-700'}`}>
+                  {q.tag}
+                </button>
+                {!q.tag_auto && <button onClick={()=>revertTag(q)} title="Revert to auto" className="text-[10px] text-neutral-400 hover:text-neutral-600 shrink-0">↺</button>}
+                <span className="flex-1 text-[14px] leading-snug text-neutral-900 min-w-0">{q.text}</span>
+                <div className="flex items-center gap-3 text-[13px] text-neutral-500 shrink-0 pl-2">
                   <button onClick={()=>{setEditing(q.id); setEditText(q.text)}} className="hover:text-neutral-900" title="Edit">✏️</button>
                   <button onClick={()=>openHistory(q)} className="hover:text-neutral-900" title="History">🕓</button>
                   {status==='upcoming' && <button onClick={()=>graveyard(q)} className="hover:text-neutral-900" title="Graveyard">🗑️</button>}
@@ -571,10 +587,10 @@ function QuestionsTab({ gameId }) {
                     <button onClick={()=>del(q)} className="hover:text-red-600" title="Delete permanently">✕</button>
                   </>}
                 </div>
-              </>
+              </div>
             )}
           </div>
-        ))}
+        )})}
         {qs.length===0 && (
           <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-8 text-center">
             <div className="text-3xl mb-2">📝</div>
