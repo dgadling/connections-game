@@ -436,6 +436,34 @@ def get_round(game_id: int, db: Session = Depends(get_db), user: models.DiscordU
         db.commit()
     round_num = state.current_round
     pairs = db.query(models.ConnPairing).filter(models.ConnPairing.game_id == game_id, models.ConnPairing.round_num == round_num).all()
+    # Auto-generate pairings if missing - cycles through N-1 groups
+    if not pairs:
+        # Get active members
+        members = db.query(models.GameMember).filter(
+            models.GameMember.game_id == game_id,
+            models.GameMember.deleted_at.is_(None)
+        ).order_by(models.GameMember.id).all()
+        member_ids = [m.id for m in members]
+        if len(member_ids) >= 3:
+            from ..pairing import generate_groups
+            groups = generate_groups(member_ids)
+            num_groups = len(groups)
+            if num_groups > 0:
+                group_idx = (round_num - 1) % num_groups
+                pairings = groups[group_idx]
+                for asker_id, target_id in pairings:
+                    db.add(models.ConnPairing(
+                        game_id=game_id,
+                        round_num=round_num,
+                        asker_member_id=asker_id,
+                        target_member_id=target_id
+                    ))
+                db.commit()
+                # Re-query
+                pairs = db.query(models.ConnPairing).filter(
+                    models.ConnPairing.game_id == game_id,
+                    models.ConnPairing.round_num == round_num
+                ).all()
     member_map = {m.id: m for m in db.query(models.GameMember).filter(models.GameMember.game_id == game_id).all()}
     out_pairs = []
     for p in pairs:
