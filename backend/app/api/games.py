@@ -1,10 +1,10 @@
 from __future__ import annotations
 import secrets, hashlib, re
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, Response, Request
+from fastapi import APIRouter, Depends, HTTPException, Response, Request, UploadFile, File
 from sqlalchemy.orm import Session
 from .. import models, schemas
-from ..db import get_db
+from ..db import get_db, engine
 from ..auth import require_user, require_membership
 from ..tagging import classify_sentiment
 from ..pairing import generate_groups
@@ -590,6 +590,69 @@ def backup_game(game_id: int, db: Session = Depends(get_db), user: models.Discor
     today = datetime.utcnow().strftime("%Y-%m-%d")
     headers = {"Content-Disposition": f'attachment; filename="connections-backup-{today}.db"'}
     return StreamingResponse(generate(), media_type="application/octet-stream", headers=headers)
+
+@router.post("/api/games/{game_id}/restore_backup")
+def restore_backup(game_id: int, file: UploadFile = File(...), db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
+    require_owner(game_id, user.discord_id, db)
+    # resolve db_path same way backup does
+    db_path = os.environ.get("CONNECTIONS_DB_PATH", "/data/connections.db")
+    if not os.path.exists(db_path):
+        alt = os.path.join(os.path.dirname(__file__), "..", "..", "connections.db")
+        if os.path.exists(alt):
+            db_path = alt
+    os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
+
+    # write upload to temp, validate
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as tf:
+        tmp_upload = tf.name
+    try:
+        with open(tmp_upload, "wb") as out:
+            while True:
+                chunk = file.file.read(65536)
+                if not chunk:
+                    break
+                out.write(chunk)
+        # validate sqlite header
+        with open(tmp_upload, "rb") as f:
+            header = f.read(16)
+        if not header.startswith(b"SQLite format 3\x00"):
+            raise HTTPException(400, "not a valid SQLite database")
+        # validate schema – can open and has expected tables
+        try:
+            test = sqlite3.connect(f"file:{tmp_upload}?mode=ro", uri=True)
+            cur = test.cursor()
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = {row[0] for row in cur.fetchall()}
+            test.close()
+        except Exception:
+            raise HTTPException(400, "corrupt SQLite file")
+        required = {"alembic_version", "discord_users", "games"}
+        if not required.issubset(tables):
+            raise HTTPException(400, f"missing required tables – got {sorted(tables)[:10]}")
+        # close all pooled connections before swapping file
+        try:
+            db.close()
+        except Exception:
+            pass
+        engine.dispose()
+        # nuke WAL/SHM sidecars so old WAL doesn't corrupt new db
+        for suffix in ("", "-wal", "-shm"):
+            p = db_path + suffix
+            if os.path.exists(p):
+                try:
+                    os.unlink(p)
+                except Exception:
+                    pass
+        # atomic swap
+        os.replace(tmp_upload, db_path)
+        tmp_upload = None
+        return {"ok": True}
+    finally:
+        if tmp_upload and os.path.exists(tmp_upload):
+            try:
+                os.unlink(tmp_upload)
+            except Exception:
+                pass
 
 @router.get("/api/games/{game_id}/history")
 def game_history(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
