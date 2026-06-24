@@ -162,11 +162,28 @@ function GameList({ user, games, setGame, onRefresh }) {
     if (full) setGame(full)
   }
 
-  const joinGame = async () => {
-    if (!inviteToken.trim() || joining) return
+  const extractToken = (input) => {
+    if (!input) return ''
+    const s = input.trim()
+    // try URL ?invite=TOKEN
+    try {
+      const url = new URL(s, window.location.origin)
+      const q = url.searchParams.get('invite')
+      if (q) return q
+    } catch {}
+    // regex fallback
+    const m = s.match(/invite=([A-Za-z0-9_-]+)/)
+    if (m) return m[1]
+    return s
+  }
+
+  const joinGame = async (tokenArg) => {
+    const raw = tokenArg !== undefined ? tokenArg : inviteToken
+    const token = extractToken(raw)
+    if (!token || joining) return
     setJoining(true)
     try {
-      const res = await api('/api/games/join', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({invite_token: inviteToken.trim()})})
+      const res = await api('/api/games/join', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({invite_token: token})})
       setShowJoin(false); setInviteToken('')
       onRefresh()
       // navigate to game
@@ -177,6 +194,20 @@ function GameList({ user, games, setGame, onRefresh }) {
       alert('Join failed: ' + e.message)
     } finally { setJoining(false) }
   }
+
+  // auto-join via ?invite=TOKEN
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const invite = params.get('invite')
+    if (invite && !joining) {
+      params.delete('invite')
+      const newSearch = params.toString()
+      const newUrl = window.location.pathname + (newSearch ? '?' + newSearch : '') + window.location.hash
+      window.history.replaceState({}, '', newUrl)
+      joinGame(invite)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const gameList = arr(games)
   const activeGames = gameList.filter(g=>!g.archived_at)
@@ -201,8 +232,8 @@ function GameList({ user, games, setGame, onRefresh }) {
       )}
       {showJoin && (
         <div className="mb-4 p-3 border rounded bg-neutral-50 flex gap-2">
-          <input value={inviteToken} onChange={e=>setInviteToken(e.target.value)} placeholder="Paste invite token" className="flex-1 px-2 py-1 border rounded text-sm font-mono" />
-          <button onClick={joinGame} disabled={joining} className="px-3 py-1 bg-indigo-600 text-white rounded text-sm disabled:opacity-50">{joining?'…':'Join'}</button>
+          <input value={inviteToken} onChange={e=>setInviteToken(e.target.value)} placeholder="Paste invite link or token" className="flex-1 px-2 py-1 border rounded text-sm font-mono" />
+          <button onClick={()=>joinGame()} disabled={joining} className="px-3 py-1 bg-indigo-600 text-white rounded text-sm disabled:opacity-50">{joining?'…':'Join'}</button>
           <button onClick={()=>setShowJoin(false)} className="px-3 py-1 border rounded text-sm">Cancel</button>
         </div>
       )}
@@ -569,7 +600,7 @@ function HistoryTab({ gameId }) {
 function AdminTab({ gameId, game, onGameUpdate }) {
   const [invites, setInvites] = useState([])
   const [admins, setAdmins] = useState([])
-  const [inviteToken, setInviteToken] = useState('')
+  const [inviteUrl, setInviteUrl] = useState('')
   const [rename, setRename] = useState(game.name)
   const [busy, setBusy] = useState(false)
 
@@ -580,7 +611,8 @@ function AdminTab({ gameId, game, onGameUpdate }) {
 
   const createInvite = async () => {
     const res = await api(`/api/games/${gameId}/invites`, {method:'POST'})
-    setInviteToken(res.invite_token)
+    const url = window.location.origin + '/?invite=' + res.invite_token
+    setInviteUrl(url)
     loadInvites()
   }
   const revokeInvite = async (id) => { await api(`/api/games/${gameId}/invites/${id}`, {method:'DELETE'}); loadInvites() }
@@ -623,12 +655,12 @@ function AdminTab({ gameId, game, onGameUpdate }) {
       <div>
         <div className="font-semibold mb-2">Invite links</div>
         <button onClick={createInvite} className="px-3 py-1 bg-indigo-600 text-white rounded text-sm mb-2">Generate invite</button>
-        {inviteToken && (
+        {inviteUrl && (
           <div className="mb-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs font-mono break-all">
-            {inviteToken}
-            <button onClick={()=>{navigator.clipboard.writeText(inviteToken); alert('Copied')}} className="ml-2 underline">copy</button>
-            <button onClick={()=>setInviteToken('')} className="ml-2 underline">hide</button>
-            <div className="text-neutral-600 font-sans mt-1">Share this token out-of-band. Single-use, expires in 7 days.</div>
+            {inviteUrl}
+            <button onClick={()=>{navigator.clipboard.writeText(inviteUrl); alert('Copied')}} className="ml-2 underline">copy</button>
+            <button onClick={()=>setInviteUrl('')} className="ml-2 underline">hide</button>
+            <div className="text-neutral-600 font-sans mt-1">Share this link – single-use, expires in 7 days.</div>
           </div>
         )}
         <ul className="space-y-1 text-xs">
