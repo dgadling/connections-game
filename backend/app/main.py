@@ -185,7 +185,7 @@ def privacy():
 <p>We store your Discord ID, Discord username, global display name, and avatar hash — public profile data from Discord's <code>identify</code> scope, nothing else.</p>
 <p>Game content (member names, questions, pairing history) is visible only to admins of that specific game. Admins for one game cannot access data from games they are not members of.</p>
 <p>We do not share, sell, or transfer your data to third parties.</p>
-<p>To delete your account data, contact dave@example.com.</p>
+<p>To delete your account data, contact dave@toasterwaffles.com.</p>
 <p><em>Last updated: 2026-06-23</em></p>
 </body></html>
 """)
