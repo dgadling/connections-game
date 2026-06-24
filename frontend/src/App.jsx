@@ -403,10 +403,38 @@ function QuestionsTab({ gameId }) {
   }
 
   const shuffleQuestions = async () => {
-    const shuffled = [...qs]
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    // Balanced shuffle: group by tag, round-robin interleave to prevent tag repetition
+    const shuffleArray = (arr) => {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    };
+    // Group by tag
+    const groups = new Map();
+    qs.forEach(q => {
+      const tag = q.tag || "reflective";
+      if (!groups.has(tag)) groups.set(tag, []);
+      groups.get(tag).push(q);
+    });
+    // Shuffle within each tag group
+    const shuffledGroups = Array.from(groups.entries()).map(([tag, tagQs]) => [tag, shuffleArray(tagQs)]);
+    // Randomize tag order for variety each shuffle
+    const tagOrder = shuffleArray(shuffledGroups.map(([tag]) => tag));
+    const groupMap = new Map(shuffledGroups);
+    const shuffled = [];
+    let added = true;
+    while (added) {
+      added = false;
+      for (const tag of tagOrder) {
+        const arr = groupMap.get(tag);
+        if (arr && arr.length > 0) {
+          shuffled.push(arr.shift());
+          added = true;
+        }
+      }
     }
     const question_ids = shuffled.map(q => q.id)
     await api(`/api/games/${gameId}/questions/reorder`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({question_ids})})
