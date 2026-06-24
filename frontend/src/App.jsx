@@ -102,6 +102,12 @@ export default function App() {
   }
   useEffect(() => { loadGames() }, [user])
 
+  // Refresh games list whenever returning to the GameList view (game becomes null)
+  // Fixes stale archived_at in the games list after archiving/unarchiving
+  useEffect(() => {
+    if (!game && user) loadGames()
+  }, [game, user])
+
   // Auto-join from ?invite=TOKEN in URL
   useEffect(() => {
     if (!user) return
@@ -220,7 +226,7 @@ export default function App() {
           {tab === 'questions' && <QuestionsTab gameId={game.id} archived={!!game.archived_at} />}
           {tab === 'members' && <MembersTab gameId={game.id} archived={!!game.archived_at} />}
           {tab === 'history' && <HistoryTab gameId={game.id} />}
-          {tab === 'admin' && <AdminTab gameId={game.id} game={game} onGameUpdate={g => setGame({...game, ...g})} />}
+          {tab === 'admin' && <AdminTab gameId={game.id} game={game} onGameUpdate={g => setGame({...game, ...g})} onGamesRefresh={loadGames} />}
         </ErrorBoundary>
       </main>
     </div>
@@ -251,6 +257,18 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
       setGame({ id: res.game_id, name: '', archived_at: null })
     } catch (e) {
       setJoinError(e.message || 'Join failed')
+    }
+  }
+  // Fetch fresh game details before navigating – prevents stale archived_at
+  const openGame = async (gameId) => {
+    try {
+      const g = await api(`/api/games/${gameId}`)
+      setGame({ id: g.id, name: g.name, archived_at: g.archived_at })
+    } catch (e) {
+      // Fall back to list data if fetch fails
+      const fallback = arr(games).find(x => x.id === gameId)
+      if (fallback) setGame({ id: fallback.id, name: fallback.name, archived_at: fallback.archived_at })
+      else alert('Failed to open game: ' + e.message)
     }
   }
   return (
@@ -290,7 +308,7 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
         </div>
         <div className="space-y-2">
           {arr(games).filter(g=>!g.archived_at).map(g => (
-            <button key={g.id} onClick={()=>setGame({id: g.id, name: g.name, archived_at: g.archived_at})}
+            <button key={g.id} onClick={()=>openGame(g.id)}
               className="w-full text-left bg-white rounded-xl shadow-sm border border-neutral-200 p-4 hover:border-indigo-300 transition-colors">
               <div className="font-medium">{g.name}</div>
             </button>
@@ -303,7 +321,7 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
             <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mt-6 mb-2 px-1">Archived</div>
             <div className="space-y-2">
               {arr(games).filter(g=>g.archived_at).map(g => (
-                <button key={g.id} onClick={()=>setGame({id: g.id, name: g.name, archived_at: g.archived_at})}
+                <button key={g.id} onClick={()=>openGame(g.id)}
                   className="w-full text-left bg-white rounded-xl shadow-sm border border-neutral-200 p-4 hover:border-neutral-300 transition-colors opacity-75">
                   <div className="font-medium text-neutral-700">{g.name}</div>
                 </button>
@@ -840,7 +858,7 @@ function HistoryTab({ gameId }) {
 }
 
 // --- Admin Tab ---
-function AdminTab({ gameId, game, onGameUpdate }) {
+function AdminTab({ gameId, game, onGameUpdate, onGamesRefresh }) {
   const [invites, setInvites] = useState([])
   const [admins, setAdmins] = useState([])
   const [inviteUrl, setInviteUrl] = useState('')
@@ -863,11 +881,12 @@ function AdminTab({ gameId, game, onGameUpdate }) {
   const doRename = async () => {
     if (!rename.trim() || rename === game.name) return
     await api(`/api/games/${gameId}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: rename.trim()})})
-    onGameUpdate({name: rename.trim()}); alert('Renamed.')
+    onGameUpdate({name: rename.trim()}); if (onGamesRefresh) onGamesRefresh(); alert('Renamed.')
   }
   const doArchive = async (archived) => {
     await api(`/api/games/${gameId}/${archived ? 'archive' : 'unarchive'}`, {method:'POST'})
     onGameUpdate({archived_at: archived ? new Date().toISOString() : null})
+    if (onGamesRefresh) onGamesRefresh()
     alert(archived ? 'Archived.' : 'Unarchived.')
   }
 
