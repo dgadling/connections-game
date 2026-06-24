@@ -1,4 +1,4 @@
 dbs:
   - path: /data/connections.db
     replicas:
-      - url: ${REPLICA_URL:-gcs://connections-game-litestream/db}
+      - url: gcs://connections-game-litestream/db
