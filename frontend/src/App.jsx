@@ -50,7 +50,6 @@ export default function App() {
   const [games, setGames] = useState([])
   const [game, setGame] = useState(null)
   const [tab, setTab] = useState('round')
-  const [claimNeeded, setClaimNeeded] = useState(null)
 
   useEffect(() => { api('/auth/me').then(setUser).catch(()=>setUser(null)) }, [])
 
@@ -58,21 +57,6 @@ export default function App() {
     if (user) api('/api/games').then(d => setGames(arr(d))).catch(()=>setGames([]))
   }
   useEffect(() => { loadGames() }, [user])
-
-  useEffect(() => {
-    if (!game || !user) return
-    api(`/api/games/${game.id}/members`).then(d => {
-      const members = arr(d)
-      const claimed = members.find(m => !m.deleted_at && m.discord_id === user.discord_id)
-      if (!claimed) {
-        api(`/api/games/${game.id}/members/unclaimed`).then(u => {
-          setClaimNeeded({ unclaimed: arr(u) })
-        }).catch(()=> setClaimNeeded(null))
-      } else {
-        setClaimNeeded(null)
-      }
-    }).catch(()=>{})
-  }, [game, user])
 
   const isOwner = game?.role === 'owner'
 
@@ -98,7 +82,6 @@ export default function App() {
   )
 
   if (!game) return <GameList user={user} games={games} setGame={setGame} onRefresh={loadGames} />
-  if (claimNeeded) return <ClaimGate gameId={game.id} gameName={game.name} unclaimed={claimNeeded.unclaimed} onDone={()=>setClaimNeeded(null)} />
 
   const tabs = [
     ['round','Round', '🎲'],
@@ -179,38 +162,6 @@ function GameList({ user, games, setGame, onRefresh }) {
           {arr(games).length===0 && <div className="text-neutral-500 text-sm bg-white rounded-xl shadow-sm border border-neutral-200 p-4">No games yet — create one above.</div>}
         </div>
       </main>
-    </div>
-  )
-}
-
-function ClaimGate({ gameId, gameName, unclaimed, onDone }) {
-  const [picked, setPicked] = useState('')
-  const [name, setName] = useState('')
-  const submit = async () => {
-    const body = picked ? {member_id: parseInt(picked)} : {name: name.trim()}
-    if (!picked && !body.name) return
-    await api(`/api/games/${gameId}/claim`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
-    onDone()
-  }
-  return (
-    <div className="min-h-screen bg-neutral-50 flex items-center justify-center px-4">
-      <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-5 max-w-md w-full">
-        <div className="font-bold text-lg mb-1">Join {gameName}</div>
-        <div className="text-sm text-neutral-600 mb-4">Claim an existing character, or create a new one.</div>
-        {arr(unclaimed).length > 0 && (
-          <div className="mb-3">
-            <div className="text-xs font-medium text-neutral-600 mb-1.5">Claim a character</div>
-            <select value={picked} onChange={e=>setPicked(e.target.value)} className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm">
-              <option value="">— pick one —</option>
-              {arr(unclaimed).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-            </select>
-          </div>
-        )}
-        <div className="text-xs text-neutral-500 my-2 text-center">or</div>
-        <input value={name} onChange={e=>setName(e.target.value)} placeholder="New character name" disabled={!!picked}
-          className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm mb-3 disabled:bg-neutral-50" />
-        <button onClick={submit} className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700">Join game</button>
-      </div>
     </div>
   )
 }
