@@ -178,13 +178,13 @@ export default function App() {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 pt-3">
-        <nav className="flex gap-0.5 sm:gap-2 text-[11px] sm:text-sm overflow-x-hidden sm:overflow-visible pb-0 border-b border-neutral-200">
+        <nav className="flex gap-0.5 sm:gap-2 text-[11px] sm:text-sm overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pb-0 border-b border-neutral-200">
           {tabs.map(([t,label,icon]) => (
             <button key={t} onClick={()=>setTab(t)}
-              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 sm:py-2.5 whitespace-nowrap rounded-t-lg border-b-2 -mb-px transition-colors ${
+              className={`flex items-center gap-0.5 sm:gap-1.5 px-1.5 sm:px-3 py-2 sm:py-2.5 whitespace-nowrap rounded-t-lg border-b-2 -mb-px transition-colors ${
                 tab===t ? 'border-indigo-600 text-indigo-700 font-semibold bg-white' : 'border-transparent text-neutral-600 hover:text-neutral-900'
               }`}>
-              <span>{icon}</span><span className="hidden sm:inline">{label}</span>
+              <span>{icon}</span><span>{label}</span>
             </button>
           ))}
         </nav>
