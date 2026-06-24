@@ -21,6 +21,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
     with op.batch_alter_table('game_memberships', schema=None) as batch_op:
+        batch_op.drop_constraint('ck_membership_role', type_='check')
         batch_op.drop_column('role')
 
 
