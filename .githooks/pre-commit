@@ -25,7 +25,7 @@ echo "  backend: ruff"
 
 # backend: pytest
 echo "  backend: pytest"
-(cd backend && python3 -m pytest -q -W ignore 2>&1 | tail -3) || { echo "❌ pytest failed"; exit 1; }
+(cd backend && python3 -m pytest -q -W ignore) || { echo "❌ pytest failed"; exit 1; }
 
 # frontend: eslint
 if [ -d frontend/node_modules ]; then
@@ -41,6 +41,6 @@ fi
 
 # frontend: node:test
 echo "  frontend: test"
-(cd frontend && node --test src/useEffect-cleanup.test.js 2>&1 | tail -5) || { echo "❌ frontend test failed"; exit 1; }
+(cd frontend && node --test src/useEffect-cleanup.test.js) || { echo "❌ frontend test failed"; exit 1; }
 
 echo "✓ pre-commit checks passed"
