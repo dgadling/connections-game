@@ -100,3 +100,59 @@ def discord_oauth_url(state: str, prompt_none: bool = True) -> str:
     if prompt_none:
         params["prompt"] = "none"
     return "https://discord.com/oauth2/authorize?" + urlencode(params)
+
+
+async def refresh_discord_token(db: Session, discord_id: str) -> str | None:
+    """Refresh a Discord OAuth access token for the given discord_id.
+
+    Returns new access_token on success, None on failure (and deletes token row).
+    """
+    from .crypto import decrypt_token, encrypt_token
+    import httpx
+
+    token_row = db.query(models.DiscordOAuthToken).filter(
+        models.DiscordOAuthToken.discord_id == discord_id
+    ).first()
+    if not token_row:
+        return None
+
+    try:
+        refresh_token = decrypt_token(token_row.refresh_token_encrypted)
+    except Exception:
+        db.delete(token_row)
+        db.commit()
+        return None
+
+    async with httpx.AsyncClient() as client:
+        token_resp = await client.post(
+            "https://discord.com/api/oauth2/token",
+            data={
+                "client_id": DISCORD_CLIENT_ID,
+                "client_secret": DISCORD_CLIENT_SECRET,
+                "grant_type": "refresh_token",
+                "refresh_token": refresh_token,
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        if token_resp.status_code != 200:
+            # invalid_grant etc - delete token row
+            db.delete(token_row)
+            db.commit()
+            return None
+        data = token_resp.json()
+        new_access_token = data.get("access_token")
+        new_refresh_token = data.get("refresh_token", refresh_token)
+        expires_in = data.get("expires_in", 604800)
+        if not new_access_token:
+            db.delete(token_row)
+            db.commit()
+            return None
+
+    # update DB
+    now = datetime.utcnow()
+    token_row.access_token_encrypted = encrypt_token(new_access_token)
+    token_row.refresh_token_encrypted = encrypt_token(new_refresh_token)
+    token_row.expires_at = now + timedelta(seconds=expires_in)
+    token_row.updated_at = now
+    db.commit()
+    return new_access_token

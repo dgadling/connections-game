@@ -137,3 +137,12 @@ class ConnState(Base):
     current_round = Column(Integer, default=1, nullable=False)
     current_question_id = Column(Integer, ForeignKey("conn_questions.id", ondelete="SET NULL"), nullable=True)
     updated_at = Column(TIMESTAMP, default=now, nullable=False)
+
+
+class DiscordOAuthToken(Base):
+    __tablename__ = "discord_oauth_tokens"
+    discord_id = Column(String, ForeignKey("discord_users.discord_id", ondelete="CASCADE"), primary_key=True)
+    access_token_encrypted = Column(Text, nullable=False)
+    refresh_token_encrypted = Column(Text, nullable=False)
+    expires_at = Column(TIMESTAMP, nullable=False)
+    updated_at = Column(TIMESTAMP, default=now, nullable=False)

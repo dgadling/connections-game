@@ -52,7 +52,32 @@ export default function App() {
   const [tab, setTab] = useState('round')
   const [signingIn, setSigningIn] = useState(false)
 
-  useEffect(() => { api('/auth/me').then(setUser).catch(()=>setUser(null)) }, [])
+  const doLogout = async () => {
+    try { await api('/auth/logout', { method: 'POST' }) } catch(e) { /* ignore */ }
+    setUser(null); setGame(null)
+  }
+
+  useEffect(() => {
+    api('/auth/me').then(setUser).catch(async () => {
+      // try silent refresh via discord_id_hint cookie
+      const match = document.cookie.split('; ').find(c => c.startsWith('discord_id_hint='))
+      const discord_id = match ? match.split('=')[1] : null
+      if (discord_id) {
+        try {
+          const u = await api('/auth/refresh', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ discord_id })
+          })
+          setUser(u)
+          return
+        } catch (e) {
+          // refresh failed, fall through
+        }
+      }
+      setUser(null)
+    })
+  }, [])
 
   const loadGames = () => {
     if (user) api('/api/games').then(d => setGames(arr(d))).catch(()=>setGames([]))
@@ -98,7 +123,7 @@ export default function App() {
     </div>
   )
 
-  if (!game) return <GameList user={user} games={games} setGame={setGame} onRefresh={loadGames} />
+  if (!game) return <GameList user={user} games={games} setGame={setGame} onRefresh={loadGames} onLogout={doLogout} />
 
   const tabs = [
     ['round','Round', '🎲'],
@@ -115,6 +140,7 @@ export default function App() {
           <button onClick={()=>setGame(null)} className="text-sm text-neutral-500 hover:text-neutral-900">← games</button>
           <h1 className="text-lg sm:text-xl font-bold tracking-tight text-neutral-900 truncate">{game.name}</h1>
           <span className="text-xs text-neutral-500 ml-auto hidden sm:inline">{user.global_name || user.username}</span>
+          <button onClick={doLogout} className="text-neutral-500 hover:text-neutral-900 text-sm ml-2">Log out</button>
         </div>
       </header>
 
@@ -144,7 +170,7 @@ export default function App() {
   )
 }
 
-function GameList({ user, games, setGame, onRefresh }) {
+function GameList({ user, games, setGame, onRefresh, onLogout }) {
   const [name, setName] = useState('')
   const createGame = async () => {
     if (!name.trim()) return
@@ -157,7 +183,10 @@ function GameList({ user, games, setGame, onRefresh }) {
       <header className="bg-white border-b border-neutral-200">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-xl font-bold">🤝 Connections</h1>
-          <span className="text-sm text-neutral-600">{user.global_name || user.username}</span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-neutral-600">{user.global_name || user.username}</span>
+            {onLogout && <button onClick={onLogout} className="text-neutral-500 hover:text-neutral-900 text-sm">Log out</button>}
+          </div>
         </div>
       </header>
       <main className="max-w-3xl mx-auto px-4 py-6">

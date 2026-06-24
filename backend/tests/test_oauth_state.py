@@ -12,7 +12,13 @@ def _mock_discord_api(mock_client):
     """Helper to mock Discord token exchange + userinfo"""
     mock_resp_token = MagicMock()
     mock_resp_token.status_code = 200
-    mock_resp_token.json.return_value = {"access_token": "fake_token"}
+    mock_resp_token.json.return_value = {
+        "access_token": "fake_token",
+        "refresh_token": "fake_refresh_token",
+        "expires_in": 604800,
+        "token_type": "Bearer",
+        "scope": "identify",
+    }
 
     mock_resp_user = MagicMock()
     mock_resp_user.status_code = 200

@@ -141,7 +141,12 @@ async def auth_discord_callback(
         )
         if token_resp.status_code != 200:
             raise HTTPException(400, "OAuth token exchange failed")
-        access_token = token_resp.json()["access_token"]
+        token_data = token_resp.json()
+        access_token = token_data["access_token"]
+        refresh_token = token_data.get("refresh_token")
+        expires_in = token_data.get("expires_in", 604800)
+        if not refresh_token:
+            raise HTTPException(400, "OAuth token response missing refresh_token")
         # Get user info
         user_resp = await client.get(
             "https://discord.com/api/users/@me",
@@ -173,6 +178,27 @@ async def auth_discord_callback(
         )
         db.add(user)
     db.commit()
+    # Store OAuth tokens (encrypted)
+    from .crypto import encrypt_token
+    token_row = db.query(models.DiscordOAuthToken).filter(
+        models.DiscordOAuthToken.discord_id == discord_id
+    ).first()
+    expires_at = now + timedelta(seconds=expires_in)
+    if token_row:
+        token_row.access_token_encrypted = encrypt_token(access_token)
+        token_row.refresh_token_encrypted = encrypt_token(refresh_token)
+        token_row.expires_at = expires_at
+        token_row.updated_at = now
+    else:
+        token_row = models.DiscordOAuthToken(
+            discord_id=discord_id,
+            access_token_encrypted=encrypt_token(access_token),
+            refresh_token_encrypted=encrypt_token(refresh_token),
+            expires_at=expires_at,
+            updated_at=now,
+        )
+        db.add(token_row)
+    db.commit()
     # Session fixation protection - invalidate all existing sessions for this discord_id
     db.query(models.AuthSession).filter(models.AuthSession.discord_id == discord_id).delete()
     db.commit()
@@ -184,21 +210,34 @@ async def auth_discord_callback(
     resp.set_cookie(SESSION_COOKIE, session_token, max_age=30*86400, httponly=True, secure=True, samesite="lax", path="/")
     resp.set_cookie(CSRF_COOKIE, csrf_token, max_age=30*86400, httponly=False, secure=True, samesite="lax", path="/")
     resp.delete_cookie("oauth_state", path="/")
+    # discord_id_hint cookie for silent auto-login via refresh_token
+    resp.set_cookie("discord_id_hint", discord_id, max_age=365*86400, httponly=False, secure=True, samesite="lax", path="/")
     return resp
 
 @app.post("/auth/logout")
 def logout(request: Request, db: Session = Depends(get_db)):
     from .auth import get_session_token
+    discord_id = None
     token = get_session_token(request)
     if token:
         token_hash = hash_token(token)
         sess = db.query(models.AuthSession).filter(models.AuthSession.session_token_hash == token_hash).first()
         if sess:
+            discord_id = sess.discord_id
             db.delete(sess)
+            db.commit()
+    # delete oauth tokens
+    if discord_id:
+        token_row = db.query(models.DiscordOAuthToken).filter(
+            models.DiscordOAuthToken.discord_id == discord_id
+        ).first()
+        if token_row:
+            db.delete(token_row)
             db.commit()
     resp = JSONResponse({"ok": True})
     resp.delete_cookie(SESSION_COOKIE, path="/")
     resp.delete_cookie(CSRF_COOKIE, path="/")
+    resp.delete_cookie("discord_id_hint", path="/")
     return resp
 
 @app.get("/auth/me")
@@ -209,6 +248,37 @@ def auth_me(user: models.DiscordUser = Depends(require_user)):
         "global_name": user.global_name,
         "avatar_hash": user.avatar_hash,
     }
+
+@app.post("/auth/refresh")
+async def auth_refresh(request: Request, db: Session = Depends(get_db)):
+    body = await request.json()
+    discord_id = body.get("discord_id")
+    if not discord_id:
+        raise HTTPException(400, "discord_id required")
+    from .auth import refresh_discord_token
+    access_token = await refresh_discord_token(db, discord_id)
+    if not access_token:
+        raise HTTPException(401, "refresh failed")
+    # create new session
+    # invalidate existing sessions for this discord_id
+    db.query(models.AuthSession).filter(models.AuthSession.discord_id == discord_id).delete()
+    db.commit()
+    session_token = create_session(db, discord_id)
+    csrf_token = generate_csrf_token()
+    user = db.query(models.DiscordUser).filter(models.DiscordUser.discord_id == discord_id).first()
+    if not user:
+        raise HTTPException(401, "user not found")
+    resp = JSONResponse({
+        "discord_id": user.discord_id,
+        "username": user.username,
+        "global_name": user.global_name,
+        "avatar_hash": user.avatar_hash,
+    })
+    resp.set_cookie(SESSION_COOKIE, session_token, max_age=30*86400, httponly=True, secure=True, samesite="lax", path="/")
+    resp.set_cookie(CSRF_COOKIE, csrf_token, max_age=30*86400, httponly=False, secure=True, samesite="lax", path="/")
+    # refresh hint cookie
+    resp.set_cookie("discord_id_hint", discord_id, max_age=365*86400, httponly=False, secure=True, samesite="lax", path="/")
+    return resp
 
 # Health check
 @app.get("/healthz")
