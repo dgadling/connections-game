@@ -406,20 +406,20 @@ def regenerate_pairings(db: Session, game_id: int):
         db.query(models.ConnPairing).filter(models.ConnPairing.game_id == game_id).delete()
         db.commit()
         return
-    # delete future pairings only? spec says regenerate automatically, past rounds immutable.
-    # For simplicity, delete all and regenerate – need to preserve played rounds.
     state = db.query(models.ConnState).filter(models.ConnState.game_id == game_id).first()
     current_round = state.current_round if state else 1
-    # delete unplayed rounds
-    db.query(models.ConnPairing).filter(models.ConnPairing.game_id == game_id, models.ConnPairing.round_num >= current_round).delete()
+    # Preserve current round pairings – only regenerate future rounds
+    # (prevents pairings shuffling under you mid-round when roster changes)
+    db.query(models.ConnPairing).filter(
+        models.ConnPairing.game_id == game_id,
+        models.ConnPairing.round_num > current_round
+    ).delete()
     db.commit()
     groups = generate_groups(member_ids)
-    # insert only future rounds, offset by current_round-1
-    existing_rounds = db.query(models.ConnPairing.round_num).filter(models.ConnPairing.game_id == game_id).distinct().count()
-    start_round = current_round
+    # Insert future rounds starting at current_round + 1
+    start_round = current_round + 1
     for idx, pairings in enumerate(groups):
         round_num = start_round + idx
-        # stop if we'd overwrite a played round – we already deleted >= current_round
         for asker_id, target_id in pairings:
             db.add(models.ConnPairing(game_id=game_id, round_num=round_num, asker_member_id=asker_id, target_member_id=target_id))
     db.commit()
