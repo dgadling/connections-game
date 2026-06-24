@@ -1,0 +1,28 @@
+#!/bin/sh
+# Pre-push hook – blocks push if lint/tests fail
+# Enable with: git config core.hooksPath .githooks
+
+set -e
+echo "▶ pre-push: running lints + tests…"
+
+# backend
+if [ -d backend ]; then
+  echo "  backend: ruff"
+  (cd backend && python3 -m ruff check . >/dev/null 2>&1 || { echo "❌ ruff failed"; exit 1; })
+  echo "  backend: pytest"
+  (cd backend && python3 -m pytest -q >/dev/null 2>&1 || { echo "❌ pytest failed"; exit 1; })
+fi
+
+# frontend
+if [ -d frontend ]; then
+  if [ -d frontend/node_modules ]; then
+    echo "  frontend: eslint"
+    (cd frontend && npm run lint --silent >/dev/null 2>&1 || { echo "❌ eslint failed"; exit 1; })
+    echo "  frontend: test"
+    (cd frontend && npm test --silent >/dev/null 2>&1 || { echo "❌ frontend test failed"; exit 1; })
+  else
+    echo "  frontend: node_modules missing – skipping (run npm install)"
+  fi
+fi
+
+echo "✓ pre-push checks passed"

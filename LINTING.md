@@ -16,7 +16,20 @@ npm run lint:fix     # auto-fix what it can
 - `react-hooks/rules-of-hooks: error` – **catches React #310**: hooks called conditionally / after early return / in loops. This is the one that caused the blank white page after Discord login.
 - `react-hooks/exhaustive-deps: warn` – missing useEffect dependencies (the bare-identifier `useEffect(load, …)` crash our custom test catches would also be flagged here).
 
-Run before every commit. CI should fail on eslint errors.
+## Running automatically
+
+**Local pre-push hook (blocks bad pushes):**
+```
+git config core.hooksPath .githooks
+```
+Now `git push` runs ruff + pytest + eslint + frontend tests first. Push is blocked if anything fails.
+
+**GitHub Actions CI (.github/workflows/ci.yml):**
+Runs on every push to main and every PR:
+- backend: ruff check → pytest
+- frontend: eslint → npm test → npm run build
+
+CI failures block PR merge.
 
 ## Backend (FastAPI / Python)
 
