@@ -3,3 +3,4 @@ sqlalchemy
 pytest
 httpx
 uvicorn
+cryptography
