@@ -590,26 +590,6 @@ function AdminTab({ gameId, game, onGameUpdate }) {
     onGameUpdate({archived_at: archived ? new Date().toISOString() : null})
     alert(archived ? 'Archived.' : 'Unarchived.')
   }
-  const downloadBackup = () => {
-    window.open(`/api/games/${gameId}/backup`, '_blank')
-  }
-
-  const restoreBackup = async (e) => {
-    const f = e.target.files?.[0]
-    if (!f) return
-    if (!confirm('Restore database from backup? This REPLACES ALL games, members, and questions. Continue?')) { e.target.value = ''; return }
-    const fd = new FormData()
-    fd.append('file', f)
-    try {
-      const r = await fetch(`/api/games/${gameId}/restore_backup`, { method: 'POST', credentials: 'include', headers: { 'X-CSRF-Token': csrf() }, body: fd })
-      if (!r.ok) throw new Error(await r.text())
-      alert('Restore complete – reloading')
-      location.reload()
-    } catch (err) {
-      alert('Restore failed: ' + err.message)
-      e.target.value = ''
-    }
-  }
 
   const inviteList = arr(invites)
   const adminList = arr(admins)
@@ -628,11 +608,6 @@ function AdminTab({ gameId, game, onGameUpdate }) {
           ) : (
             <button onClick={()=>doArchive(false)} className="px-3 py-1 border rounded text-sm bg-amber-50">Unarchive game</button>
           )}
-          <button onClick={downloadBackup} className="px-3 py-1 border rounded text-sm">Download Backup</button>
-          <label className="px-3 py-1 border rounded text-sm cursor-pointer bg-amber-50 hover:bg-amber-100">
-            Restore Backup
-            <input type="file" accept=".db,.sqlite,.sqlite3" onChange={restoreBackup} className="hidden" />
-          </label>
         </div>
       </div>
 
