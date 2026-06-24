@@ -44,8 +44,12 @@ def db_session():
 
 @pytest.fixture
 def test_user(db_session):
+    import os
+    # If SUPERUSER_DISCORD_ID is set, use it for test_user so existing
+    # game-creation tests pass (create_game is superuser-only when configured)
+    discord_id = os.environ.get("SUPERUSER_DISCORD_ID") or "123456789012345678"
     u = models.DiscordUser(
-        discord_id="123456789012345678",
+        discord_id=discord_id,
         username="testuser",
         global_name="Test User",
         avatar_hash=None,
@@ -88,7 +92,6 @@ def game(db_session, test_user):
     mem = models.GameMembership(
         game_id=g.id,
         discord_id=test_user.discord_id,
-        role="owner"
     )
     db_session.add(mem)
     # conn state

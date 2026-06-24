@@ -61,7 +61,6 @@ def test_invite_join_creates_admin_membership(client, game, db_session, test_use
         models.GameMembership.discord_id == joiner.discord_id
     ).first()
     assert mem is not None, "GameMembership should be created"
-    assert mem.role == "admin"
 
     # Verify invite was consumed
     inv_db = db_session.query(models.GameInvite).filter(

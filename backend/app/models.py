@@ -61,11 +61,7 @@ class GameMembership(Base):
     __tablename__ = "game_memberships"
     game_id = Column(Integer, ForeignKey("games.id", ondelete="CASCADE"), primary_key=True)
     discord_id = Column(String, ForeignKey("discord_users.discord_id", ondelete="CASCADE"), primary_key=True)
-    role = Column(String, nullable=False)
     joined_at = Column(TIMESTAMP, default=now, nullable=False)
-    __table_args__ = (
-        CheckConstraint("role IN ('owner','admin')", name="ck_membership_role"),
-    )
 
 class GameMember(Base):
     __tablename__ = "game_members"

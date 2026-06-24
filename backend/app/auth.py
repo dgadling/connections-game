@@ -13,6 +13,18 @@ CSRF_COOKIE = "csrf_token"
 SESSION_SLIDING_DAYS = 30
 SESSION_ABSOLUTE_DAYS = 90
 
+# Global superuser - has owner access to all games
+# Read at module load, but is_superuser() also checks os.environ for test overrides
+SUPERUSER_DISCORD_ID = os.environ.get("SUPERUSER_DISCORD_ID", "")
+
+
+def is_superuser(discord_id: str) -> bool:
+    """Check if discord_id matches the configured superuser."""
+    # Check env var dynamically to allow test overrides that set os.environ
+    # after module import (pytest conftest loads app.auth early)
+    superuser_id = os.environ.get("SUPERUSER_DISCORD_ID") or SUPERUSER_DISCORD_ID
+    return bool(superuser_id and discord_id == superuser_id)
+
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
@@ -49,6 +61,11 @@ def require_user(request: Request, db: Session = Depends(get_db)) -> models.Disc
     return user
 
 def require_membership(game_id: int, discord_id: str, db: Session):
+    # Superuser bypass - has access to all games
+    if is_superuser(discord_id):
+        # Return a fake membership object with owner role
+        from types import SimpleNamespace
+        return SimpleNamespace(role="owner", discord_id=discord_id, game_id=game_id)
     mem = db.query(models.GameMembership).filter(
         models.GameMembership.game_id == game_id,
         models.GameMembership.discord_id == discord_id

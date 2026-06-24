@@ -12,7 +12,6 @@ class GameOut(BaseModel):
     name: str
     owner_discord_id: str
     archived_at: Optional[datetime] = None
-    role: Optional[str] = None
     class Config:
         from_attributes = True
 

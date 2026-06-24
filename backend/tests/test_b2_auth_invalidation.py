@@ -54,7 +54,7 @@ def test_oauth_does_not_invalidate_other_users_sessions(db_session, test_user):
 
     # Create session for another user
     other_user = models.DiscordUser(
-        discord_id="999999999999999999",
+        discord_id="888888888888888888",
         username="other",
         global_name="Other",
     )

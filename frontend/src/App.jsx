@@ -100,16 +100,12 @@ export default function App() {
     }).then(res => {
       // Refresh game list, then navigate to joined game
       loadGames()
-      setGame({ id: res.game_id, slug: res.slug, name: '', role: 'admin' })
+      setGame({ id: res.game_id, slug: res.slug, name: '' })
     }).catch(e => {
       alert('Invite join failed: ' + e.message)
       loadGames()
     })
   }, [user])
-
-  const isOwner = game?.role === 'owner'
-
-  useEffect(() => { if (tab === 'admin' && !isOwner) setTab('round') }, [tab, isOwner])
 
   if (user === undefined) return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-50 px-4">
@@ -162,7 +158,7 @@ export default function App() {
     ['questions','Questions', '❓'],
     ['members','Members', '👥'],
     ['history','History', '📜'],
-    ...(isOwner ? [['admin','Admin', '⚙️']] : []),
+    ['admin','Admin', '⚙️'],
   ]
 
   return (
@@ -213,7 +209,7 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
     if (!name.trim()) return
     const g = await api('/api/games', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: name.trim()})})
     setName(''); onRefresh()
-    setGame({id: g.id, slug: g.slug, name: g.name, role: g.role || 'owner'})
+    setGame({id: g.id, slug: g.slug, name: g.name})
   }
   const [inviteCode, setInviteCode] = useState('')
   const [joinError, setJoinError] = useState('')
@@ -228,7 +224,7 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
       })
       setInviteCode('')
       onRefresh()
-      setGame({ id: res.game_id, slug: res.slug, name: '', role: 'admin' })
+      setGame({ id: res.game_id, slug: res.slug, name: '' })
     } catch (e) {
       setJoinError(e.message || 'Join failed')
     }
@@ -267,10 +263,10 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
         </div>
         <div className="space-y-2">
           {arr(games).map(g => (
-            <button key={g.id} onClick={()=>setGame({id: g.id, slug: g.slug, name: g.name, role: g.role})}
+            <button key={g.id} onClick={()=>setGame({id: g.id, slug: g.slug, name: g.name})}
               className="w-full text-left bg-white rounded-xl shadow-sm border border-neutral-200 p-4 hover:border-indigo-300 transition-colors">
               <div className="font-medium">{g.name}</div>
-              <div className="text-xs text-neutral-500 mt-0.5">{g.role === 'owner' ? 'Owner' : 'Admin'} · /{g.slug}</div>
+              <div className="text-xs text-neutral-500 mt-0.5">/{g.slug}</div>
             </button>
           ))}
           {arr(games).length===0 && <div className="text-neutral-500 text-sm bg-white rounded-xl shadow-sm border border-neutral-200 p-4">No games yet — create one or join with an invite code above.</div>}
@@ -779,8 +775,8 @@ function AdminTab({ gameId, game, onGameUpdate }) {
         <ul className="space-y-2 text-sm divide-y divide-neutral-100">
           {arr(admins).map(a => (
             <li key={a.discord_id} className="flex justify-between py-2">
-              <span>{a.global_name || a.username} <span className="text-neutral-500 text-xs">· {a.role}</span></span>
-              {a.role !== 'owner' && <button onClick={()=>revokeAdmin(a.discord_id)} className="text-xs text-red-600 hover:underline">revoke</button>}
+              <span>{a.global_name || a.username}</span>
+              <button onClick={()=>revokeAdmin(a.discord_id)} className="text-xs text-red-600 hover:underline">revoke</button>
             </li>
           ))}
         </ul>

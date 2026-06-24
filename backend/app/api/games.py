@@ -33,6 +33,15 @@ def validate_discord_id(snowflake: str):
 
 @router.post("/api/games", response_model=schemas.GameOut)
 def create_game(payload: schemas.GameCreate, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
+    from ..auth import is_superuser
+    import os
+    from ..auth import SUPERUSER_DISCORD_ID as _SU
+    # If SUPERUSER_DISCORD_ID is configured, only superuser can create games.
+    # If not configured (dev/test), allow anyone (backward compat).
+    # Check env var dynamically to match is_superuser() test override behavior
+    superuser_id = os.environ.get("SUPERUSER_DISCORD_ID") or _SU
+    if superuser_id and not is_superuser(user.discord_id):
+        raise HTTPException(403, "only superuser can create games")
     base = slugify(payload.name)
     for _ in range(5):
         slug = f"{base}-{secrets.token_urlsafe(6).lower().replace('_','').replace('-','')[:8]}"
@@ -45,36 +54,36 @@ def create_game(payload: schemas.GameCreate, db: Session = Depends(get_db), user
     db.add(game)
     db.commit()
     db.refresh(game)
-    mem = models.GameMembership(game_id=game.id, discord_id=user.discord_id, role="owner")
+    mem = models.GameMembership(game_id=game.id, discord_id=user.discord_id)
     db.add(mem)
     db.add(models.ConnState(game_id=game.id, current_round=1))
     db.commit()
-    game.role = "owner"
     return game
 
 @router.get("/api/games", response_model=list[schemas.GameOut])
 def list_games(db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
+    from ..auth import is_superuser
+    if is_superuser(user.discord_id):
+        # Superuser sees all games
+        games = db.query(models.Game).all()
+        return games
     memberships = db.query(models.GameMembership, models.Game).join(models.Game, models.GameMembership.game_id == models.Game.id).filter(models.GameMembership.discord_id == user.discord_id).all()
     out = []
-    for mem, game in memberships:
-        game.role = mem.role
+    for _mem, game in memberships:
         out.append(game)
     return out
 
 @router.get("/api/games/{game_id}", response_model=schemas.GameOut)
 def get_game(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
-    mem = require_membership(game_id, user.discord_id, db)
+    require_membership(game_id, user.discord_id, db)
     game = db.query(models.Game).filter(models.Game.id == game_id).first()
     if not game:
         raise HTTPException(404)
-    game.role = mem.role
     return game
 
 @router.patch("/api/games/{game_id}")
 def rename_game(game_id: int, payload: dict, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
-    mem = require_membership(game_id, user.discord_id, db)
-    if mem.role != "owner":
-        raise HTTPException(403)
+    require_game_admin(game_id, user.discord_id, db)
     game = db.query(models.Game).filter(models.Game.id == game_id).first()
     name = payload.get("name")
     if name:
@@ -508,11 +517,11 @@ def regenerate_pairings(db: Session, game_id: int):
 
 # ---- Join / Invites / Admin / Archive / History / Pairings ----
 
-def require_owner(game_id: int, discord_id: str, db: Session):
+def require_game_admin(game_id: int, discord_id: str, db: Session):
+    # Game membership = admin access. Superuser bypass is in require_membership.
     mem = require_membership(game_id, discord_id, db)
-    if mem.role != "owner":
-        raise HTTPException(403, "owner only")
     return mem
+
 
 @router.post("/api/games/join")
 def join_game(payload: schemas.JoinRequest, request: Request, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
@@ -526,7 +535,7 @@ def join_game(payload: schemas.JoinRequest, request: Request, db: Session = Depe
     # grant membership if not already
     existing = db.query(models.GameMembership).filter(models.GameMembership.game_id == game_id, models.GameMembership.discord_id == user.discord_id).first()
     if not existing:
-        db.add(models.GameMembership(game_id=game_id, discord_id=user.discord_id, role="admin", joined_at=now))
+        db.add(models.GameMembership(game_id=game_id, discord_id=user.discord_id))
     invite.used_by = user.discord_id
     invite.used_at = now
     db.commit()
@@ -550,7 +559,7 @@ def join_game(payload: schemas.JoinRequest, request: Request, db: Session = Depe
 
 @router.post("/api/games/{game_id}/invites")
 def create_invite(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
-    require_owner(game_id, user.discord_id, db)
+    require_game_admin(game_id, user.discord_id, db)
     token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     now = datetime.utcnow()
@@ -568,7 +577,7 @@ def create_invite(game_id: int, db: Session = Depends(get_db), user: models.Disc
 
 @router.get("/api/games/{game_id}/invites")
 def list_invites(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
-    require_owner(game_id, user.discord_id, db)
+    require_game_admin(game_id, user.discord_id, db)
     rows = db.query(models.GameInvite).filter(models.GameInvite.game_id == game_id).order_by(models.GameInvite.created_at.desc()).all()
     out = []
     for r in rows:
@@ -585,7 +594,7 @@ def list_invites(game_id: int, db: Session = Depends(get_db), user: models.Disco
 
 @router.delete("/api/games/{game_id}/invites/{invite_id}")
 def revoke_invite(game_id: int, invite_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
-    require_owner(game_id, user.discord_id, db)
+    require_game_admin(game_id, user.discord_id, db)
     inv = db.query(models.GameInvite).filter(models.GameInvite.id == invite_id, models.GameInvite.game_id == game_id).first()
     if not inv:
         raise HTTPException(404)
@@ -595,7 +604,7 @@ def revoke_invite(game_id: int, invite_id: int, db: Session = Depends(get_db), u
 
 @router.post("/api/games/{game_id}/archive")
 def archive_game(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
-    require_owner(game_id, user.discord_id, db)
+    require_game_admin(game_id, user.discord_id, db)
     game = db.query(models.Game).filter(models.Game.id == game_id).first()
     if not game:
         raise HTTPException(404)
@@ -605,7 +614,7 @@ def archive_game(game_id: int, db: Session = Depends(get_db), user: models.Disco
 
 @router.post("/api/games/{game_id}/unarchive")
 def unarchive_game(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
-    require_owner(game_id, user.discord_id, db)
+    require_game_admin(game_id, user.discord_id, db)
     game = db.query(models.Game).filter(models.Game.id == game_id).first()
     if not game:
         raise HTTPException(404)
@@ -615,15 +624,15 @@ def unarchive_game(game_id: int, db: Session = Depends(get_db), user: models.Dis
 
 @router.get("/api/games/{game_id}/admins")
 def list_admins(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
-    require_owner(game_id, user.discord_id, db)
+    require_game_admin(game_id, user.discord_id, db)
     rows = db.query(models.GameMembership, models.DiscordUser).join(
         models.DiscordUser, models.GameMembership.discord_id == models.DiscordUser.discord_id
     ).filter(models.GameMembership.game_id == game_id).all()
-    return [{"discord_id": m.GameMembership.discord_id, "role": m.GameMembership.role, "joined_at": m.GameMembership.joined_at, "username": m.DiscordUser.username, "global_name": m.DiscordUser.global_name} for m in rows]
+    return [{"discord_id": m.GameMembership.discord_id, "joined_at": m.GameMembership.joined_at, "username": m.DiscordUser.username, "global_name": m.DiscordUser.global_name} for m in rows]
 
 @router.delete("/api/games/{game_id}/admins/{discord_id}")
 def revoke_admin(game_id: int, discord_id: str, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
-    require_owner(game_id, user.discord_id, db)
+    require_game_admin(game_id, user.discord_id, db)
     if discord_id == user.discord_id:
         raise HTTPException(400, "cannot revoke yourself")
     mem = db.query(models.GameMembership).filter(models.GameMembership.game_id == game_id, models.GameMembership.discord_id == discord_id).first()
