@@ -170,7 +170,7 @@ function GameList({ user, games, setGame, onRefresh }) {
       const url = new URL(s, window.location.origin)
       const q = url.searchParams.get('invite')
       if (q) return q
-    } catch {}
+    } catch { /* not a URL, fall through to regex */ }
     // regex fallback
     const m = s.match(/invite=([A-Za-z0-9_-]+)/)
     if (m) return m[1]
@@ -617,7 +617,7 @@ function MembersTab({ gameId }) {
           <input value={discordId} onChange={e=>setDiscordId(e.target.value)} placeholder="Discord ID (optional – leave blank for unclaimed)" className="flex-1 min-w-[220px] border rounded px-2 py-1 font-mono text-xs" />
           <button onClick={addMember} className="px-3 py-1 bg-indigo-600 text-white rounded text-sm">Add</button>
         </div>
-        <div className="text-xs text-neutral-500">Discord ID = numeric snowflake only (17–20 digits). <a href="https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID" target="_blank" className="underline">How to find it?</a> Leave blank to create an unclaimed character slot.</div>
+        <div className="text-xs text-neutral-500">Discord ID = numeric snowflake only (17–20 digits). <a href="https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID" target="_blank" rel="noreferrer" className="underline">How to find it?</a> Leave blank to create an unclaimed character slot.</div>
       </div>
 
       <ul className="space-y-1 text-sm">
@@ -803,7 +803,7 @@ function AdminTab({ gameId, game, onGameUpdate }) {
       </div>
 
       <div className="text-xs text-neutral-500 pt-4 border-t">
-        <a href="/privacy" target="_blank" className="underline">Privacy Policy</a>
+        <a href="/privacy" target="_blank" rel="noreferrer" className="underline">Privacy Policy</a>
       </div>
     </div>
   )
