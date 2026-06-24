@@ -61,11 +61,11 @@ export default function App() {
 
   useEffect(() => {
     if (!game || !user) return
-    api(`/api/games/${game.game_id}/members`).then(d => {
+    api(`/api/games/${game.id}/members`).then(d => {
       const members = arr(d)
       const claimed = members.find(m => !m.deleted_at && m.discord_id === user.discord_id)
       if (!claimed) {
-        api(`/api/games/${game.game_id}/members/unclaimed`).then(u => {
+        api(`/api/games/${game.id}/members/unclaimed`).then(u => {
           setClaimNeeded({ unclaimed: arr(u) })
         }).catch(()=> setClaimNeeded(null))
       } else {
@@ -98,7 +98,7 @@ export default function App() {
   )
 
   if (!game) return <GameList user={user} games={games} setGame={setGame} onRefresh={loadGames} />
-  if (claimNeeded) return <ClaimGate gameId={game.game_id} gameName={game.name} unclaimed={claimNeeded.unclaimed} onDone={()=>setClaimNeeded(null)} />
+  if (claimNeeded) return <ClaimGate gameId={game.id} gameName={game.name} unclaimed={claimNeeded.unclaimed} onDone={()=>setClaimNeeded(null)} />
 
   const tabs = [
     ['round','Round', '🎲'],
@@ -133,11 +133,11 @@ export default function App() {
 
       <main className="max-w-4xl mx-auto px-4 py-4 sm:py-6 pb-20 sm:pb-6">
         <ErrorBoundary>
-          {tab === 'round' && <RoundTab gameId={game.game_id} />}
-          {tab === 'questions' && <QuestionsTab gameId={game.game_id} />}
-          {tab === 'members' && <MembersTab gameId={game.game_id} />}
-          {tab === 'history' && <HistoryTab gameId={game.game_id} />}
-          {tab === 'admin' && <AdminTab gameId={game.game_id} game={game} onGameUpdate={g => setGame({...game, ...g})} />}
+          {tab === 'round' && <RoundTab gameId={game.id} />}
+          {tab === 'questions' && <QuestionsTab gameId={game.id} />}
+          {tab === 'members' && <MembersTab gameId={game.id} />}
+          {tab === 'history' && <HistoryTab gameId={game.id} />}
+          {tab === 'admin' && <AdminTab gameId={game.id} game={game} onGameUpdate={g => setGame({...game, ...g})} />}
         </ErrorBoundary>
       </main>
     </div>
@@ -150,7 +150,7 @@ function GameList({ user, games, setGame, onRefresh }) {
     if (!name.trim()) return
     const g = await api('/api/games', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: name.trim()})})
     setName(''); onRefresh()
-    setGame({game_id: g.id ?? g.game_id, slug: g.slug, name: g.name, role: 'owner'})
+    setGame({id: g.id, slug: g.slug, name: g.name, role: g.role || 'owner'})
   }
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -169,15 +169,13 @@ function GameList({ user, games, setGame, onRefresh }) {
           </div>
         </div>
         <div className="space-y-2">
-          {arr(games).map(g => {
-            const gid = g.game_id ?? g.id
-            return (
-            <button key={gid} onClick={()=>setGame({game_id: gid, slug: g.slug, name: g.name, role: g.role})}
+          {arr(games).map(g => (
+            <button key={g.id} onClick={()=>setGame({id: g.id, slug: g.slug, name: g.name, role: g.role})}
               className="w-full text-left bg-white rounded-xl shadow-sm border border-neutral-200 p-4 hover:border-indigo-300 transition-colors">
               <div className="font-medium">{g.name}</div>
               <div className="text-xs text-neutral-500 mt-0.5">{g.role === 'owner' ? 'Owner' : 'Admin'} · /{g.slug}</div>
             </button>
-          )})}
+          ))}
           {arr(games).length===0 && <div className="text-neutral-500 text-sm bg-white rounded-xl shadow-sm border border-neutral-200 p-4">No games yet — create one above.</div>}
         </div>
       </main>

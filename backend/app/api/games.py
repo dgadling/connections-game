@@ -49,19 +49,25 @@ def create_game(payload: schemas.GameCreate, db: Session = Depends(get_db), user
     db.add(mem)
     db.add(models.ConnState(game_id=game.id, current_round=1))
     db.commit()
+    game.role = "owner"
     return game
 
-@router.get("/api/games")
+@router.get("/api/games", response_model=list[schemas.GameOut])
 def list_games(db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     memberships = db.query(models.GameMembership, models.Game).join(models.Game, models.GameMembership.game_id == models.Game.id).filter(models.GameMembership.discord_id == user.discord_id).all()
-    return [{"game_id": m.GameMembership.game_id, "slug": m.Game.slug, "name": m.Game.name, "role": m.GameMembership.role, "archived_at": m.Game.archived_at} for m in memberships]
+    out = []
+    for mem, game in memberships:
+        game.role = mem.role
+        out.append(game)
+    return out
 
 @router.get("/api/games/{game_id}", response_model=schemas.GameOut)
 def get_game(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
-    require_membership(game_id, user.discord_id, db)
+    mem = require_membership(game_id, user.discord_id, db)
     game = db.query(models.Game).filter(models.Game.id == game_id).first()
     if not game:
         raise HTTPException(404)
+    game.role = mem.role
     return game
 
 @router.patch("/api/games/{game_id}")
