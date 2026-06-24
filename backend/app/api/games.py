@@ -81,7 +81,19 @@ def list_members(game_id: int, include_deleted: bool = False, db: Session = Depe
     q = db.query(models.GameMember).filter(models.GameMember.game_id == game_id)
     if not include_deleted:
         q = q.filter(models.GameMember.deleted_at.is_(None))
-    return q.order_by(models.GameMember.sort_order).all()
+    rows = q.order_by(models.GameMember.sort_order).all()
+    return [
+        {
+            "id": m.id,
+            "game_id": m.game_id,
+            "name": m.name,
+            "discord_id": m.discord_id,
+            "sort_order": m.sort_order,
+            "created_at": m.created_at.isoformat() if m.created_at else None,
+            "deleted_at": m.deleted_at.isoformat() if m.deleted_at else None,
+        }
+        for m in rows
+    ]
 
 @router.post("/api/games/{game_id}/members")
 def create_member(game_id: int, payload: schemas.MemberCreate, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
@@ -97,7 +109,7 @@ def create_member(game_id: int, payload: schemas.MemberCreate, db: Session = Dep
         raise HTTPException(400, "Name or Discord ID already in use")
     db.refresh(m)
     regenerate_pairings(db, game_id)
-    return m
+    return {"id": m.id, "name": m.name, "discord_id": m.discord_id, "game_id": m.game_id}
 
 @router.patch("/api/games/{game_id}/members/{member_id}")
 def patch_member(game_id: int, member_id: int, payload: schemas.MemberPatch, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
@@ -117,7 +129,7 @@ def patch_member(game_id: int, member_id: int, payload: schemas.MemberPatch, db:
         db.rollback()
         raise HTTPException(400, "Name or Discord ID conflict")
     regenerate_pairings(db, game_id)
-    return m
+    return {"id": m.id, "name": m.name, "discord_id": m.discord_id, "game_id": m.game_id}
 
 @router.delete("/api/games/{game_id}/members/{member_id}")
 def delete_member(game_id: int, member_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
@@ -143,7 +155,7 @@ def restore_member(game_id: int, member_id: int, db: Session = Depends(get_db), 
         db.rollback()
         raise HTTPException(400, "Name conflict")
     regenerate_pairings(db, game_id)
-    return m
+    return {"id": m.id, "name": m.name, "discord_id": m.discord_id, "game_id": m.game_id}
 
 # Claim
 @router.get("/api/games/{game_id}/members/unclaimed")
@@ -191,7 +203,20 @@ def claim_member(game_id: int, payload: schemas.ClaimRequest, db: Session = Depe
 def list_questions(game_id: int, status: str = "upcoming", db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     rows = db.query(models.ConnQuestion).filter(models.ConnQuestion.game_id == game_id, models.ConnQuestion.status == status).order_by(models.ConnQuestion.sort_order).all()
-    return rows
+    return [
+        {
+            "id": q.id,
+            "game_id": q.game_id,
+            "text": q.text,
+            "tag": q.tag,
+            "tag_auto": q.tag_auto,
+            "status": q.status,
+            "sort_order": q.sort_order,
+            "created_at": q.created_at.isoformat() if q.created_at else None,
+            "updated_at": q.updated_at.isoformat() if q.updated_at else None,
+        }
+        for q in rows
+    ]
 
 @router.post("/api/games/{game_id}/questions")
 def create_question(game_id: int, payload: schemas.QuestionCreate, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
@@ -242,13 +267,30 @@ def patch_question(game_id: int, qid: int, payload: schemas.QuestionPatch, db: S
     q.tag_auto = new_tag_auto
     q.updated_at = datetime.utcnow()
     db.commit()
-    return q
+    return {
+        "id": q.id,
+        "text": q.text,
+        "tag": q.tag,
+        "tag_auto": q.tag_auto,
+        "status": q.status,
+        "sort_order": q.sort_order,
+    }
 
 @router.get("/api/games/{game_id}/questions/{qid}/history")
 def question_history(game_id: int, qid: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     rows = db.query(models.ConnQuestionEdit).filter(models.ConnQuestionEdit.question_id == qid).order_by(models.ConnQuestionEdit.edited_at).all()
-    return rows
+    return [
+        {
+            "id": r.id,
+            "question_id": r.question_id,
+            "old_text": r.old_text,
+            "old_tag": r.old_tag,
+            "edited_by": r.edited_by,
+            "edited_at": r.edited_at.isoformat() if r.edited_at else None,
+        }
+        for r in rows
+    ]
 
 @router.post("/api/games/{game_id}/questions/{qid}/graveyard")
 def graveyard_question(game_id: int, qid: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
@@ -318,7 +360,16 @@ def get_round(game_id: int, db: Session = Depends(get_db), user: models.DiscordU
         if question:
             state.current_question_id = question.id
             db.commit()
-    return {"round_num": round_num, "question": question, "pairings": out_pairs}
+    q_out = None
+    if question:
+        q_out = {
+            "id": question.id,
+            "text": question.text,
+            "tag": question.tag,
+            "tag_auto": question.tag_auto,
+            "status": question.status,
+        }
+    return {"round_num": round_num, "question": q_out, "pairings": out_pairs}
 
 @router.post("/api/games/{game_id}/round/complete")
 def complete_round(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):

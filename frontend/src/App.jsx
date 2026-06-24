@@ -13,7 +13,8 @@ async function api(path, opts={}) {
     throw new Error(`${r.status} ${txt}`)
   }
   const ct = r.headers.get('content-type') || ''
-  return ct.includes('json') ? r.json() : r.text()
+  if (ct.includes('json')) return await r.json()
+  return await r.text()
 }
 
 const TAGS = ['warm','secretive','reflective','tension','vulnerable','loyal']
@@ -295,7 +296,7 @@ function QuestionsTab({ gameId }) {
   const [historyQ, setHistoryQ] = useState(null)
   const [history, setHistory] = useState([])
 
-  const load = () => api(`/api/games/${gameId}/questions?status=${status}`).then(setQs).catch(()=>{})
+  const load = () => api(`/api/games/${gameId}/questions?status=${status}`).then(d => setQs(Array.isArray(d) ? d : [])).catch(e => { console.error('questions load failed', e); setQs([]) })
   useEffect(load, [gameId, status])
 
   const addQuestion = async () => {
