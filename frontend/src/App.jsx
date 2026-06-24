@@ -46,7 +46,7 @@ class ErrorBoundary extends Component {
 }
 
 export default function App() {
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState(undefined)
   const [games, setGames] = useState([])
   const [game, setGame] = useState(null)
   const [tab, setTab] = useState('round')
@@ -88,7 +88,16 @@ export default function App() {
 
   useEffect(() => { if (tab === 'admin' && !isOwner) setTab('round') }, [tab, isOwner])
 
-  if (!user) return (
+  if (user === undefined) return (
+    <div className="min-h-screen flex items-center justify-center bg-neutral-50 px-4">
+      <div className="text-center">
+        <div className="text-4xl mb-2 animate-pulse">🤝</div>
+        <p className="text-sm text-neutral-500">Loading…</p>
+      </div>
+    </div>
+  )
+
+  if (user === null) return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-violet-50 px-4">
       <div className="text-center max-w-sm w-full">
         {signingIn ? (
