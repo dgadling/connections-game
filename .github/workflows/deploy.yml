@@ -40,9 +40,10 @@ jobs:
             --image=us-central1-docker.pkg.dev/connections-500320/connections/connections-game:${{ github.sha }} \
             --platform=managed \
             --allow-unauthenticated \
+            --min-instances=1 \
             --max-instances=1 \
             --memory=512Mi \
             --cpu=1 \
-            --set-env-vars="DISCORD_CLIENT_ID=1519114145864356001" \
+            --set-env-vars="DISCORD_CLIENT_ID=1519114145864356001,REPLICA_URL=gcs://connections-game-litestream/db" \
             --set-secrets="DISCORD_CLIENT_SECRET=discord_oauth_client_secret:latest,SESSION_SECRET=session_secret:latest" \
             --quiet
