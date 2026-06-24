@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Component } from 'react'
 
 function csrf() {
+// … rest unchanged
   return document.cookie.split('; ').find(c => c.startsWith('csrf_token='))?.split('=')[1] || ''
 }
 
@@ -28,6 +29,27 @@ const TAG_COLORS = {
 }
 
 const arr = (d) => Array.isArray(d) ? d : []
+
+// --- debug ErrorBoundary – remove after crash is fixed ---
+class ErrorBoundary extends Component {
+  constructor(p){ super(p); this.state = { err: null } }
+  static getDerivedStateFromError(err){ return { err } }
+  componentDidCatch(err, info){
+    console.error('💥 React crash:', err)
+    console.error('Component stack:', info.componentStack)
+  }
+  render(){
+    if (this.state.err) {
+      return <div className="p-4 bg-red-50 border border-red-300 rounded text-sm">
+        <div className="font-bold text-red-800 mb-2">Render crash caught</div>
+        <pre className="whitespace-pre-wrap text-xs">{String(this.state.err.stack || this.state.err)}</pre>
+        <button onClick={()=>this.setState({err:null})} className="mt-2 px-2 py-1 border rounded text-xs">Retry</button>
+      </div>
+    }
+    return this.props.children
+  }
+}
+// --- end debug ---
 
 export default function App() {
   const [user, setUser] = useState(null)
@@ -102,11 +124,13 @@ export default function App() {
           </button>
         ))}
       </div>
+      <ErrorBoundary key={tab}>
       {tab === 'round' && <RoundTab gameId={game.game_id} gameName={game.name} />}
       {tab === 'questions' && <QuestionsTab gameId={game.game_id} />}
       {tab === 'members' && <MembersTab gameId={game.game_id} />}
       {tab === 'history' && <HistoryTab gameId={game.game_id} />}
       {tab === 'admin' && <AdminTab gameId={game.game_id} game={game} onGameUpdate={g => setGame({...game, ...g})} />}
+      </ErrorBoundary>
     </div>
   )
 }
