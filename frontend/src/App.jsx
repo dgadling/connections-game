@@ -1,4 +1,21 @@
 import { useEffect, useState, Component } from 'react'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 function csrf() {
   return document.cookie.split('; ').find(c => c.startsWith('csrf_token='))?.split('=')[1] || ''
@@ -389,29 +406,68 @@ function QuestionsTab({ gameId }) {
   const restore = async (q) => { await api(`/api/games/${gameId}/questions/${q.id}/restore`, {method:'POST'}); load() }
   const del = async (q) => { if (!confirm('Delete permanently?')) return; await api(`/api/games/${gameId}/questions/${q.id}`, {method:'DELETE'}); load() }
 
-  const [dragIdx, setDragIdx] = useState(null)
-  const [dragOverIdx, setDragOverIdx] = useState(null)
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(TouchSensor, { activationConstraint: { delay: 100, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
 
-  const reorderQuestions = async (newQs) => {
+  const handleDragEndDnd = async (event) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = qs.findIndex(q => q.id === active.id)
+    const newIndex = qs.findIndex(q => q.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+    const newQs = arrayMove(qs, oldIndex, newIndex)
+    setQs(newQs)
     const question_ids = newQs.map(q => q.id)
     await api(`/api/games/${gameId}/questions/reorder`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({question_ids})})
     load()
   }
 
-  const handleDragStart = (idx) => { setDragIdx(idx) }
-  const handleDragOver = (e, idx) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== idx) setDragOverIdx(idx) }
-  const handleDragLeave = () => { setDragOverIdx(null) }
-  const handleDrop = async (e, dropIdx) => {
-    e.preventDefault()
-    if (dragIdx === null || dragIdx === dropIdx) { setDragIdx(null); setDragOverIdx(null); return }
-    const newQs = [...qs]
-    const [item] = newQs.splice(dragIdx, 1)
-    newQs.splice(dropIdx, 0, item)
-    setDragIdx(null); setDragOverIdx(null)
-    setQs(newQs)
-    await reorderQuestions(newQs)
+  function SortableQuestionItem({ q, status, editing, editText, setEditText, onSaveEdit, onCancelEdit, onCycleTag, onRevertTag, onEditStart, onOpenHistory, onGraveyard, onRestore, onDelete }) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: q.id, disabled: status !== 'upcoming' || editing === q.id })
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.4 : 1,
+    }
+    return (
+      <div ref={setNodeRef} style={style}
+        className={`bg-white rounded-lg shadow-sm border border-neutral-200 px-3 py-2.5 transition-all ${isDragging ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`}>
+        {editing === q.id ? (
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input value={editText} onChange={e=>setEditText(e.target.value)} maxLength={500} className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" autoFocus />
+            <div className="flex gap-2">
+              <button onClick={()=>onSaveEdit(q)} className="flex-1 sm:flex-initial px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Save</button>
+              <button onClick={onCancelEdit} className="flex-1 sm:flex-initial px-3 py-2 border border-neutral-300 rounded-lg text-sm">Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-start gap-2">
+            {status==='upcoming' && (
+              <span {...attributes} {...listeners} className="text-neutral-300 hover:text-neutral-500 shrink-0 cursor-grab select-none text-[14px] leading-snug pt-0.5 touch-none" title="Drag to reorder">⋮⋮</span>
+            )}
+            <button onClick={()=>onCycleTag(q)} title="Click to change tag"
+              className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 mt-0.5 ${TAG_COLORS[q.tag]||'bg-neutral-100 text-neutral-700'}`}>
+              {q.tag}
+            </button>
+            {!q.tag_auto && <button onClick={()=>onRevertTag(q)} title="Revert to auto" className="text-[10px] text-neutral-400 hover:text-neutral-600 shrink-0 pt-0.5">↺</button>}
+            <span className="flex-1 text-[14px] leading-snug text-neutral-900 min-w-0">{q.text}</span>
+            <div className="flex items-start gap-3 text-[13px] text-neutral-500 shrink-0 pl-2 pt-0.5">
+              <button onClick={()=>onEditStart(q)} className="hover:text-neutral-900" title="Edit">✏️</button>
+              {q.edit_count > 0 && <button onClick={()=>onOpenHistory(q)} className="hover:text-neutral-900" title="History">🕓</button>}
+              {(status==='upcoming' || status==='used') && <button onClick={()=>onGraveyard(q)} className="hover:text-neutral-900" title="Graveyard">💀</button>}
+              {status==='graveyard' && <>
+                <button onClick={()=>onRestore(q)} className="hover:text-neutral-900" title="Restore">♻️</button>
+                <button onClick={()=>onDelete(q)} className="hover:text-red-600" title="Delete permanently">✕</button>
+              </>}
+            </div>
+          </div>
+        )}
+      </div>
+    )
   }
-  const handleDragEnd = () => { setDragIdx(null); setDragOverIdx(null) }
 
   const shuffleQuestions = async () => {
     // Balanced shuffle: group by tag, round-robin interleave to prevent tag repetition
@@ -546,68 +602,47 @@ function QuestionsTab({ gameId }) {
       </div>
 
       {/* question list */}
-      <div className="space-y-1.5">
-        {qs.map((q, idx) => {
-          const isDragging = dragIdx === idx
-          const isDragOver = dragOverIdx === idx && dragIdx !== null && dragIdx !== idx
-          return (
-          <div key={q.id}
-            draggable={status==='upcoming' && editing !== q.id}
-            onDragStart={()=> status==='upcoming' && handleDragStart(idx)}
-            onDragOver={(e)=> status==='upcoming' && handleDragOver(e, idx)}
-            onDragLeave={()=> status==='upcoming' && handleDragLeave()}
-            onDrop={(e)=> status==='upcoming' && handleDrop(e, idx)}
-            onDragEnd={handleDragEnd}
-            className={`bg-white rounded-lg shadow-sm border border-neutral-200 px-3 py-2.5 transition-all ${isDragging ? 'opacity-40' : ''} ${isDragOver ? 'ring-2 ring-indigo-400 ring-offset-1' : ''} ${status==='upcoming' ? 'cursor-grab active:cursor-grabbing' : ''}`}>
-            {editing === q.id ? (
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input value={editText} onChange={e=>setEditText(e.target.value)} maxLength={500} className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" autoFocus />
-                <div className="flex gap-2">
-                  <button onClick={()=>saveEdit(q)} className="flex-1 sm:flex-initial px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Save</button>
-                  <button onClick={()=>setEditing(null)} className="flex-1 sm:flex-initial px-3 py-2 border border-neutral-300 rounded-lg text-sm">Cancel</button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-start gap-2">
-                {status==='upcoming' && (
-                  <span className="text-neutral-300 hover:text-neutral-500 shrink-0 cursor-grab select-none text-[14px] leading-snug pt-0.5" title="Drag to reorder" draggable={false} onMouseDown={e=>e.stopPropagation()}>⋮⋮</span>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndDnd}>
+        <SortableContext items={qs.map(q => q.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-1.5">
+            {qs.map((q) => (
+              <SortableQuestionItem
+                key={q.id}
+                q={q}
+                status={status}
+                editing={editing}
+                editText={editText}
+                setEditText={setEditText}
+                onSaveEdit={saveEdit}
+                onCancelEdit={() => setEditing(null)}
+                onCycleTag={cycleTag}
+                onRevertTag={revertTag}
+                onEditStart={(qq) => { setEditing(qq.id); setEditText(qq.text) }}
+                onOpenHistory={openHistory}
+                onGraveyard={graveyard}
+                onRestore={restore}
+                onDelete={del}
+              />
+            ))}
+            {qs.length===0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-8 text-center">
+                <div className="text-3xl mb-2">📝</div>
+                <div className="text-neutral-700 font-medium mb-1">No {status} questions yet</div>
+                {status === 'upcoming' && (
+                  usedCount > 0 ? (
+                    <div className="space-y-2">
+                      <div className="text-sm text-neutral-500">{usedCount} question{usedCount===1?'':'s'} in used pool</div>
+                      <button onClick={recycleQuestions} disabled={busy} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">♻️ Recycle used questions ({usedCount})</button>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-neutral-500">Add one above, or load the 38-question starter pack.</div>
+                  )
                 )}
-                <button onClick={()=>cycleTag(q)} title="Click to change tag"
-                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 mt-0.5 ${TAG_COLORS[q.tag]||'bg-neutral-100 text-neutral-700'}`}>
-                  {q.tag}
-                </button>
-                {!q.tag_auto && <button onClick={()=>revertTag(q)} title="Revert to auto" className="text-[10px] text-neutral-400 hover:text-neutral-600 shrink-0 pt-0.5">↺</button>}
-                <span className="flex-1 text-[14px] leading-snug text-neutral-900 min-w-0">{q.text}</span>
-                <div className="flex items-start gap-3 text-[13px] text-neutral-500 shrink-0 pl-2 pt-0.5">
-                  <button onClick={()=>{setEditing(q.id); setEditText(q.text)}} className="hover:text-neutral-900" title="Edit">✏️</button>
-                  {q.edit_count > 0 && <button onClick={()=>openHistory(q)} className="hover:text-neutral-900" title="History">🕓</button>}
-                  {(status==='upcoming' || status==='used') && <button onClick={()=>graveyard(q)} className="hover:text-neutral-900" title="Graveyard">💀</button>}
-                  {status==='graveyard' && <>
-                    <button onClick={()=>restore(q)} className="hover:text-neutral-900" title="Restore">♻️</button>
-                    <button onClick={()=>del(q)} className="hover:text-red-600" title="Delete permanently">✕</button>
-                  </>}
-                </div>
               </div>
             )}
           </div>
-        )})}
-        {qs.length===0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-8 text-center">
-            <div className="text-3xl mb-2">📝</div>
-            <div className="text-neutral-700 font-medium mb-1">No {status} questions yet</div>
-            {status === 'upcoming' && (
-              usedCount > 0 ? (
-                <div className="space-y-2">
-                  <div className="text-sm text-neutral-500">{usedCount} question{usedCount===1?'':'s'} in used pool</div>
-                  <button onClick={recycleQuestions} disabled={busy} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">♻️ Recycle used questions ({usedCount})</button>
-                </div>
-              ) : (
-                <div className="text-sm text-neutral-500">Add one above, or load the 38-question starter pack.</div>
-              )
-            )}
-          </div>
-        )}
-      </div>
+        </SortableContext>
+      </DndContext>
 
       {historyQ && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-40" onClick={()=>setHistoryQ(null)}>
