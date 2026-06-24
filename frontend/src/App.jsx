@@ -178,13 +178,13 @@ export default function App() {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 pt-3">
-        <nav className="flex gap-1 sm:gap-2 text-sm overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-0 border-b border-neutral-200">
+        <nav className="flex gap-0.5 sm:gap-2 text-[11px] sm:text-sm overflow-x-hidden sm:overflow-visible pb-0 border-b border-neutral-200">
           {tabs.map(([t,label,icon]) => (
             <button key={t} onClick={()=>setTab(t)}
-              className={`flex items-center gap-1.5 px-3 py-2.5 whitespace-nowrap rounded-t-lg border-b-2 -mb-px transition-colors ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 sm:py-2.5 whitespace-nowrap rounded-t-lg border-b-2 -mb-px transition-colors ${
                 tab===t ? 'border-indigo-600 text-indigo-700 font-semibold bg-white' : 'border-transparent text-neutral-600 hover:text-neutral-900'
               }`}>
-              <span>{icon}</span><span>{label}</span>
+              <span>{icon}</span><span className="hidden sm:inline">{label}</span>
             </button>
           ))}
         </nav>
@@ -279,9 +279,23 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
 // --- Round Tab ---
 function RoundTab({ gameId }) {
   const [data, setData] = useState(null)
+  const [copied, setCopied] = useState(false)
   const load = () => api(`/api/games/${gameId}/round`).then(setData).catch(()=>setData(null))
   useEffect(() => { load() }, [gameId])
   const complete = async () => { await api(`/api/games/${gameId}/round/complete`, {method:'POST'}); load() }
+
+  const copyDiscord = () => {
+    if (!data) return
+    const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    const lines = [`🤝 Connections — Round ${data.round_num} — ${dateStr}`, '', `> ${data.question?.text || '(no question)'}`, '']
+    arr(data.pairings).forEach(p => {
+      const asker = p.asker_discord_id ? `<@${p.asker_discord_id}>` : p.asker_name
+      const target = p.target_discord_id ? `<@${p.target_discord_id}>` : p.target_name
+      lines.push(`• ${asker} answers about ${target}`)
+    })
+    navigator.clipboard.writeText(lines.join('\n'))
+    setCopied(true); setTimeout(()=>setCopied(false), 1500)
+  }
 
   if (!data) return <div className="text-neutral-500">Loading…</div>
 
@@ -290,7 +304,10 @@ function RoundTab({ gameId }) {
       <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold text-neutral-900">Round {data.round_num}</h2>
-          <button onClick={load} className="text-xs text-neutral-500 hover:text-neutral-700">↻ refresh</button>
+          <div className="flex items-center gap-2">
+            <button onClick={copyDiscord} disabled={!data.question || arr(data.pairings).length === 0} className="text-xs px-2.5 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed">{copied ? 'Copied!' : 'Copy'}</button>
+            <button onClick={load} className="text-xs text-neutral-500 hover:text-neutral-700">↻ refresh</button>
+          </div>
         </div>
         {data.question ? (
           <>
@@ -480,9 +497,9 @@ function QuestionsTab({ gameId }) {
       </div>
 
       {/* question list */}
-      <div className="space-y-2.5">
+      <div className="space-y-1.5">
         {qs.map((q, idx) => (
-          <div key={q.id} className="bg-white rounded-xl shadow-sm border border-neutral-200 p-3 sm:p-4">
+          <div key={q.id} className="bg-white rounded-lg shadow-sm border border-neutral-200 px-3 py-2.5">
             {editing === q.id ? (
               <div className="flex flex-col sm:flex-row gap-2">
                 <input value={editText} onChange={e=>setEditText(e.target.value)} maxLength={500} className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" autoFocus />
@@ -493,28 +510,28 @@ function QuestionsTab({ gameId }) {
               </div>
             ) : (
               <>
-                <div className="flex items-start gap-2.5 mb-2">
+                <div className="flex items-start gap-1.5 flex-wrap">
                   <button onClick={()=>cycleTag(q)} title="Click to change tag"
-                    className={`text-[11px] px-2 py-1 rounded-full font-medium shrink-0 ${TAG_COLORS[q.tag]||'bg-neutral-100 text-neutral-700'}`}>
+                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${TAG_COLORS[q.tag]||'bg-neutral-100 text-neutral-700'}`}>
                     {q.tag}
                   </button>
-                  {!q.tag_auto && <button onClick={()=>revertTag(q)} title="Revert to auto" className="text-[11px] text-neutral-400 hover:text-neutral-600 mt-0.5">↺</button>}
-                  <span className="flex-1 text-[15px] leading-snug text-neutral-900">{q.text}</span>
+                  {!q.tag_auto && <button onClick={()=>revertTag(q)} title="Revert to auto" className="text-[10px] text-neutral-400 hover:text-neutral-600">↺</button>}
+                  <span className="flex-1 text-[14px] leading-snug text-neutral-900 min-w-[120px]">{q.text}</span>
                 </div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-500 pt-1 border-t border-neutral-100">
-                  <button onClick={()=>{setEditing(q.id); setEditText(q.text)}} className="hover:text-neutral-900 py-1">Edit</button>
-                  <button onClick={()=>openHistory(q)} className="hover:text-neutral-900 py-1">History</button>
-                  {status==='upcoming' && <button onClick={()=>graveyard(q)} className="hover:text-neutral-900 py-1">Graveyard</button>}
-                  {status==='graveyard' && <>
-                    <button onClick={()=>restore(q)} className="hover:text-neutral-900 py-1">Restore</button>
-                    <button onClick={()=>del(q)} className="hover:text-red-600 py-1">Delete</button>
-                  </>}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-neutral-500 mt-1.5">
                   {status==='upcoming' && (
-                    <span className="ml-auto flex gap-0.5">
-                      <button onClick={()=>moveQuestion(q.id, -1)} disabled={idx===0} className="w-7 h-7 flex items-center justify-center rounded hover:bg-neutral-100 disabled:opacity-30" title="Move up">↑</button>
-                      <button onClick={()=>moveQuestion(q.id, 1)} disabled={idx===qs.length-1} className="w-7 h-7 flex items-center justify-center rounded hover:bg-neutral-100 disabled:opacity-30" title="Move down">↓</button>
+                    <span className="flex gap-0.5 mr-1">
+                      <button onClick={()=>moveQuestion(q.id, -1)} disabled={idx===0} className="w-5 h-5 flex items-center justify-center rounded hover:bg-neutral-100 disabled:opacity-30" title="Move up">↑</button>
+                      <button onClick={()=>moveQuestion(q.id, 1)} disabled={idx===qs.length-1} className="w-5 h-5 flex items-center justify-center rounded hover:bg-neutral-100 disabled:opacity-30" title="Move down">↓</button>
                     </span>
                   )}
+                  <button onClick={()=>{setEditing(q.id); setEditText(q.text)}} className="hover:text-neutral-900" title="Edit">✏️</button>
+                  <button onClick={()=>openHistory(q)} className="hover:text-neutral-900" title="History">🕓</button>
+                  {status==='upcoming' && <button onClick={()=>graveyard(q)} className="hover:text-neutral-900" title="Graveyard">🗑️</button>}
+                  {status==='graveyard' && <>
+                    <button onClick={()=>restore(q)} className="hover:text-neutral-900" title="Restore">♻️</button>
+                    <button onClick={()=>del(q)} className="hover:text-red-600" title="Delete permanently">✕</button>
+                  </>}
                 </div>
               </>
             )}
