@@ -11,8 +11,10 @@ config = context.config
 
 # Override sqlalchemy.url from env - CONNECTIONS_DB / CONNECTIONS_DB_PATH
 import os
-db_path = os.environ.get("CONNECTIONS_DB") or os.environ.get("CONNECTIONS_DB_PATH", "/data/connections.db")
-os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
+from contextlib import suppress
+db_path = os.environ.get("CONNECTIONS_DB") or os.environ.get("CONNECTIONS_DB_PATH", "./connections.db")
+with suppress(PermissionError):
+    os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
 config.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
 
 # Interpret the config file for Python logging.
