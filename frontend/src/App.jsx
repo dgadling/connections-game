@@ -100,9 +100,24 @@ export default function App() {
     </div>
   )
 
+  const isOwner = game?.role === 'owner'
+
+  // bounce off admin tab if not owner
+  useEffect(() => {
+    if (tab === 'admin' && !isOwner) setTab('round')
+  }, [tab, isOwner])
+
   if (!game) return <GameList user={user} games={games} setGame={setGame} onRefresh={loadGames} />
 
   if (claimNeeded) return <ClaimGate gameId={game.game_id} gameName={game.name} unclaimed={claimNeeded.unclaimed} onDone={()=>setClaimNeeded(null)} />
+
+  const tabs = [
+    ['round','Current Round'],
+    ['questions','Questions'],
+    ['members','Members'],
+    ['history','History'],
+    ...(isOwner ? [['admin','Admin']] : []),
+  ]
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-6">
@@ -112,13 +127,7 @@ export default function App() {
         <span className="text-xs text-neutral-500 ml-auto">{user.global_name || user.username}</span>
       </div>
       <div className="border-b mb-4 flex gap-4 text-sm overflow-x-auto">
-        {[
-          ['round','Current Round'],
-          ['questions','Questions'],
-          ['members','Members'],
-          ['history','History'],
-          ['admin','Admin'],
-        ].map(([t,label]) => (
+        {tabs.map(([t,label]) => (
           <button key={t} onClick={()=>setTab(t)} className={`pb-2 whitespace-nowrap ${tab===t ? 'border-b-2 border-indigo-600 font-semibold' : 'text-neutral-600 hover:text-neutral-900'}`}>
             {label}
           </button>
@@ -129,7 +138,7 @@ export default function App() {
       {tab === 'questions' && <QuestionsTab gameId={game.game_id} />}
       {tab === 'members' && <MembersTab gameId={game.game_id} />}
       {tab === 'history' && <HistoryTab gameId={game.game_id} />}
-      {tab === 'admin' && <AdminTab gameId={game.game_id} game={game} onGameUpdate={g => setGame({...game, ...g})} />}
+      {tab === 'admin' && isOwner && <AdminTab gameId={game.game_id} game={game} onGameUpdate={g => setGame({...game, ...g})} />}
       </ErrorBoundary>
     </div>
   )
