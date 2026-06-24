@@ -45,5 +45,5 @@ jobs:
             --memory=512Mi \
             --cpu=1 \
             --set-env-vars="DISCORD_CLIENT_ID=1519114145864356001,REPLICA_URL=gcs://connections-game-litestream/db" \
-            --set-secrets="DISCORD_CLIENT_SECRET=discord_oauth_client_secret:latest,SESSION_SECRET=session_secret:latest" \
+            --set-secrets="DISCORD_CLIENT_SECRET=discord_oauth_client_secret:latest,SESSION_SECRET=session_secret:latest,SUPERUSER_DISCORD_ID=SUPERUSER_DISCORD_ID:latest,DISCORD_OAUTH_FERNET_KEY=DISCORD_OAUTH_FERNET_KEY:latest" \
             --quiet
