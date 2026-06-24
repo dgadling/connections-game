@@ -13,11 +13,6 @@ from ..pairing import generate_groups
 
 router = APIRouter()
 
-def slugify(name: str) -> str:
-    import re as _re
-    s = _re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
-    return s or "game"
-
 def validate_discord_id(snowflake: str):
     if not re.match(r'^\d{17,20}$', snowflake):
         raise HTTPException(400, "Invalid Discord ID format")
@@ -42,15 +37,7 @@ def create_game(payload: schemas.GameCreate, db: Session = Depends(get_db), user
     superuser_id = os.environ.get("SUPERUSER_DISCORD_ID") or _SU
     if superuser_id and not is_superuser(user.discord_id):
         raise HTTPException(403, "only superuser can create games")
-    base = slugify(payload.name)
-    for _ in range(5):
-        slug = f"{base}-{secrets.token_urlsafe(6).lower().replace('_','').replace('-','')[:8]}"
-        exists = db.query(models.Game).filter(models.Game.slug == slug).first()
-        if not exists:
-            break
-    else:
-        raise HTTPException(500, "slug collision")
-    game = models.Game(slug=slug, name=payload.name, owner_discord_id=user.discord_id)
+    game = models.Game(name=payload.name, owner_discord_id=user.discord_id)
     db.add(game)
     db.commit()
     db.refresh(game)
@@ -590,7 +577,6 @@ def join_game(payload: schemas.JoinRequest, request: Request, db: Session = Depe
         db.add(models.GameMembership(game_id=game_id, discord_id=user.discord_id))
     db.delete(invite)
     db.commit()
-    game = db.query(models.Game).filter(models.Game.id == game_id).first()
     # check claim_needed
     claimed = db.query(models.GameMember).filter(
         models.GameMember.game_id == game_id,
@@ -606,7 +592,7 @@ def join_game(payload: schemas.JoinRequest, request: Request, db: Session = Depe
             models.GameMember.discord_id.is_(None)
         ).all()
         unclaimed = [{"id": r.id, "name": r.name} for r in rows]
-    return {"game_id": game_id, "slug": game.slug if game else None, "claim_needed": claim_needed, "unclaimed_members": unclaimed}
+    return {"game_id": game_id, "claim_needed": claim_needed, "unclaimed_members": unclaimed}
 
 @router.post("/api/games/{game_id}/invites")
 def create_invite(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):

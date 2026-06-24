@@ -68,7 +68,6 @@ def admin_b(db_session):
 def game_a(db_session):
     """game_a: admin_a and admin_b are members, super_user is NOT in memberships table"""
     g = models.Game(
-        slug="game-a-xyz",
         name="Game A",
         owner_discord_id="111111111111111111",
     )
@@ -90,7 +89,6 @@ def game_a(db_session):
 def game_b(db_session):
     """game_b: only admin_b is a member, super_user is NOT in memberships table"""
     g = models.Game(
-        slug="game-b-xyz",
         name="Game B",
         owner_discord_id="222222222222222222",
     )

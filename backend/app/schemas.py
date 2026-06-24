@@ -8,7 +8,6 @@ class GameCreate(BaseModel):
 
 class GameOut(BaseModel):
     id: int
-    slug: str
     name: str
     owner_discord_id: str
     archived_at: Optional[datetime] = None

@@ -39,7 +39,6 @@ class OAuthState(Base):
 class Game(Base):
     __tablename__ = "games"
     id = Column(Integer, primary_key=True)
-    slug = Column(String, unique=True, nullable=False)
     name = Column(String, nullable=False)
     owner_discord_id = Column(String, ForeignKey("discord_users.discord_id"), nullable=False)
     created_at = Column(TIMESTAMP, default=now, nullable=False)

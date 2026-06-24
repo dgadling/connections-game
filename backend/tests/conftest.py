@@ -81,7 +81,6 @@ def client(db_session, test_user):
 @pytest.fixture
 def game(db_session, test_user):
     g = models.Game(
-        slug="test-game-abc123",
         name="Test Game",
         owner_discord_id=test_user.discord_id,
     )

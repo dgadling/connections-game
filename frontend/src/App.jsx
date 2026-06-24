@@ -100,7 +100,7 @@ export default function App() {
     }).then(res => {
       // Refresh game list, then navigate to joined game
       loadGames()
-      setGame({ id: res.game_id, slug: res.slug, name: '' })
+      setGame({ id: res.game_id, name: '' })
     }).catch(e => {
       alert('Invite join failed: ' + e.message)
       loadGames()
@@ -209,7 +209,7 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
     if (!name.trim()) return
     const g = await api('/api/games', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: name.trim()})})
     setName(''); onRefresh()
-    setGame({id: g.id, slug: g.slug, name: g.name})
+    setGame({id: g.id, name: g.name})
   }
   const [inviteCode, setInviteCode] = useState('')
   const [joinError, setJoinError] = useState('')
@@ -224,7 +224,7 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
       })
       setInviteCode('')
       onRefresh()
-      setGame({ id: res.game_id, slug: res.slug, name: '' })
+      setGame({ id: res.game_id, name: '' })
     } catch (e) {
       setJoinError(e.message || 'Join failed')
     }
@@ -263,10 +263,9 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
         </div>
         <div className="space-y-2">
           {arr(games).map(g => (
-            <button key={g.id} onClick={()=>setGame({id: g.id, slug: g.slug, name: g.name})}
+            <button key={g.id} onClick={()=>setGame({id: g.id, name: g.name})}
               className="w-full text-left bg-white rounded-xl shadow-sm border border-neutral-200 p-4 hover:border-indigo-300 transition-colors">
               <div className="font-medium">{g.name}</div>
-              <div className="text-xs text-neutral-500 mt-0.5">/{g.slug}</div>
             </button>
           ))}
           {arr(games).length===0 && <div className="text-neutral-500 text-sm bg-white rounded-xl shadow-sm border border-neutral-200 p-4">No games yet — create one or join with an invite code above.</div>}
