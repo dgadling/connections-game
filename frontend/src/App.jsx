@@ -139,8 +139,13 @@ export default function App() {
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
           <button onClick={()=>setGame(null)} className="text-sm text-neutral-500 hover:text-neutral-900">← games</button>
           <h1 className="text-lg sm:text-xl font-bold tracking-tight text-neutral-900 truncate">{game.name}</h1>
-          <span className="text-xs text-neutral-500 ml-auto hidden sm:inline">{user.global_name || user.username}</span>
-          <button onClick={doLogout} className="text-neutral-500 hover:text-neutral-900 text-sm ml-2">Log out</button>
+          <div className="ml-auto flex items-center gap-2 text-xs text-neutral-500">
+            <span className="hidden sm:inline">{user.global_name || user.username}</span>
+            <button onClick={doLogout} title="Log out" aria-label="Log out"
+              className="px-1.5 py-1 rounded hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 transition-colors text-base leading-none">
+              ⍈
+            </button>
+          </div>
         </div>
       </header>
 
@@ -183,9 +188,14 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
       <header className="bg-white border-b border-neutral-200">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-xl font-bold">🤝 Connections</h1>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-neutral-600">{user.global_name || user.username}</span>
-            {onLogout && <button onClick={onLogout} className="text-neutral-500 hover:text-neutral-900 text-sm">Log out</button>}
+          <div className="flex items-center gap-2 text-sm text-neutral-600">
+            <span>{user.global_name || user.username}</span>
+            {onLogout && (
+              <button onClick={onLogout} title="Log out" aria-label="Log out"
+                className="px-1.5 py-1 rounded hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 transition-colors text-base leading-none">
+                ⍈
+              </button>
+            )}
           </div>
         </div>
       </header>
