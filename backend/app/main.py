@@ -121,8 +121,9 @@ async def auth_discord_callback(request: Request, code: str, state: str, db: Ses
         )
         db.add(user)
     db.commit()
-    # Session fixation protection – invalidate existing sessions
-    # (get_current_user would find them via cookie – we just issue fresh)
+    # Session fixation protection – invalidate all existing sessions for this discord_id
+    db.query(models.AuthSession).filter(models.AuthSession.discord_id == discord_id).delete()
+    db.commit()
     # Create new session
     from .auth import create_session
     session_token = create_session(db, discord_id)
