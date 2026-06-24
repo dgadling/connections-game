@@ -408,13 +408,40 @@ function QuestionsTab({ gameId }) {
   const restore = async (q) => { await api(`/api/games/${gameId}/questions/${q.id}/restore`, {method:'POST'}); setStatus('upcoming'); load() }
   const del = async (q) => { if (!confirm('Delete permanently?')) return; await api(`/api/games/${gameId}/questions/${q.id}`, {method:'DELETE'}); load() }
 
+  const moveQuestion = async (qid, delta) => {
+    const idx = qs.findIndex(q => q.id === qid)
+    if (idx < 0) return
+    const newIdx = idx + delta
+    if (newIdx < 0 || newIdx >= qs.length) return
+    const newQs = [...qs]
+    const [item] = newQs.splice(idx, 1)
+    newQs.splice(newIdx, 0, item)
+    const question_ids = newQs.map(q => q.id)
+    await api(`/api/games/${gameId}/questions/reorder`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({question_ids})})
+    load()
+  }
+
+  const shuffleQuestions = async () => {
+    const shuffled = [...qs]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
+    const question_ids = shuffled.map(q => q.id)
+    await api(`/api/games/${gameId}/questions/reorder`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({question_ids})})
+    load()
+  }
+
   return (
     <div>
-      <div className="flex gap-3 text-sm border-b mb-3">
+      <div className="flex gap-3 text-sm border-b mb-3 items-center">
         {['upcoming','used','graveyard'].map(s => (
           <button key={s} onClick={()=>setStatus(s)} className={`pb-1.5 capitalize ${status===s ? 'border-b-2 border-indigo-600 font-semibold' : 'text-neutral-600'}`}>{s}</button>
         ))}
-        <span className="ml-auto text-neutral-500 text-xs pt-1">{qs.length} questions</span>
+        <span className="ml-auto text-neutral-500 text-xs">{qs.length} questions</span>
+        {status === 'upcoming' && qs.length > 1 && (
+          <button onClick={shuffleQuestions} className="text-xs px-2 py-1 border rounded hover:bg-neutral-50 ml-2">🔀 Shuffle</button>
+        )}
       </div>
 
       {status === 'upcoming' && (
@@ -425,7 +452,7 @@ function QuestionsTab({ gameId }) {
       )}
 
       <ul className="space-y-2">
-        {qs.map(q => (
+        {qs.map((q, idx) => (
           <li key={q.id} className="border rounded p-3 text-sm">
             {editing === q.id ? (
               <div className="flex gap-2">
@@ -440,11 +467,17 @@ function QuestionsTab({ gameId }) {
                   {!q.tag_auto && <button onClick={()=>revertTag(q)} title="Revert to auto-tag" className="text-[11px] text-neutral-500 hover:text-neutral-800">↺</button>}
                   <span className="flex-1">{q.text}</span>
                 </div>
-                <div className="flex gap-3 text-xs text-neutral-500">
+                <div className="flex gap-3 text-xs text-neutral-500 items-center">
                   <button onClick={()=>{setEditing(q.id); setEditText(q.text)}} className="hover:text-neutral-800">Edit</button>
                   <button onClick={()=>openHistory(q)} className="hover:text-neutral-800">History</button>
                   {status==='upcoming' && <button onClick={()=>graveyard(q)} className="hover:text-neutral-800">Graveyard</button>}
                   {status==='graveyard' && <><button onClick={()=>restore(q)} className="hover:text-neutral-800">Restore</button><button onClick={()=>del(q)} className="hover:text-red-600">Delete</button></>}
+                  {status==='upcoming' && (
+                    <span className="ml-auto flex gap-1">
+                      <button onClick={()=>moveQuestion(q.id, -1)} disabled={idx===0} className="px-1 hover:text-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed" title="Move up">↑</button>
+                      <button onClick={()=>moveQuestion(q.id, 1)} disabled={idx===qs.length-1} className="px-1 hover:text-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed" title="Move down">↓</button>
+                    </span>
+                  )}
                 </div>
               </>
             )}
