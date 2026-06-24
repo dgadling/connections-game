@@ -50,6 +50,7 @@ export default function App() {
   const [games, setGames] = useState([])
   const [game, setGame] = useState(null)
   const [tab, setTab] = useState('round')
+  const [signingIn, setSigningIn] = useState(false)
 
   useEffect(() => { api('/auth/me').then(setUser).catch(()=>setUser(null)) }, [])
 
@@ -65,18 +66,34 @@ export default function App() {
   if (!user) return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-violet-50 px-4">
       <div className="text-center max-w-sm w-full">
-        <div className="text-5xl mb-3">🤝</div>
-        <h1 className="text-2xl font-bold tracking-tight text-neutral-900 mb-2">Connections</h1>
-        <p className="text-neutral-600 text-sm mb-6">The character bonding game for your table</p>
-        <button
-          onClick={async () => {
-            const redirect_after = window.location.pathname + window.location.search
-            const r = await fetch(`/auth/discord/start?redirect_after=${encodeURIComponent(redirect_after)}`, {method:'POST', credentials:'include', headers:{'X-CSRF-Token':csrf()}})
-            const {auth_url} = await r.json()
-            window.location = auth_url
-          }}
-          className="w-full px-4 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium shadow-sm"
-        >Sign in with Discord</button>
+        {signingIn ? (
+          <>
+            <div className="text-5xl mb-3 animate-pulse">🤝</div>
+            <h1 className="text-2xl font-bold tracking-tight text-neutral-900 mb-2">Signing in with Discord…</h1>
+            <p className="text-neutral-600 text-sm">Redirecting you to Discord</p>
+          </>
+        ) : (
+          <>
+            <div className="text-5xl mb-3">🤝</div>
+            <h1 className="text-2xl font-bold tracking-tight text-neutral-900 mb-2">Connections</h1>
+            <p className="text-neutral-600 text-sm mb-6">The character bonding game for your table</p>
+            <button
+              onClick={async () => {
+                setSigningIn(true)
+                try {
+                  const redirect_after = window.location.pathname + window.location.search
+                  const r = await fetch(`/auth/discord/start?redirect_after=${encodeURIComponent(redirect_after)}`, {method:'POST', credentials:'include', headers:{'X-CSRF-Token':csrf()}})
+                  const {auth_url} = await r.json()
+                  window.location = auth_url
+                } catch (e) {
+                  setSigningIn(false)
+                  alert('Sign-in failed: ' + e.message)
+                }
+              }}
+              className="w-full px-4 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium shadow-sm"
+            >Sign in with Discord</button>
+          </>
+        )}
       </div>
     </div>
   )
