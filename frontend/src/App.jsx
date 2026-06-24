@@ -330,7 +330,7 @@ function QuestionsTab({ gameId }) {
   const [history, setHistory] = useState([])
 
   const load = () => api(`/api/games/${gameId}/questions?status=${status}`).then(d => setQs(arr(d))).catch(e => { console.error('questions load failed', e); setQs([]) })
-  useEffect(load, [gameId, status])
+  useEffect(() => { load() }, [gameId, status])
 
   const addQuestion = async () => {
     if (!newText.trim()) return
@@ -440,7 +440,7 @@ function MembersTab({ gameId }) {
   const [editDiscord, setEditDiscord] = useState('')
 
   const load = () => api(`/api/games/${gameId}/members?include_deleted=${showDeleted}`).then(d => setMembers(arr(d))).catch(()=>setMembers([]))
-  useEffect(load, [gameId, showDeleted])
+  useEffect(() => { load() }, [gameId, showDeleted])
 
   const addMember = async () => {
     if (!name.trim()) return
