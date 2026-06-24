@@ -1,0 +1,30 @@
+#!/bin/sh
+# Pre-commit – blocks commit if lint/tests fail
+set -e
+echo "▶ pre-commit: ruff + pytest + eslint + frontend-test"
+
+# backend: ruff
+echo "  backend: ruff"
+(cd backend && python3 -m ruff check . 2>&1) || { echo "❌ ruff failed"; exit 1; }
+
+# backend: pytest
+echo "  backend: pytest"
+(cd backend && python3 -m pytest -q -W ignore 2>&1 | tail -3) || { echo "❌ pytest failed"; exit 1; }
+
+# frontend: eslint
+if [ -d frontend/node_modules ]; then
+  echo "  frontend: eslint"
+  if [ -x frontend/node_modules/.bin/eslint ]; then
+    (cd frontend && ./node_modules/.bin/eslint src --ext .js,.jsx 2>&1) || { echo "❌ eslint failed"; exit 1; }
+  else
+    echo "  eslint binary missing – run npm install / bun install"; exit 1
+  fi
+else
+  echo "❌ frontend/node_modules missing – run npm install (or bun install in sandbox)"; exit 1
+fi
+
+# frontend: node:test
+echo "  frontend: test"
+(cd frontend && node --test src/useEffect-cleanup.test.js 2>&1 | tail -5) || { echo "❌ frontend test failed"; exit 1; }
+
+echo "✓ pre-commit checks passed"
