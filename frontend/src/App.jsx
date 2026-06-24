@@ -27,6 +27,8 @@ const TAG_COLORS = {
   loyal: 'bg-green-100 text-green-800',
 }
 
+const arr = (d) => Array.isArray(d) ? d : []
+
 export default function App() {
   const [user, setUser] = useState(null)
   const [games, setGames] = useState([])
@@ -39,18 +41,19 @@ export default function App() {
   }, [])
 
   const loadGames = () => {
-    if (user) api('/api/games').then(setGames).catch(()=>{})
+    if (user) api('/api/games').then(d => setGames(arr(d))).catch(()=>setGames([]))
   }
   useEffect(loadGames, [user])
 
   // check claim status when entering a game
   useEffect(() => {
     if (!game || !user) return
-    api(`/api/games/${game.game_id}/members`).then(members => {
+    api(`/api/games/${game.game_id}/members`).then(d => {
+      const members = arr(d)
       const claimed = members.find(m => !m.deleted_at && m.discord_id === user.discord_id)
       if (!claimed) {
-        api(`/api/games/${game.game_id}/members/unclaimed`).then(unclaimed => {
-          setClaimNeeded({ unclaimed })
+        api(`/api/games/${game.game_id}/members/unclaimed`).then(u => {
+          setClaimNeeded({ unclaimed: arr(u) })
         }).catch(()=> setClaimNeeded(null))
       } else {
         setClaimNeeded(null)
@@ -121,7 +124,7 @@ function GameList({ user, games, setGame, onRefresh }) {
     setShowCreate(false); setName('')
     onRefresh()
     // find full game object
-    const list = await api('/api/games')
+    const list = await api('/api/games').then(arr).catch(()=>[])
     const full = list.find(x => x.slug === g.slug)
     if (full) setGame(full)
   }
@@ -134,13 +137,17 @@ function GameList({ user, games, setGame, onRefresh }) {
       setShowJoin(false); setInviteToken('')
       onRefresh()
       // navigate to game
-      const list = await api('/api/games')
+      const list = await api('/api/games').then(arr).catch(()=>[])
       const full = list.find(x => x.game_id === res.game_id)
       if (full) setGame(full)
     } catch(e) {
       alert('Join failed: ' + e.message)
     } finally { setJoining(false) }
   }
+
+  const gameList = arr(games)
+  const activeGames = gameList.filter(g=>!g.archived_at)
+  const archivedCount = gameList.filter(g=>g.archived_at).length
 
   return (
     <div className="max-w-2xl mx-auto p-6">
@@ -167,10 +174,10 @@ function GameList({ user, games, setGame, onRefresh }) {
         </div>
       )}
       <ul className="space-y-2">
-        {games.filter(g=>!g.archived_at).map(g => <li key={g.game_id}><button onClick={()=>setGame(g)} className="w-full text-left px-3 py-2 border rounded hover:bg-neutral-50">{g.name} <span className="text-xs text-neutral-500 ml-2">{g.role}</span></button></li>)}
-        {games.filter(g=>!g.archived_at).length === 0 && <li className="text-neutral-500 text-sm">No games yet – create one or join with an invite.</li>}
+        {activeGames.map(g => <li key={g.game_id}><button onClick={()=>setGame(g)} className="w-full text-left px-3 py-2 border rounded hover:bg-neutral-50">{g.name} <span className="text-xs text-neutral-500 ml-2">{g.role}</span></button></li>)}
+        {activeGames.length === 0 && <li className="text-neutral-500 text-sm">No games yet – create one or join with an invite.</li>}
       </ul>
-      {games.some(g=>g.archived_at) && <div className="mt-6 text-xs text-neutral-500">{games.filter(g=>g.archived_at).length} archived game(s) hidden</div>}
+      {archivedCount > 0 && <div className="mt-6 text-xs text-neutral-500">{archivedCount} archived game(s) hidden</div>}
     </div>
   )
 }
@@ -178,7 +185,8 @@ function GameList({ user, games, setGame, onRefresh }) {
 function ClaimGate({ gameId, gameName, unclaimed, onDone }) {
   const [selected, setSelected] = useState('')
   const [newName, setNewName] = useState('')
-  const [mode, setMode] = useState(unclaimed.length > 0 ? 'claim' : 'new')
+  const unclaimedList = arr(unclaimed)
+  const [mode, setMode] = useState(unclaimedList.length > 0 ? 'claim' : 'new')
   const [busy, setBusy] = useState(false)
 
   const submit = async () => {
@@ -198,13 +206,13 @@ function ClaimGate({ gameId, gameName, unclaimed, onDone }) {
     <div className="max-w-md mx-auto p-6 mt-12">
       <h1 className="text-xl font-bold mb-2">Welcome to {gameName}</h1>
       <p className="text-sm text-neutral-600 mb-4">Claim your character or add yourself as a new player.</p>
-      {unclaimed.length > 0 && (
+      {unclaimedList.length > 0 && (
         <div className="mb-3">
           <label className="flex items-center gap-2 mb-2"><input type="radio" checked={mode==='claim'} onChange={()=>setMode('claim')} /> Claim an existing character</label>
           {mode==='claim' && (
             <select value={selected} onChange={e=>setSelected(e.target.value)} className="w-full border rounded px-2 py-1.5 text-sm">
               <option value="">— pick —</option>
-              {unclaimed.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+              {unclaimedList.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
           )}
         </div>
@@ -223,10 +231,11 @@ function RoundTab({ gameId, gameName }) {
   const [completing, setCompleting] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  const load = () => api(`/api/games/${gameId}/round`).then(setData).catch(()=>{})
+  const load = () => api(`/api/games/${gameId}/round`).then(d => setData(d || {})).catch(()=>setData({pairings:[]}))
   useEffect(() => { load() }, [gameId])
 
   if (!data) return <div>Loading…</div>
+  const pairings = arr(data.pairings)
 
   const copyDiscord = () => {
     const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -236,7 +245,7 @@ function RoundTab({ gameId, gameName }) {
       `> ${data.question?.text || '(no question)'}`,
       '',
     ]
-    data.pairings.forEach(p => {
+    pairings.forEach(p => {
       const asker = p.asker_discord_id ? `<@${p.asker_discord_id}>` : p.asker_name
       const target = p.target_discord_id ? `<@${p.target_discord_id}>` : p.target_name
       lines.push(`• ${asker} answers about ${target}`)
@@ -266,11 +275,11 @@ function RoundTab({ gameId, gameName }) {
         <button onClick={copyDiscord} className="text-sm px-3 py-1 border rounded hover:bg-neutral-50">{copied ? 'Copied!' : 'Copy to Discord'}</button>
       </div>
       <div className="mb-4 p-3 bg-neutral-50 rounded text-[15px]">{data.question?.text || 'No question set – add questions in the Questions tab.'}</div>
-      {data.pairings.length === 0 ? (
+      {pairings.length === 0 ? (
         <div className="text-sm text-neutral-500">No pairings yet – add at least 3 members.</div>
       ) : (
         <ul className="space-y-1.5 text-sm">
-          {data.pairings.map(p => (
+          {pairings.map(p => (
             <li key={p.asker_id} className="flex items-center gap-2">
               <span className="font-medium">{p.asker_name}</span>
               <span className="text-neutral-500">answers about</span>
@@ -280,7 +289,7 @@ function RoundTab({ gameId, gameName }) {
           ))}
         </ul>
       )}
-      <button onClick={complete} disabled={completing || data.pairings.length===0} className="mt-4 px-4 py-1.5 bg-indigo-600 text-white rounded text-sm disabled:opacity-50">
+      <button onClick={complete} disabled={completing || pairings.length===0} className="mt-4 px-4 py-1.5 bg-indigo-600 text-white rounded text-sm disabled:opacity-50">
         {completing ? '…' : 'Mark Complete'}
       </button>
     </div>
@@ -296,7 +305,7 @@ function QuestionsTab({ gameId }) {
   const [historyQ, setHistoryQ] = useState(null)
   const [history, setHistory] = useState([])
 
-  const load = () => api(`/api/games/${gameId}/questions?status=${status}`).then(d => setQs(Array.isArray(d) ? d : [])).catch(e => { console.error('questions load failed', e); setQs([]) })
+  const load = () => api(`/api/games/${gameId}/questions?status=${status}`).then(d => setQs(arr(d))).catch(e => { console.error('questions load failed', e); setQs([]) })
   useEffect(load, [gameId, status])
 
   const addQuestion = async () => {
@@ -325,8 +334,10 @@ function QuestionsTab({ gameId }) {
   }
 
   const openHistory = async (q) => {
-    const h = await api(`/api/games/${gameId}/questions/${q.id}/history`)
-    setHistory(h); setHistoryQ(q)
+    try {
+      const h = await api(`/api/games/${gameId}/questions/${q.id}/history`)
+      setHistory(arr(h)); setHistoryQ(q)
+    } catch(e) { setHistory([]); setHistoryQ(q) }
   }
 
   const graveyard = async (q) => { await api(`/api/games/${gameId}/questions/${q.id}/graveyard`, {method:'POST'}); load() }
@@ -382,9 +393,9 @@ function QuestionsTab({ gameId }) {
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4" onClick={()=>setHistoryQ(null)}>
           <div className="bg-white rounded p-4 max-w-lg w-full text-sm" onClick={e=>e.stopPropagation()}>
             <div className="font-semibold mb-2">Edit history – {historyQ.text.slice(0,40)}…</div>
-            {history.length===0 ? <div className="text-neutral-500">No edits yet.</div> : (
+            {arr(history).length===0 ? <div className="text-neutral-500">No edits yet.</div> : (
               <ul className="space-y-2 max-h-64 overflow-auto">
-                {history.map(h => <li key={h.id} className="border-b pb-1"><div className="text-neutral-500 text-xs">{new Date(h.edited_at).toLocaleString()} – {h.edited_by}</div><div><span className="text-neutral-500">was:</span> [{h.old_tag}] {h.old_text}</div></li>)}
+                {arr(history).map(h => <li key={h.id} className="border-b pb-1"><div className="text-neutral-500 text-xs">{h.edited_at ? new Date(h.edited_at).toLocaleString() : ''} – {h.edited_by}</div><div><span className="text-neutral-500">was:</span> [{h.old_tag}] {h.old_text}</div></li>)}
               </ul>
             )}
             <button onClick={()=>setHistoryQ(null)} className="mt-3 px-3 py-1 border rounded text-sm">Close</button>
@@ -404,7 +415,7 @@ function MembersTab({ gameId }) {
   const [editName, setEditName] = useState('')
   const [editDiscord, setEditDiscord] = useState('')
 
-  const load = () => api(`/api/games/${gameId}/members?include_deleted=${showDeleted}`).then(setMembers).catch(()=>{})
+  const load = () => api(`/api/games/${gameId}/members?include_deleted=${showDeleted}`).then(d => setMembers(arr(d))).catch(()=>setMembers([]))
   useEffect(load, [gameId, showDeleted])
 
   const addMember = async () => {
@@ -447,8 +458,9 @@ function MembersTab({ gameId }) {
     } catch(e) { alert('Restore failed: ' + e.message) }
   }
 
-  const active = members.filter(m=>!m.deleted_at)
-  const deleted = members.filter(m=>m.deleted_at)
+  const memberList = arr(members)
+  const active = memberList.filter(m=>!m.deleted_at)
+  const deleted = memberList.filter(m=>m.deleted_at)
 
   return (
     <div>
@@ -503,18 +515,19 @@ function MembersTab({ gameId }) {
 
 function HistoryTab({ gameId }) {
   const [rows, setRows] = useState([])
-  useEffect(()=>{ api(`/api/games/${gameId}/history`).then(setRows).catch(()=>{}) }, [gameId])
+  useEffect(()=>{ api(`/api/games/${gameId}/history`).then(d => setRows(arr(d))).catch(()=>setRows([])) }, [gameId])
+  const rowList = arr(rows)
   return (
     <div>
-      <div className="text-sm text-neutral-600 mb-2">{rows.length} rounds played</div>
+      <div className="text-sm text-neutral-600 mb-2">{rowList.length} rounds played</div>
       <ul className="space-y-2 text-sm">
-        {rows.map(r => (
+        {rowList.map(r => (
           <li key={r.round_num} className="border rounded p-2">
-            <div className="font-medium">Round {r.round_num} – {new Date(r.played_at).toLocaleDateString()}</div>
+            <div className="font-medium">Round {r.round_num} – {r.played_at ? new Date(r.played_at).toLocaleDateString() : ''}</div>
             <div className="text-neutral-700">{r.question_text || <em>question deleted</em>}</div>
           </li>
         ))}
-        {rows.length===0 && <li className="text-neutral-500">No rounds played yet.</li>}
+        {rowList.length===0 && <li className="text-neutral-500">No rounds played yet.</li>}
       </ul>
     </div>
   )
@@ -527,8 +540,8 @@ function AdminTab({ gameId, game, onGameUpdate }) {
   const [rename, setRename] = useState(game.name)
   const [busy, setBusy] = useState(false)
 
-  const loadInvites = () => api(`/api/games/${gameId}/invites`).then(setInvites).catch(()=>setInvites([]))
-  const loadAdmins = () => api(`/api/games/${gameId}/admins`).then(setAdmins).catch(()=>setAdmins([]))
+  const loadInvites = () => api(`/api/games/${gameId}/invites`).then(d => setInvites(arr(d))).catch(()=>setInvites([]))
+  const loadAdmins = () => api(`/api/games/${gameId}/admins`).then(d => setAdmins(arr(d))).catch(()=>setAdmins([]))
 
   useEffect(()=>{ loadInvites(); loadAdmins() }, [gameId])
 
@@ -556,6 +569,9 @@ function AdminTab({ gameId, game, onGameUpdate }) {
   const downloadBackup = () => {
     window.open(`/api/games/${gameId}/backup`, '_blank')
   }
+
+  const inviteList = arr(invites)
+  const adminList = arr(admins)
 
   return (
     <div className="space-y-6 text-sm">
@@ -587,20 +603,20 @@ function AdminTab({ gameId, game, onGameUpdate }) {
           </div>
         )}
         <ul className="space-y-1 text-xs">
-          {invites.map(inv => (
+          {inviteList.map(inv => (
             <li key={inv.id} className="flex justify-between border-b py-1">
-              <span>{inv.token_prefix}… – {inv.used_by ? `used by ${inv.used_by}` : inv.revoked_at ? 'revoked' : `expires ${new Date(inv.expires_at).toLocaleDateString()}`}</span>
+              <span>{inv.token_prefix}… – {inv.used_by ? `used by ${inv.used_by}` : inv.revoked_at ? 'revoked' : `expires ${inv.expires_at ? new Date(inv.expires_at).toLocaleDateString() : ''}`}</span>
               {!inv.used_by && !inv.revoked_at && <button onClick={()=>revokeInvite(inv.id)} className="text-red-600 hover:underline">revoke</button>}
             </li>
           ))}
-          {invites.length===0 && <li className="text-neutral-500">No invites yet.</li>}
+          {inviteList.length===0 && <li className="text-neutral-500">No invites yet.</li>}
         </ul>
       </div>
 
       <div>
         <div className="font-semibold mb-2">Admins</div>
         <ul className="space-y-1">
-          {admins.map(a => (
+          {adminList.map(a => (
             <li key={a.discord_id} className="flex justify-between border-b py-1">
               <span>{a.global_name || a.username} <span className="text-neutral-500 text-xs">({a.role})</span></span>
               {a.role !== 'owner' && <button onClick={()=>revokeAdmin(a.discord_id)} className="text-xs text-red-600 hover:underline">revoke access</button>}
