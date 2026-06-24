@@ -529,15 +529,14 @@ def join_game(payload: schemas.JoinRequest, request: Request, db: Session = Depe
     token_hash = hashlib.sha256(payload.invite_token.encode()).hexdigest()
     invite = db.query(models.GameInvite).filter(models.GameInvite.token_hash == token_hash).first()
     now = datetime.utcnow()
-    if not invite or invite.revoked_at or invite.used_at or invite.expires_at < now:
+    if not invite or invite.expires_at < now:
         raise HTTPException(403, "invalid or expired invite")
     game_id = invite.game_id
     # grant membership if not already
     existing = db.query(models.GameMembership).filter(models.GameMembership.game_id == game_id, models.GameMembership.discord_id == user.discord_id).first()
     if not existing:
         db.add(models.GameMembership(game_id=game_id, discord_id=user.discord_id))
-    invite.used_by = user.discord_id
-    invite.used_at = now
+    db.delete(invite)
     db.commit()
     game = db.query(models.Game).filter(models.Game.id == game_id).first()
     # check claim_needed
@@ -560,7 +559,7 @@ def join_game(payload: schemas.JoinRequest, request: Request, db: Session = Depe
 @router.post("/api/games/{game_id}/invites")
 def create_invite(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_game_admin(game_id, user.discord_id, db)
-    token = secrets.token_urlsafe(32)
+    token = secrets.token_urlsafe(12)
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     now = datetime.utcnow()
     invite = models.GameInvite(
@@ -568,7 +567,7 @@ def create_invite(game_id: int, db: Session = Depends(get_db), user: models.Disc
         game_id=game_id,
         created_by=user.discord_id,
         created_at=now,
-        expires_at=now + timedelta(days=7)
+        expires_at=now + timedelta(days=1)
     )
     db.add(invite)
     db.commit()
@@ -578,6 +577,13 @@ def create_invite(game_id: int, db: Session = Depends(get_db), user: models.Disc
 @router.get("/api/games/{game_id}/invites")
 def list_invites(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_game_admin(game_id, user.discord_id, db)
+    now = datetime.utcnow()
+    # delete expired rows for this game
+    db.query(models.GameInvite).filter(
+        models.GameInvite.game_id == game_id,
+        models.GameInvite.expires_at < now
+    ).delete(synchronize_session=False)
+    db.commit()
     rows = db.query(models.GameInvite).filter(models.GameInvite.game_id == game_id).order_by(models.GameInvite.created_at.desc()).all()
     out = []
     for r in rows:
@@ -586,9 +592,6 @@ def list_invites(game_id: int, db: Session = Depends(get_db), user: models.Disco
             "token_prefix": r.token_hash[:6],
             "created_at": r.created_at,
             "expires_at": r.expires_at,
-            "used_by": r.used_by,
-            "used_at": r.used_at,
-            "revoked_at": r.revoked_at,
         })
     return out
 
@@ -598,7 +601,7 @@ def revoke_invite(game_id: int, invite_id: int, db: Session = Depends(get_db), u
     inv = db.query(models.GameInvite).filter(models.GameInvite.id == invite_id, models.GameInvite.game_id == game_id).first()
     if not inv:
         raise HTTPException(404)
-    inv.revoked_at = datetime.utcnow()
+    db.delete(inv)
     db.commit()
     return {"ok": True}
 

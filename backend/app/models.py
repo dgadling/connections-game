@@ -53,9 +53,6 @@ class GameInvite(Base):
     created_by = Column(String, ForeignKey("discord_users.discord_id"), nullable=False)
     created_at = Column(TIMESTAMP, default=now, nullable=False)
     expires_at = Column(TIMESTAMP, nullable=False)
-    used_by = Column(String, ForeignKey("discord_users.discord_id"), nullable=True)
-    used_at = Column(TIMESTAMP, nullable=True)
-    revoked_at = Column(TIMESTAMP, nullable=True)
 
 class GameMembership(Base):
     __tablename__ = "game_memberships"

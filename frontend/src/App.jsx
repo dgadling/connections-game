@@ -755,15 +755,15 @@ function AdminTab({ gameId, game, onGameUpdate }) {
             <div className="flex gap-3">
               <button onClick={()=>{navigator.clipboard.writeText(inviteUrl); alert('Copied')}} className="underline">copy</button>
               <button onClick={()=>setInviteUrl('')} className="underline">hide</button>
-              <span className="text-neutral-600 ml-auto">single-use · 7 days</span>
+              <span className="text-neutral-600 ml-auto">single-use · 1 day</span>
             </div>
           </div>
         )}
         <ul className="space-y-1 text-xs divide-y divide-neutral-100">
           {arr(invites).map(inv => (
             <li key={inv.id} className="flex justify-between py-2">
-              <span className="text-neutral-600">{inv.token_prefix}… · {inv.used_by ? `used by ${inv.used_by}` : inv.revoked_at ? 'revoked' : `expires ${inv.expires_at ? new Date(inv.expires_at).toLocaleDateString() : ''}`}</span>
-              {!inv.used_by && !inv.revoked_at && <button onClick={()=>revokeInvite(inv.id)} className="text-red-600 hover:underline">revoke</button>}
+              <span className="text-neutral-600">{inv.token_prefix}… · expires {inv.expires_at ? new Date(inv.expires_at).toLocaleDateString() : ''}</span>
+              <button onClick={()=>revokeInvite(inv.id)} className="text-red-600 hover:underline">revoke</button>
             </li>
           ))}
           {arr(invites).length===0 && <li className="text-neutral-500 py-2">No invites yet.</li>}

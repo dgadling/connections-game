@@ -60,12 +60,13 @@ def test_question_history_serialization(client, game, questions, db_session):
 
 def test_list_invites_serialization(client, game, db_session, test_user):
     from app import models
+    from datetime import timedelta
     inv = models.GameInvite(
         token_hash="abc123",
         game_id=game.id,
         created_by=test_user.discord_id,
         created_at=datetime.utcnow(),
-        expires_at=datetime.utcnow(),
+        expires_at=datetime.utcnow() + timedelta(days=1),
     )
     db_session.add(inv)
     db_session.commit()
@@ -77,8 +78,6 @@ def test_list_invites_serialization(client, game, db_session, test_user):
     i = data[0]
     assert_iso_or_none(i["created_at"])
     assert_iso_or_none(i["expires_at"])
-    assert_iso_or_none(i["used_at"])
-    assert_iso_or_none(i["revoked_at"])
 
 def test_list_admins_serialization(client, game):
     r = client.get(f"/api/games/{game.id}/admins")

@@ -23,7 +23,7 @@ def test_invite_join_creates_admin_membership(client, game, db_session, test_use
         game_id=game.id,
         created_by=test_user.discord_id,
         created_at=datetime.utcnow(),
-        expires_at=datetime.utcnow() + timedelta(days=7),
+        expires_at=datetime.utcnow() + timedelta(days=1),
     )
     db_session.add(invite)
     db_session.commit()
@@ -62,12 +62,11 @@ def test_invite_join_creates_admin_membership(client, game, db_session, test_use
     ).first()
     assert mem is not None, "GameMembership should be created"
 
-    # Verify invite was consumed
+    # Verify invite was consumed (deleted)
     inv_db = db_session.query(models.GameInvite).filter(
         models.GameInvite.token_hash == token_hash
     ).first()
-    assert inv_db.used_by == joiner.discord_id
-    assert inv_db.used_at is not None
+    assert inv_db is None, "Invite should be deleted after use"
 
 
 def test_invite_cannot_be_reused(client, game, db_session, test_user):
@@ -85,7 +84,7 @@ def test_invite_cannot_be_reused(client, game, db_session, test_user):
         game_id=game.id,
         created_by=test_user.discord_id,
         created_at=datetime.utcnow(),
-        expires_at=datetime.utcnow() + timedelta(days=7),
+        expires_at=datetime.utcnow() + timedelta(days=1),
     )
     db_session.add(invite)
     db_session.commit()
