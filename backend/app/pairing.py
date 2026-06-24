@@ -18,10 +18,7 @@ def generate_groups(member_ids: list[int]) -> list[list[tuple[int, int]]]:
     if n < 3:
         raise ValueError("Need at least 3 members")
 
-    if n % 2 == 1:
-        perms = _additive(n)
-    else:
-        perms = _backtrack_search(n)
+    perms = _additive(n) if n % 2 == 1 else _backtrack_search(n)
 
     return [
         [(member_ids[i], member_ids[p[i]]) for i in range(n)]

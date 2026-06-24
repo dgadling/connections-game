@@ -1,4 +1,4 @@
-"""m3/m4: history enrichment – pairings[], asker/target names + discord_ids, played_by_username, question_tag"""
+"""m3/m4: history enrichment - pairings[], asker/target names + discord_ids, played_by_username, question_tag"""
 from app import models
 
 
@@ -13,7 +13,7 @@ def test_history_includes_pairings_with_names_and_discord_ids(client, game, ques
     )
     db_session.add(play)
 
-    # Create pairing for round 1 – Alice (no discord_id) asks about Bob (has discord_id)
+    # Create pairing for round 1 - Alice (no discord_id) asks about Bob (has discord_id)
     alice, bob = members[0], members[1]
     pairing = models.ConnPairing(
         game_id=game.id,

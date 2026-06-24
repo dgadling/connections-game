@@ -1,4 +1,4 @@
-"""m2: question reorder – POST /questions/reorder updates sort_order"""
+"""m2: question reorder - POST /questions/reorder updates sort_order"""
 from app import models
 
 
@@ -9,7 +9,7 @@ def test_question_reorder_updates_sort_order(client, game, questions, db_session
     assert q1.sort_order == 0
     assert q2.sort_order == 1
 
-    # Reorder: swap them – q2 first, q1 second
+    # Reorder: swap them - q2 first, q1 second
     r = client.post(
         f"/api/games/{game.id}/questions/reorder",
         json={"question_ids": [q2.id, q1.id]}
@@ -33,7 +33,7 @@ def test_question_reorder_updates_sort_order(client, game, questions, db_session
 
 
 def test_question_reorder_three_items(client, game, db_session):
-    """Reorder with 3 questions – full reverse"""
+    """Reorder with 3 questions - full reverse"""
     # Create 3 questions with known order
     qs = []
     for i, text in enumerate(["First", "Second", "Third"]):

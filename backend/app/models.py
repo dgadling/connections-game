@@ -1,9 +1,8 @@
 from __future__ import annotations
 from sqlalchemy import (
     Column, Integer, String, Text, Boolean, TIMESTAMP, ForeignKey,
-    UniqueConstraint, CheckConstraint, Index
+    UniqueConstraint, CheckConstraint
 )
-from sqlalchemy.orm import relationship
 from datetime import datetime
 from .db import Base
 

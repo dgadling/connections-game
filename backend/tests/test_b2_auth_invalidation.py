@@ -5,7 +5,7 @@ from app.auth import hash_token
 
 
 def test_oauth_invalidates_existing_sessions(db_session, test_user):
-    """Simulate OAuth callback session invalidation – existing AuthSession rows for discord_id should be deleted"""
+    """Simulate OAuth callback session invalidation - existing AuthSession rows for discord_id should be deleted"""
     # Create 2 old sessions for test_user
     old_tokens = ["old_token_1", "old_token_2"]
     for t in old_tokens:

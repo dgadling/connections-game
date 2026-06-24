@@ -1,6 +1,8 @@
 from __future__ import annotations
-import os, secrets, hashlib
-from datetime import datetime, timedelta, timezone
+import os
+import secrets
+import hashlib
+from datetime import datetime, timedelta
 from fastapi import Request, HTTPException, Depends
 from sqlalchemy.orm import Session
 from .db import get_db
@@ -56,7 +58,7 @@ def require_membership(game_id: int, discord_id: str, db: Session):
     return mem
 
 def create_session(db: Session, discord_id: str) -> str:
-    # invalidate existing sessions for this discord_id? spec says invalidate any existing session at OAuth login – do that in oauth callback, not here
+    # invalidate existing sessions for this discord_id? spec says invalidate any existing session at OAuth login - do that in oauth callback, not here
     token = secrets.token_urlsafe(32)
     token_hash = hash_token(token)
     now = datetime.utcnow()

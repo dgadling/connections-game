@@ -1,7 +1,9 @@
 from __future__ import annotations
-import secrets, hashlib, re
+import secrets
+import hashlib
+import re
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, Response, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..db import get_db
@@ -26,8 +28,8 @@ def validate_discord_id(snowflake: str):
         now = datetime.utcnow().timestamp()
         if ts < 1420070400 or ts > now + 86400:
             raise HTTPException(400, "That doesn't look like a Discord ID — see https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID")
-    except ValueError:
-        raise HTTPException(400, "Invalid Discord ID")
+    except ValueError as e:
+        raise HTTPException(400, "Invalid Discord ID") from e
 
 @router.post("/api/games", response_model=schemas.GameOut)
 def create_game(payload: schemas.GameCreate, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
@@ -104,9 +106,9 @@ def create_member(game_id: int, payload: schemas.MemberCreate, db: Session = Dep
     db.add(m)
     try:
         db.commit()
-    except Exception:
+    except Exception as e:
         db.rollback()
-        raise HTTPException(400, "Name or Discord ID already in use")
+        raise HTTPException(400, "Name or Discord ID already in use") from e
     db.refresh(m)
     regenerate_pairings(db, game_id)
     return {"id": m.id, "name": m.name, "discord_id": m.discord_id, "game_id": m.game_id}
@@ -125,9 +127,9 @@ def patch_member(game_id: int, member_id: int, payload: schemas.MemberPatch, db:
         m.discord_id = payload.discord_id
     try:
         db.commit()
-    except Exception:
+    except Exception as e:
         db.rollback()
-        raise HTTPException(400, "Name or Discord ID conflict")
+        raise HTTPException(400, "Name or Discord ID conflict") from e
     regenerate_pairings(db, game_id)
     return {"id": m.id, "name": m.name, "discord_id": m.discord_id, "game_id": m.game_id}
 
@@ -151,9 +153,9 @@ def restore_member(game_id: int, member_id: int, db: Session = Depends(get_db), 
     m.deleted_at = None
     try:
         db.commit()
-    except Exception:
+    except Exception as e:
         db.rollback()
-        raise HTTPException(400, "Name conflict")
+        raise HTTPException(400, "Name conflict") from e
     regenerate_pairings(db, game_id)
     return {"id": m.id, "name": m.name, "discord_id": m.discord_id, "game_id": m.game_id}
 
@@ -182,18 +184,18 @@ def claim_member(game_id: int, payload: schemas.ClaimRequest, db: Session = Depe
         m.discord_id = user.discord_id
         try:
             db.commit()
-        except Exception:
+        except Exception as e:
             db.rollback()
-            raise HTTPException(400, "Discord ID already claimed in this game")
+            raise HTTPException(400, "Discord ID already claimed in this game") from e
         return {"member_id": m.id, "name": m.name, "discord_id": m.discord_id}
     else:
         m = models.GameMember(game_id=game_id, name=payload.name, discord_id=user.discord_id)
         db.add(m)
         try:
             db.commit()
-        except Exception:
+        except Exception as e:
             db.rollback()
-            raise HTTPException(400, "Name already in use")
+            raise HTTPException(400, "Name already in use") from e
         db.refresh(m)
         regenerate_pairings(db, game_id)
         return {"member_id": m.id, "name": m.name, "discord_id": m.discord_id}
@@ -236,8 +238,6 @@ def patch_question(game_id: int, qid: int, payload: schemas.QuestionPatch, db: S
     q = db.query(models.ConnQuestion).filter(models.ConnQuestion.id == qid, models.ConnQuestion.game_id == game_id).first()
     if not q:
         raise HTTPException(404)
-    old_text, old_tag = q.text, q.tag
-    changed = False
     # record edit if text or tag changes
     new_text = payload.text if payload.text is not None else q.text
     new_tag = q.tag
@@ -250,7 +250,6 @@ def patch_question(game_id: int, qid: int, payload: schemas.QuestionPatch, db: S
         if payload.tag_auto is None:
             new_tag_auto = False
     if payload.text is not None and payload.text != q.text:
-        changed = True
         new_text = payload.text
         if new_tag_auto:  # reclassify if auto
             new_tag = classify_sentiment(new_text)
@@ -261,7 +260,6 @@ def patch_question(game_id: int, qid: int, payload: schemas.QuestionPatch, db: S
     if new_text != q.text or new_tag != q.tag:
         edit = models.ConnQuestionEdit(question_id=q.id, old_text=q.text, old_tag=q.tag, edited_by=user.discord_id, edited_at=datetime.utcnow())
         db.add(edit)
-        changed = True
     q.text = new_text
     q.tag = new_tag
     q.tag_auto = new_tag_auto
@@ -342,8 +340,6 @@ def get_round(game_id: int, db: Session = Depends(get_db), user: models.DiscordU
         db.add(state)
         db.commit()
     round_num = state.current_round
-    pairings = db.query(models.ConnPairing, models.GameMember).join(models.GameMember, models.ConnPairing.target_member_id == models.GameMember.id).filter(models.ConnPairing.game_id == game_id, models.ConnPairing.round_num == round_num).all()
-    # need asker names too
     pairs = db.query(models.ConnPairing).filter(models.ConnPairing.game_id == game_id, models.ConnPairing.round_num == round_num).all()
     member_map = {m.id: m for m in db.query(models.GameMember).filter(models.GameMember.game_id == game_id).all()}
     out_pairs = []
@@ -382,9 +378,9 @@ def complete_round(game_id: int, db: Session = Depends(get_db), user: models.Dis
     db.add(play)
     try:
         db.commit()
-    except Exception:
+    except Exception as e:
         db.rollback()
-        raise HTTPException(409, "round already completed")
+        raise HTTPException(409, "round already completed") from e
     # mark question used
     if state.current_question_id:
         q = db.query(models.ConnQuestion).filter(models.ConnQuestion.id == state.current_question_id).first()
@@ -408,7 +404,7 @@ def regenerate_pairings(db: Session, game_id: int):
         return
     state = db.query(models.ConnState).filter(models.ConnState.game_id == game_id).first()
     current_round = state.current_round if state else 1
-    # Preserve current round pairings – only regenerate future rounds
+    # Preserve current round pairings - only regenerate future rounds
     # (prevents pairings shuffling under you mid-round when roster changes)
     db.query(models.ConnPairing).filter(
         models.ConnPairing.game_id == game_id,
@@ -596,7 +592,7 @@ def game_history(game_id: int, db: Session = Depends(get_db), user: models.Disco
     return out
 
 @router.get("/api/games/{game_id}/pairings")
-def get_pairings(game_id: int, round: int = None, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
+def get_pairings(game_id: int, round: int | None = None, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     if round is None:
         state = db.query(models.ConnState).filter(models.ConnState.game_id == game_id).first()
@@ -614,4 +610,4 @@ def get_pairings(game_id: int, round: int = None, db: Session = Depends(get_db),
             })
     return {"round_num": round, "pairings": out}
 
-# ensure require_membership is called on every endpoint – audit above: yes
+# ensure require_membership is called on every endpoint - audit above: yes

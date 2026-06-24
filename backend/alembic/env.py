@@ -9,7 +9,7 @@ from alembic import context
 # access to the values within the .ini file in use.
 config = context.config
 
-# Override sqlalchemy.url from env – CONNECTIONS_DB / CONNECTIONS_DB_PATH
+# Override sqlalchemy.url from env - CONNECTIONS_DB / CONNECTIONS_DB_PATH
 import os
 db_path = os.environ.get("CONNECTIONS_DB") or os.environ.get("CONNECTIONS_DB_PATH", "/data/connections.db")
 os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
@@ -22,7 +22,8 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from app.models import Base
 target_metadata = Base.metadata

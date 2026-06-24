@@ -1,4 +1,4 @@
-"""m6: invite join – POST /games/join consumes invite_token, creates admin membership"""
+"""m6: invite join - POST /games/join consumes invite_token, creates admin membership"""
 import hashlib
 from datetime import datetime, timedelta
 from app import models
@@ -72,7 +72,7 @@ def test_invite_join_creates_admin_membership(client, game, db_session, test_use
 
 
 def test_invite_cannot_be_reused(client, game, db_session, test_user):
-    """An invite token is single-use – second join attempt must fail"""
+    """An invite token is single-use - second join attempt must fail"""
     # Create two joiners
     joiner1 = models.DiscordUser(discord_id="111111111111111111", username="j1", global_name="J1")
     joiner2 = models.DiscordUser(discord_id="222222222222222222", username="j2", global_name="J2")
@@ -105,7 +105,7 @@ def test_invite_cannot_be_reused(client, game, db_session, test_user):
             return joiner
         return override_get_db, override_require_user
 
-    # First join – should succeed
+    # First join - should succeed
     override_get_db, override_require_user = make_overrides(joiner1)
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[require_user] = override_require_user
@@ -115,7 +115,7 @@ def test_invite_cannot_be_reused(client, game, db_session, test_user):
     finally:
         app.dependency_overrides.clear()
 
-    # Second join with same token – must fail
+    # Second join with same token - must fail
     override_get_db, override_require_user = make_overrides(joiner2)
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[require_user] = override_require_user

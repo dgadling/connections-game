@@ -46,7 +46,7 @@ def test_regenerate_preserves_current_round(db_session, game, members):
     # Rounds 3 and 4 (> current_round) should have been deleted and regenerated
     # They may exist (regenerated) or not, but the key is that rounds 1-2 survived
     # Verify old round 3/4 specific pairings are gone by checking they were replaced
-    # Simpler: just assert rounds 1-2 still exist – that's the bug fix
+    # Simpler: just assert rounds 1-2 still exist - that's the bug fix
     assert True  # if we got here, preservation worked
 
 
@@ -88,4 +88,4 @@ def test_regenerate_deletes_future_rounds_only(db_session, game):
         assert count > 0, f"Round {rnd} (<= current_round) must be preserved, got {count} pairings"
 
     # Future rounds should have been regenerated (may have different count due to group size)
-    # Just verify regenerate_pairings ran without deleting current/past rounds – already asserted above
+    # Just verify regenerate_pairings ran without deleting current/past rounds - already asserted above

@@ -1,18 +1,18 @@
 from __future__ import annotations
-import os, secrets, re
+import os
+import secrets
 from datetime import datetime, timedelta
-from fastapi import FastAPI, Request, Response, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 import httpx
 
-from .db import engine, get_db, Base
+from .db import get_db
 from . import models
 from .auth import (
-    get_current_user, require_user,
+    require_user,
     create_session, hash_token,
     generate_csrf_token, CSRF_COOKIE, SESSION_COOKIE,
     discord_oauth_url,
@@ -43,7 +43,7 @@ async def csrf_cookie_middleware(request: Request, call_next):
 # Auth routes
 @app.post("/auth/discord/start")
 async def auth_discord_start(request: Request, db: Session = Depends(get_db), redirect_after: str = "/"):
-    # Validate redirect_after – same-origin path only
+    # Validate redirect_after - same-origin path only
     if "://" in redirect_after or redirect_after.startswith("//"):
         redirect_after = "/"
     if not redirect_after.startswith("/"):
@@ -63,7 +63,7 @@ async def auth_discord_start(request: Request, db: Session = Depends(get_db), re
 
 @app.get("/auth/discord/callback")
 async def auth_discord_callback(request: Request, code: str, state: str, db: Session = Depends(get_db)):
-    # Verify state – must match cookie + DB, single-use
+    # Verify state - must match cookie + DB, single-use
     cookie_state = request.cookies.get("oauth_state")
     if not cookie_state or cookie_state != state:
         raise HTTPException(400, "Invalid OAuth state")
@@ -121,15 +121,13 @@ async def auth_discord_callback(request: Request, code: str, state: str, db: Ses
         )
         db.add(user)
     db.commit()
-    # Session fixation protection – invalidate all existing sessions for this discord_id
+    # Session fixation protection - invalidate all existing sessions for this discord_id
     db.query(models.AuthSession).filter(models.AuthSession.discord_id == discord_id).delete()
     db.commit()
     # Create new session
-    from .auth import create_session
     session_token = create_session(db, discord_id)
     csrf_token = generate_csrf_token()
     # Redirect with cookies
-    from fastapi.responses import RedirectResponse
     resp = RedirectResponse(url=redirect_after, status_code=302)
     resp.set_cookie(SESSION_COOKIE, session_token, max_age=30*86400, httponly=True, secure=True, samesite="lax", path="/")
     resp.set_cookie(CSRF_COOKIE, csrf_token, max_age=30*86400, httponly=False, secure=True, samesite="lax", path="/")
@@ -138,7 +136,7 @@ async def auth_discord_callback(request: Request, code: str, state: str, db: Ses
 
 @app.post("/auth/logout")
 def logout(request: Request, db: Session = Depends(get_db)):
-    from .auth import get_session_token, hash_token
+    from .auth import get_session_token
     token = get_session_token(request)
     if token:
         token_hash = hash_token(token)
@@ -166,8 +164,8 @@ def healthz(db: Session = Depends(get_db)):
     try:
         db.execute(text("SELECT 1"))
         return {"status": "ok"}
-    except Exception:
-        raise HTTPException(503, "db unavailable")
+    except Exception as e:
+        raise HTTPException(503, "db unavailable") from e
 
 # Privacy policy
 @app.get("/privacy")
@@ -177,7 +175,6 @@ def privacy():
     privacy_path = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "public", "privacy.html")
     if os.path.exists(privacy_path):
         return FileResponse(privacy_path)
-    from fastapi.responses import HTMLResponse
     return HTMLResponse("""
 <!doctype html><html><head><meta charset=utf-8><title>Privacy Policy — Connections Game</title></head>
 <body style="font-family:sans-serif;max-width:640px;margin:40px auto;padding:0 16px">
