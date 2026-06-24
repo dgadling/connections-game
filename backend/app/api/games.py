@@ -206,7 +206,21 @@ def claim_member(game_id: int, payload: schemas.ClaimRequest, db: Session = Depe
 @router.get("/api/games/{game_id}/questions")
 def list_questions(game_id: int, status: str = "upcoming", db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
-    rows = db.query(models.ConnQuestion).filter(models.ConnQuestion.game_id == game_id, models.ConnQuestion.status == status).order_by(models.ConnQuestion.sort_order).all()
+    from sqlalchemy import func
+    # count edits per question to avoid N+1
+    edit_counts_sq = db.query(
+        models.ConnQuestionEdit.question_id,
+        func.count(models.ConnQuestionEdit.id).label("cnt")
+    ).group_by(models.ConnQuestionEdit.question_id).subquery()
+    rows = db.query(
+        models.ConnQuestion,
+        func.coalesce(edit_counts_sq.c.cnt, 0).label("edit_count")
+    ).outerjoin(
+        edit_counts_sq, edit_counts_sq.c.question_id == models.ConnQuestion.id
+    ).filter(
+        models.ConnQuestion.game_id == game_id,
+        models.ConnQuestion.status == status
+    ).order_by(models.ConnQuestion.sort_order).all()
     return [
         {
             "id": q.id,
@@ -216,10 +230,11 @@ def list_questions(game_id: int, status: str = "upcoming", db: Session = Depends
             "tag_auto": q.tag_auto,
             "status": q.status,
             "sort_order": q.sort_order,
+            "edit_count": edit_count,
             "created_at": q.created_at.isoformat() if q.created_at else None,
             "updated_at": q.updated_at.isoformat() if q.updated_at else None,
         }
-        for q in rows
+        for q, edit_count in rows
     ]
 
 @router.post("/api/games/{game_id}/questions")

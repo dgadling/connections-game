@@ -51,6 +51,7 @@ class QuestionOut(BaseModel):
     tag_auto: bool
     status: str
     sort_order: int
+    edit_count: int = 0
     class Config:
         from_attributes = True
 

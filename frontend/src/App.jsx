@@ -568,20 +568,20 @@ function QuestionsTab({ gameId }) {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-start gap-2">
                 {status==='upcoming' && (
-                  <span className="text-neutral-300 hover:text-neutral-500 shrink-0 cursor-grab select-none text-[14px] leading-none" title="Drag to reorder" draggable={false} onMouseDown={e=>e.stopPropagation()}>⋮⋮</span>
+                  <span className="text-neutral-300 hover:text-neutral-500 shrink-0 cursor-grab select-none text-[14px] leading-snug pt-0.5" title="Drag to reorder" draggable={false} onMouseDown={e=>e.stopPropagation()}>⋮⋮</span>
                 )}
                 <button onClick={()=>cycleTag(q)} title="Click to change tag"
-                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${TAG_COLORS[q.tag]||'bg-neutral-100 text-neutral-700'}`}>
+                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 mt-0.5 ${TAG_COLORS[q.tag]||'bg-neutral-100 text-neutral-700'}`}>
                   {q.tag}
                 </button>
-                {!q.tag_auto && <button onClick={()=>revertTag(q)} title="Revert to auto" className="text-[10px] text-neutral-400 hover:text-neutral-600 shrink-0">↺</button>}
+                {!q.tag_auto && <button onClick={()=>revertTag(q)} title="Revert to auto" className="text-[10px] text-neutral-400 hover:text-neutral-600 shrink-0 pt-0.5">↺</button>}
                 <span className="flex-1 text-[14px] leading-snug text-neutral-900 min-w-0">{q.text}</span>
-                <div className="flex items-center gap-3 text-[13px] text-neutral-500 shrink-0 pl-2">
+                <div className="flex items-start gap-3 text-[13px] text-neutral-500 shrink-0 pl-2 pt-0.5">
                   <button onClick={()=>{setEditing(q.id); setEditText(q.text)}} className="hover:text-neutral-900" title="Edit">✏️</button>
-                  <button onClick={()=>openHistory(q)} className="hover:text-neutral-900" title="History">🕓</button>
-                  {status==='upcoming' && <button onClick={()=>graveyard(q)} className="hover:text-neutral-900" title="Graveyard">🗑️</button>}
+                  {q.edit_count > 0 && <button onClick={()=>openHistory(q)} className="hover:text-neutral-900" title="History">🕓</button>}
+                  {(status==='upcoming' || status==='used') && <button onClick={()=>graveyard(q)} className="hover:text-neutral-900" title="Graveyard">💀</button>}
                   {status==='graveyard' && <>
                     <button onClick={()=>restore(q)} className="hover:text-neutral-900" title="Restore">♻️</button>
                     <button onClick={()=>del(q)} className="hover:text-red-600" title="Delete permanently">✕</button>
