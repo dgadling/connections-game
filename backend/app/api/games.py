@@ -348,6 +348,28 @@ def reorder_questions(game_id: int, payload: schemas.ReorderRequest, db: Session
     return {"ok": True}
 
 
+@router.post("/api/games/{game_id}/questions/recycle")
+def recycle_questions(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
+    require_membership(game_id, user.discord_id, db)
+    # find max sort_order among existing upcoming questions
+    max_sort = db.query(models.ConnQuestion.sort_order).filter(
+        models.ConnQuestion.game_id == game_id,
+        models.ConnQuestion.status == "upcoming"
+    ).order_by(models.ConnQuestion.sort_order.desc()).first()
+    sort_order = (max_sort[0] + 1) if max_sort else 0
+    # recycle used questions, ordered by id ASC (no last_asked column in this schema)
+    used_qs = db.query(models.ConnQuestion).filter(
+        models.ConnQuestion.game_id == game_id,
+        models.ConnQuestion.status == "used"
+    ).order_by(models.ConnQuestion.id.asc()).all()
+    for q in used_qs:
+        q.status = "upcoming"
+        q.sort_order = sort_order
+        sort_order += 1
+    db.commit()
+    return {"recycled_count": len(used_qs)}
+
+
 @router.post("/api/games/{game_id}/questions/seed")
 def seed_questions(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)

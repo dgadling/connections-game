@@ -349,8 +349,9 @@ function QuestionsTab({ gameId }) {
   const [showImport, setShowImport] = useState(false)
   const [importText, setImportText] = useState('')
   const [busy, setBusy] = useState(false)
+  const [usedCount, setUsedCount] = useState(0)
 
-  const load = () => api(`/api/games/${gameId}/questions?status=${status}`).then(d => setQs(arr(d))).catch(e => { console.error('questions load failed', e); setQs([]) })
+  const load = () => api(`/api/games/${gameId}/questions?status=${status}`).then(d => { const a = arr(d); setQs(a); if (status === 'upcoming') { if (a.length === 0) { api(`/api/games/${gameId}/questions?status=used`).then(u => setUsedCount(arr(u).length)).catch(()=>setUsedCount(0)) } else { setUsedCount(0) } } }).catch(e => { console.error('questions load failed', e); setQs([]) })
   useEffect(() => { load() }, [gameId, status])
 
   const addQuestion = async () => {
@@ -475,6 +476,16 @@ function QuestionsTab({ gameId }) {
     } catch(e) { alert('Export failed: ' + e.message) }
   }
 
+  const recycleQuestions = async () => {
+    setBusy(true)
+    try {
+      const r = await api(`/api/games/${gameId}/questions/recycle`, {method:'POST'})
+      if (r.recycled_count === 0) { alert('No used questions to recycle.'); return }
+      load()
+    } catch(e) { alert('Recycle failed: ' + e.message) }
+    finally { setBusy(false) }
+  }
+
   return (
     <div className="space-y-4">
       {/* status tabs + tools */}
@@ -569,7 +580,16 @@ function QuestionsTab({ gameId }) {
           <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-8 text-center">
             <div className="text-3xl mb-2">📝</div>
             <div className="text-neutral-700 font-medium mb-1">No {status} questions yet</div>
-            {status === 'upcoming' && <div className="text-sm text-neutral-500">Add one above, or load the 38-question starter pack.</div>}
+            {status === 'upcoming' && (
+              usedCount > 0 ? (
+                <div className="space-y-2">
+                  <div className="text-sm text-neutral-500">{usedCount} question{usedCount===1?'':'s'} in used pool</div>
+                  <button onClick={recycleQuestions} disabled={busy} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">♻️ Recycle used questions ({usedCount})</button>
+                </div>
+              ) : (
+                <div className="text-sm text-neutral-500">Add one above, or load the 38-question starter pack.</div>
+              )
+            )}
           </div>
         )}
       </div>
