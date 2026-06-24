@@ -9,6 +9,12 @@ from alembic import context
 # access to the values within the .ini file in use.
 config = context.config
 
+# Override sqlalchemy.url from env – CONNECTIONS_DB / CONNECTIONS_DB_PATH
+import os
+db_path = os.environ.get("CONNECTIONS_DB") or os.environ.get("CONNECTIONS_DB_PATH", "/data/connections.db")
+os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
+config.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
+
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:

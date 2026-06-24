@@ -3,9 +3,9 @@ import os
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DB_PATH = os.environ.get("CONNECTIONS_DB", "/data/connections.db")
-if not os.path.exists(os.path.dirname(DB_PATH)) or os.path.dirname(DB_PATH) == "":
-    DB_PATH = "./connections.db"
+DB_PATH = os.environ.get("CONNECTIONS_DB") or os.environ.get("CONNECTIONS_DB_PATH", "/data/connections.db")
+# ensure parent dir exists
+os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
 
 engine = create_engine(
     f"sqlite:///{DB_PATH}",

@@ -9,6 +9,7 @@ RUN npm run build
 FROM python:3.12-slim
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
+    CONNECTIONS_DB=/data/connections.db \
     CONNECTIONS_DB_PATH=/data/connections.db
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends sqlite3 && rm -rf /var/lib/apt/lists/*
