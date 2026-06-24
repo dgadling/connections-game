@@ -42,27 +42,70 @@ async def csrf_cookie_middleware(request: Request, call_next):
 
 # Auth routes
 @app.post("/auth/discord/start")
-async def auth_discord_start(request: Request, db: Session = Depends(get_db), redirect_after: str = "/"):
+@app.get("/auth/discord/start")
+async def auth_discord_start(request: Request, db: Session = Depends(get_db), redirect_after: str = "/", force_consent: bool = False):
     # Validate redirect_after - same-origin path only
     if "://" in redirect_after or redirect_after.startswith("//"):
         redirect_after = "/"
     if not redirect_after.startswith("/"):
         redirect_after = "/"
     state = secrets.token_urlsafe(32)
+    use_prompt_none = not force_consent
     oauth_state = models.OAuthState(
         state_token=state,
         redirect_after=redirect_after,
         created_at=datetime.utcnow(),
         expires_at=datetime.utcnow() + timedelta(minutes=10),
+        used_silent_auth=use_prompt_none,
     )
     db.add(oauth_state)
     db.commit()
-    resp = JSONResponse({"auth_url": discord_oauth_url(state)})
+    auth_url = discord_oauth_url(state, prompt_none=use_prompt_none)
+    # GET requests (OAuth fallback redirect) -> 302 to Discord directly
+    if request.method == "GET":
+        return RedirectResponse(url=auth_url, status_code=302)
+    # POST requests (frontend) -> JSON with auth_url
+    resp = JSONResponse({"auth_url": auth_url})
     resp.set_cookie("oauth_state", state, max_age=600, httponly=True, secure=True, samesite="none", path="/")
     return resp
 
 @app.get("/auth/discord/callback")
-async def auth_discord_callback(request: Request, code: str, state: str, db: Session = Depends(get_db)):
+async def auth_discord_callback(
+    request: Request,
+    db: Session = Depends(get_db),
+    error: str | None = None,
+    code: str | None = None,
+    state: str | None = None,
+):
+    # OAuth error handling (prompt=none fallback)
+    if error:
+        if not state:
+            raise HTTPException(400, f"OAuth error: {error} (missing state)")
+        # Verify state - DB is authoritative
+        oauth_state = db.query(models.OAuthState).filter(models.OAuthState.state_token == state).first()
+        if not oauth_state or oauth_state.expires_at < datetime.utcnow():
+            raise HTTPException(400, "OAuth state expired")
+        # Allowed retry errors: consent_required, login_required, interaction_required
+        retry_errors = {"consent_required", "login_required", "interaction_required"}
+        if error in retry_errors and oauth_state.used_silent_auth:
+            # Fallback to interactive consent
+            redirect_after = oauth_state.redirect_after or "/"
+            db.delete(oauth_state)
+            db.commit()
+            from urllib.parse import quote
+            return RedirectResponse(
+                url=f"/auth/discord/start?force_consent=1&redirect_after={quote(redirect_after, safe='')}",
+                status_code=302,
+            )
+        # Non-retryable error
+        db.delete(oauth_state)
+        db.commit()
+        raise HTTPException(400, f"OAuth error: {error}")
+
+    # Normal success path - require code and state
+    if not code or not state:
+        raise HTTPException(400, "OAuth callback missing code or state")
+
     # Verify state - DB is authoritative CSRF protection (single-use, 10min expiry)
     # Cookie is defense-in-depth only - don't fail if missing (mobile Safari drops cross-site Lax cookies)
     import logging

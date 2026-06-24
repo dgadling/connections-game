@@ -34,6 +34,7 @@ class OAuthState(Base):
     redirect_after = Column(String, nullable=True)
     created_at = Column(TIMESTAMP, default=now, nullable=False)
     expires_at = Column(TIMESTAMP, nullable=False)
+    used_silent_auth = Column(Boolean, default=False, nullable=False)
 
 class Game(Base):
     __tablename__ = "games"

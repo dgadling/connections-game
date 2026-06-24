@@ -88,7 +88,7 @@ if not DISCORD_CLIENT_SECRET:
 
 REDIRECT_URI = os.environ.get("DISCORD_REDIRECT_URI", "https://connections-285405137493.us-central1.run.app/auth/discord/callback")
 
-def discord_oauth_url(state: str) -> str:
+def discord_oauth_url(state: str, prompt_none: bool = True) -> str:
     from urllib.parse import urlencode
     params = {
         "client_id": DISCORD_CLIENT_ID,
@@ -97,4 +97,6 @@ def discord_oauth_url(state: str) -> str:
         "scope": "identify",
         "state": state,
     }
-    return "https://discord.com/api/oauth2/authorize?" + urlencode(params)
+    if prompt_none:
+        params["prompt"] = "none"
+    return "https://discord.com/oauth2/authorize?" + urlencode(params)

@@ -214,3 +214,119 @@ def test_oauth_callback_valid_cookie_and_valid_db_still_works(db_session):
     # Verify session was created
     session_count = db_session.query(models.AuthSession).count()
     assert session_count >= 1, "OAuth callback should create AuthSession"
+
+
+# --- prompt=none silent auth tests (TDD) ---
+
+def test_discord_oauth_url_includes_prompt_none_by_default():
+    from app.auth import discord_oauth_url
+    url = discord_oauth_url("xyz")
+    assert "prompt=none" in url, url
+
+def test_discord_oauth_url_omits_prompt_when_force_consent():
+    from app.auth import discord_oauth_url
+    url = discord_oauth_url("xyz", prompt_none=False)
+    assert "prompt=none" not in url
+
+def _create_oauth_state_with_silent(db_session, state_token, used_silent_auth=True):
+    oauth_state = models.OAuthState(
+        state_token=state_token,
+        redirect_after="/",
+        created_at=datetime.utcnow(),
+        expires_at=datetime.utcnow() + timedelta(minutes=10),
+        used_silent_auth=used_silent_auth,
+    )
+    db_session.add(oauth_state)
+    db_session.commit()
+    return oauth_state
+
+def test_callback_consent_required_triggers_fallback(db_session):
+    db_session.query(models.OAuthState).delete()
+    db_session.commit()
+    state_token = "consent_req"
+    _create_oauth_state_with_silent(db_session, state_token, True)
+    for client in _oauth_client(db_session):
+        resp = client.get(f"/auth/discord/callback?error=consent_required&state={state_token}", follow_redirects=False)
+    assert resp.status_code in (302, 307)
+    loc = resp.headers.get("location", "")
+    assert "/auth/discord/start" in loc
+    assert "force_consent=1" in loc
+    # state consumed
+    assert db_session.query(models.OAuthState).filter_by(state_token=state_token).first() is None
+
+def test_callback_login_required_triggers_fallback(db_session):
+    db_session.query(models.OAuthState).delete()
+    db_session.commit()
+    state_token = "login_req"
+    _create_oauth_state_with_silent(db_session, state_token, True)
+    for client in _oauth_client(db_session):
+        resp = client.get(f"/auth/discord/callback?error=login_required&state={state_token}", follow_redirects=False)
+    assert resp.status_code in (302, 307)
+    assert "force_consent=1" in resp.headers.get("location", "")
+
+def test_callback_access_denied_no_fallback(db_session):
+    db_session.query(models.OAuthState).delete()
+    db_session.commit()
+    state_token = "access_den"
+    _create_oauth_state_with_silent(db_session, state_token, True)
+    for client in _oauth_client(db_session):
+        resp = client.get(f"/auth/discord/callback?error=access_denied&state={state_token}")
+    assert resp.status_code == 200
+    assert "cancelled" in resp.text.lower()
+
+def test_callback_invalid_client_no_fallback(db_session):
+    db_session.query(models.OAuthState).delete()
+    db_session.commit()
+    # test all non-retry errors: access_denied, invalid_request, invalid_scope, unauthorized_client, unsupported_response_type
+    for err in ["invalid_request", "invalid_scope", "unauthorized_client", "unsupported_response_type"]:
+        state_token = f"bad_{err}"
+        _create_oauth_state_with_silent(db_session, state_token, True)
+        for client in _oauth_client(db_session):
+            resp = client.get(f"/auth/discord/callback?error={err}&state={state_token}")
+        assert resp.status_code == 400, f"{err} should 400, got {resp.status_code}"
+        assert "oauth error" in resp.text.lower() or err in resp.text.lower()
+        db_session.query(models.OAuthState).delete()
+        db_session.commit()
+
+def test_callback_loop_protection(db_session):
+    """If used_silent_auth is False, do NOT fallback again"""
+    db_session.query(models.OAuthState).delete()
+    db_session.commit()
+    state_token = "loop_test"
+    _create_oauth_state_with_silent(db_session, state_token, False)
+    for client in _oauth_client(db_session):
+        resp = client.get(f"/auth/discord/callback?error=consent_required&state={state_token}")
+    # should 400, NOT redirect loop
+    assert resp.status_code == 400
+    assert "consent_required" in resp.text.lower() or "oauth error" in resp.text.lower()
+
+def test_callback_interaction_required_triggers_fallback(db_session):
+    db_session.query(models.OAuthState).delete()
+    db_session.commit()
+    state_token = "interaction_req"
+    _create_oauth_state_with_silent(db_session, state_token, True)
+    for client in _oauth_client(db_session):
+        resp = client.get(f"/auth/discord/callback?error=interaction_required&state={state_token}", follow_redirects=False)
+    assert resp.status_code in (302, 307)
+    assert "force_consent=1" in resp.headers.get("location", "")
+
+def test_auth_start_force_consent_omits_prompt_none(db_session):
+    """POST /auth/discord/start?force_consent=true should omit prompt=none"""
+    # clean
+    db_session.query(models.OAuthState).delete()
+    db_session.commit()
+    for client in _oauth_client(db_session):
+        resp = client.post("/auth/discord/start?force_consent=true&redirect_after=/test")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "auth_url" in data
+        assert "prompt=none" not in data["auth_url"]
+        # verify DB state was stored with used_silent_auth=False
+        from urllib.parse import urlparse, parse_qs
+        url = data["auth_url"]
+        qs = parse_qs(urlparse(url).query)
+        state = qs["state"][0]
+        oauth_state = db_session.query(models.OAuthState).filter_by(state_token=state).first()
+        assert oauth_state is not None
+        assert oauth_state.used_silent_auth is False
+        assert oauth_state.redirect_after == "/test"
