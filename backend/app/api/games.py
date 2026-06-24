@@ -330,6 +330,86 @@ def reorder_questions(game_id: int, payload: schemas.ReorderRequest, db: Session
     db.commit()
     return {"ok": True}
 
+
+@router.post("/api/games/{game_id}/questions/seed")
+def seed_questions(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
+    require_membership(game_id, user.discord_id, db)
+    from ..question_bank import STARTER_QUESTIONS
+    # append after existing upcoming questions
+    max_sort = db.query(models.ConnQuestion.sort_order).filter(
+        models.ConnQuestion.game_id == game_id,
+        models.ConnQuestion.status == "upcoming"
+    ).order_by(models.ConnQuestion.sort_order.desc()).first()
+    sort_order = (max_sort[0] + 1) if max_sort else 0
+    # skip duplicates (case-insensitive text match against existing questions in this game)
+    existing_texts = {
+        t.lower().strip()
+        for (t,) in db.query(models.ConnQuestion.text).filter(models.ConnQuestion.game_id == game_id).all()
+    }
+    inserted = 0
+    for text in STARTER_QUESTIONS:
+        if text.lower().strip() in existing_texts:
+            continue
+        tag = classify_sentiment(text)
+        q = models.ConnQuestion(
+            game_id=game_id, text=text, tag=tag, tag_auto=True,
+            status="upcoming", sort_order=sort_order
+        )
+        db.add(q)
+        sort_order += 1
+        inserted += 1
+        existing_texts.add(text.lower().strip())
+    db.commit()
+    return {"inserted": inserted, "total_bank": len(STARTER_QUESTIONS)}
+
+
+@router.post("/api/games/{game_id}/questions/import")
+def import_questions(game_id: int, payload: schemas.QuestionImport, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
+    require_membership(game_id, user.discord_id, db)
+    max_sort = db.query(models.ConnQuestion.sort_order).filter(
+        models.ConnQuestion.game_id == game_id,
+        models.ConnQuestion.status == "upcoming"
+    ).order_by(models.ConnQuestion.sort_order.desc()).first()
+    sort_order = (max_sort[0] + 1) if max_sort else 0
+    existing_texts = {
+        t.lower().strip()
+        for (t,) in db.query(models.ConnQuestion.text).filter(models.ConnQuestion.game_id == game_id).all()
+    }
+    inserted = 0
+    skipped = 0
+    for raw in payload.questions:
+        text = raw.strip()
+        if not text or len(text) > 500:
+            skipped += 1
+            continue
+        if text.lower() in existing_texts:
+            skipped += 1
+            continue
+        tag = classify_sentiment(text)
+        q = models.ConnQuestion(
+            game_id=game_id, text=text, tag=tag, tag_auto=True,
+            status="upcoming", sort_order=sort_order
+        )
+        db.add(q)
+        sort_order += 1
+        inserted += 1
+        existing_texts.add(text.lower())
+    db.commit()
+    return {"inserted": inserted, "skipped": skipped}
+
+
+@router.get("/api/games/{game_id}/questions/export")
+def export_questions(game_id: int, status: str = "all", db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
+    require_membership(game_id, user.discord_id, db)
+    q = db.query(models.ConnQuestion).filter(models.ConnQuestion.game_id == game_id)
+    if status != "all":
+        q = q.filter(models.ConnQuestion.status == status)
+    rows = q.order_by(models.ConnQuestion.sort_order).all()
+    return [
+        {"text": r.text, "tag": r.tag, "status": r.status, "sort_order": r.sort_order}
+        for r in rows
+    ]
+
 # Round
 @router.get("/api/games/{game_id}/round")
 def get_round(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):

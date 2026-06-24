@@ -40,6 +40,10 @@ class QuestionPatch(BaseModel):
     tag: Optional[str] = None
     tag_auto: Optional[bool] = None
 
+class QuestionImport(BaseModel):
+    questions: list[str] = Field(..., min_length=1)
+    # accepts raw list of question strings; tags are auto-classified
+
 class QuestionOut(BaseModel):
     id: int
     game_id: int

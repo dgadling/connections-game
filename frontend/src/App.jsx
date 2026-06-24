@@ -417,6 +417,9 @@ function QuestionsTab({ gameId }) {
   const [editText, setEditText] = useState('')
   const [historyQ, setHistoryQ] = useState(null)
   const [history, setHistory] = useState([])
+  const [showImport, setShowImport] = useState(false)
+  const [importText, setImportText] = useState('')
+  const [busy, setBusy] = useState(false)
 
   const load = () => api(`/api/games/${gameId}/questions?status=${status}`).then(d => setQs(arr(d))).catch(e => { console.error('questions load failed', e); setQs([]) })
   useEffect(() => { load() }, [gameId, status])
@@ -481,22 +484,79 @@ function QuestionsTab({ gameId }) {
     load()
   }
 
+  const seedQuestions = async () => {
+    if (!confirm('Load the 38-question starter pack? Duplicates will be skipped.')) return
+    setBusy(true)
+    try {
+      const r = await api(`/api/games/${gameId}/questions/seed`, {method:'POST'})
+      alert(`Added ${r.inserted} questions.` + (r.inserted === 0 ? ' (all already present)' : ''))
+      load()
+    } catch(e) { alert('Seed failed: ' + e.message) }
+    finally { setBusy(false) }
+  }
+
+  const doImport = async () => {
+    const lines = importText.split('\n').map(s => s.trim()).filter(Boolean)
+    if (lines.length === 0) { alert('Paste at least one question (one per line).'); return }
+    setBusy(true)
+    try {
+      const r = await api(`/api/games/${gameId}/questions/import`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({questions: lines})})
+      alert(`Imported ${r.inserted} questions` + (r.skipped ? `, ${r.skipped} skipped` : ''))
+      setImportText(''); setShowImport(false); load()
+    } catch(e) { alert('Import failed: ' + e.message) }
+    finally { setBusy(false) }
+  }
+
+  const doExport = async () => {
+    try {
+      const rows = await api(`/api/games/${gameId}/questions/export?status=${status === 'graveyard' ? 'graveyard' : 'all'}`)
+      const blob = new Blob([JSON.stringify(rows, null, 2)], {type: 'application/json'})
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = `connections-questions-${status}-${new Date().toISOString().slice(0,10)}.json`
+      a.click(); URL.revokeObjectURL(url)
+    } catch(e) { alert('Export failed: ' + e.message) }
+  }
+
   return (
     <div>
-      <div className="flex gap-3 text-sm border-b mb-3 items-center">
+      <div className="flex gap-3 text-sm border-b mb-3 items-center flex-wrap">
         {['upcoming','used','graveyard'].map(s => (
           <button key={s} onClick={()=>setStatus(s)} className={`pb-1.5 capitalize ${status===s ? 'border-b-2 border-indigo-600 font-semibold' : 'text-neutral-600'}`}>{s}</button>
         ))}
         <span className="ml-auto text-neutral-500 text-xs">{qs.length} questions</span>
         {status === 'upcoming' && qs.length > 1 && (
-          <button onClick={shuffleQuestions} className="text-xs px-2 py-1 border rounded hover:bg-neutral-50 ml-2">🔀 Shuffle</button>
+          <button onClick={shuffleQuestions} className="text-xs px-2 py-1 border rounded hover:bg-neutral-50">🔀 Shuffle</button>
         )}
       </div>
 
       {status === 'upcoming' && (
-        <div className="mb-4 flex gap-2">
+        <>
+        <div className="mb-3 flex gap-2">
           <input value={newText} onChange={e=>setNewText(e.target.value)} placeholder="Add a new question… (max 500 chars)" maxLength={500} className="flex-1 border rounded px-2 py-1.5 text-sm" onKeyDown={e=>e.key==='Enter'&&addQuestion()} />
           <button onClick={addQuestion} className="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm">Add</button>
+        </div>
+        <div className="mb-3 flex flex-wrap gap-2 text-xs">
+          <button onClick={seedQuestions} disabled={busy} className="px-2 py-1 border rounded hover:bg-neutral-50 disabled:opacity-50">📦 Load starter pack</button>
+          <button onClick={()=>setShowImport(v=>!v)} className="px-2 py-1 border rounded hover:bg-neutral-50">📥 Import</button>
+          <button onClick={doExport} className="px-2 py-1 border rounded hover:bg-neutral-50">📤 Export</button>
+        </div>
+        {showImport && (
+          <div className="mb-3 p-3 bg-neutral-50 border rounded text-sm">
+            <div className="text-xs font-medium mb-1">Paste questions, one per line</div>
+            <textarea value={importText} onChange={e=>setImportText(e.target.value)} placeholder={"What scares you?\nWhat's your fondest memory?\n…"} className="w-full border rounded px-2 py-1.5 text-sm h-28" />
+            <div className="flex gap-2 mt-2">
+              <button onClick={doImport} disabled={busy} className="px-3 py-1 bg-indigo-600 text-white rounded text-xs disabled:opacity-50">Import</button>
+              <button onClick={()=>{setShowImport(false); setImportText('')}} className="px-3 py-1 border rounded text-xs">Cancel</button>
+              <span className="text-[11px] text-neutral-500 ml-auto self-center">Tags auto-classified · duplicates skipped</span>
+            </div>
+          </div>
+        )}
+        </>
+      )}
+      {status !== 'upcoming' && (
+        <div className="mb-3">
+          <button onClick={doExport} className="text-xs px-2 py-1 border rounded hover:bg-neutral-50">📤 Export {status}</button>
         </div>
       )}
 
@@ -532,7 +592,7 @@ function QuestionsTab({ gameId }) {
             )}
           </li>
         ))}
-        {qs.length===0 && <li className="text-neutral-500 text-sm">No {status} questions.</li>}
+        {qs.length===0 && <li className="text-neutral-500 text-sm">No {status} questions.{status==='upcoming' && ' Add one above, or load the starter pack.'}</li>}
       </ul>
 
       {historyQ && (
