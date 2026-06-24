@@ -19,7 +19,7 @@
     "build": "vite build",
     "dev": "vite",
     "preview": "vite preview",
-    "test": "node --test src/useEffect-cleanup.test.js",
+    "test": "node --test src/*.test.js",
     "lint": "eslint src --ext .js,.jsx",
     "lint:fix": "eslint src --ext .js,.jsx --fix"
   },

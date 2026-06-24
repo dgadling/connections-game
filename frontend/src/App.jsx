@@ -84,6 +84,29 @@ export default function App() {
   }
   useEffect(() => { loadGames() }, [user])
 
+  // Auto-join from ?invite=TOKEN in URL
+  useEffect(() => {
+    if (!user) return
+    const params = new URLSearchParams(window.location.search)
+    const inviteToken = params.get('invite')
+    if (!inviteToken) return
+    // Clear the URL immediately to prevent double-join on refresh
+    const cleanUrl = window.location.pathname
+    window.history.replaceState({}, '', cleanUrl)
+    api('/api/games/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ invite_token: inviteToken })
+    }).then(res => {
+      // Refresh game list, then navigate to joined game
+      loadGames()
+      setGame({ id: res.game_id, slug: res.slug, name: '', role: 'admin' })
+    }).catch(e => {
+      alert('Invite join failed: ' + e.message)
+      loadGames()
+    })
+  }, [user])
+
   const isOwner = game?.role === 'owner'
 
   useEffect(() => { if (tab === 'admin' && !isOwner) setTab('round') }, [tab, isOwner])
@@ -192,6 +215,24 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
     setName(''); onRefresh()
     setGame({id: g.id, slug: g.slug, name: g.name, role: g.role || 'owner'})
   }
+  const [inviteCode, setInviteCode] = useState('')
+  const [joinError, setJoinError] = useState('')
+  const joinGame = async () => {
+    if (!inviteCode.trim()) return
+    setJoinError('')
+    try {
+      const res = await api('/api/games/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invite_token: inviteCode.trim() })
+      })
+      setInviteCode('')
+      onRefresh()
+      setGame({ id: res.game_id, slug: res.slug, name: '', role: 'admin' })
+    } catch (e) {
+      setJoinError(e.message || 'Join failed')
+    }
+  }
   return (
     <div className="min-h-screen bg-neutral-50">
       <header className="bg-white border-b border-neutral-200">
@@ -216,6 +257,14 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
             <button onClick={createGame} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 whitespace-nowrap">Create</button>
           </div>
         </div>
+        <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5 mb-5">
+          <div className="font-semibold mb-2">Join with invite code</div>
+          <div className="flex gap-2">
+            <input value={inviteCode} onChange={e=>{setInviteCode(e.target.value); setJoinError('')}} placeholder="Paste invite code…" className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" onKeyDown={e=>e.key==='Enter'&&joinGame()} />
+            <button onClick={joinGame} className="px-4 py-2 bg-neutral-800 text-white rounded-lg text-sm font-medium hover:bg-neutral-900 whitespace-nowrap">Join</button>
+          </div>
+          {joinError && <div className="text-sm text-red-600 mt-2">{joinError}</div>}
+        </div>
         <div className="space-y-2">
           {arr(games).map(g => (
             <button key={g.id} onClick={()=>setGame({id: g.id, slug: g.slug, name: g.name, role: g.role})}
@@ -224,7 +273,7 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
               <div className="text-xs text-neutral-500 mt-0.5">{g.role === 'owner' ? 'Owner' : 'Admin'} · /{g.slug}</div>
             </button>
           ))}
-          {arr(games).length===0 && <div className="text-neutral-500 text-sm bg-white rounded-xl shadow-sm border border-neutral-200 p-4">No games yet — create one above.</div>}
+          {arr(games).length===0 && <div className="text-neutral-500 text-sm bg-white rounded-xl shadow-sm border border-neutral-200 p-4">No games yet — create one or join with an invite code above.</div>}
         </div>
       </main>
     </div>

@@ -43,6 +43,6 @@ fi
 
 # frontend: node:test
 echo "  frontend: test"
-(cd frontend && node --test src/useEffect-cleanup.test.js) || { echo "❌ frontend test failed"; exit 1; }
+(cd frontend && node --test src/*.test.js) || { echo "❌ frontend test failed"; exit 1; }
 
 echo "✓ pre-commit checks passed"
