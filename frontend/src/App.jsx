@@ -66,7 +66,7 @@ export default function App() {
   const [user, setUser] = useState(undefined)
   const [games, setGames] = useState([])
   const [game, setGame] = useState(null)
-  const [tab, setTab] = useState('round')
+  const [tab, setTab] = useState('ask')
   const [signingIn, setSigningIn] = useState(false)
 
   const doLogout = async () => {
@@ -178,7 +178,7 @@ export default function App() {
   if (!game) return <GameList user={user} games={games} setGame={setGame} onRefresh={loadGames} onLogout={doLogout} />
 
   const tabs = [
-    ['round','Round', '🎲'],
+    ['ask','Ask', '💬'],
     ['questions','Questions', '❓'],
     ['members','Members', '👥'],
     ['history','History', '📜'],
@@ -222,7 +222,7 @@ export default function App() {
 
       <main className="max-w-4xl mx-auto px-4 py-4 sm:py-6 pb-20 sm:pb-6">
         <ErrorBoundary>
-          {tab === 'round' && <RoundTab gameId={game.id} archived={!!game.archived_at} />}
+          {tab === 'ask' && <RoundTab gameId={game.id} archived={!!game.archived_at} />}
           {tab === 'questions' && <QuestionsTab gameId={game.id} archived={!!game.archived_at} />}
           {tab === 'members' && <MembersTab gameId={game.id} archived={!!game.archived_at} />}
           {tab === 'history' && <HistoryTab gameId={game.id} />}
@@ -345,7 +345,7 @@ function RoundTab({ gameId, archived }) {
   const copyDiscord = () => {
     if (!data) return
     const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    const lines = [`🤝 Connections — Round ${data.round_num} — ${dateStr}`, '', `> ${data.question?.text || '(no question)'}`, '']
+    const lines = [`🤝 Connections — ${dateStr}`, '', `> ${data.question?.text || '(no question)'}`, '']
     arr(data.pairings).forEach(p => {
       const asker = p.asker_discord_id ? `<@${p.asker_discord_id}>` : p.asker_name
       const target = p.target_discord_id ? `<@${p.target_discord_id}>` : p.target_name
@@ -357,15 +357,14 @@ function RoundTab({ gameId, archived }) {
 
   if (!data) return <div className="text-neutral-500">Loading…</div>
 
+  const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-neutral-900">Round {data.round_num}</h2>
-          <div className="flex items-center gap-2">
-            <button onClick={copyDiscord} disabled={!data.question || arr(data.pairings).length === 0} className="text-xs px-2.5 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed">{copied ? 'Copied!' : 'Copy'}</button>
-            <button onClick={load} className="text-xs text-neutral-500 hover:text-neutral-700">↻ refresh</button>
-          </div>
+          <h2 className="font-semibold text-neutral-900 text-sm text-neutral-500">{todayStr}</h2>
+          <button onClick={copyDiscord} disabled={!data.question || arr(data.pairings).length === 0} className="text-xs px-2.5 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed">{copied ? 'Copied!' : 'Copy'}</button>
         </div>
         {data.question ? (
           <>
@@ -488,17 +487,20 @@ function QuestionsTab({ gameId, archived }) {
             {status==='upcoming' && (
               <span {...attributes} {...listeners} className="text-neutral-300 hover:text-neutral-500 shrink-0 cursor-grab select-none text-[14px] leading-snug pt-0.5 touch-none" title="Drag to reorder">⋮⋮</span>
             )}
-            <select
-              value={q.tag}
-              onChange={e => onSetTag(q, e.target.value)}
-              disabled={status !== 'upcoming'}
-              className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 mt-0.5 appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-indigo-400 ${TAG_COLORS[q.tag]||'bg-neutral-100 text-neutral-700'}`}
-              style={{ WebkitAppearance: 'none' }}
-              title="Change tag"
-              onClick={e => e.stopPropagation()}
-            >
-              {TAGS.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
+            <span className="relative shrink-0 mt-0.5">
+              <select
+                value={q.tag}
+                onChange={e => onSetTag(q, e.target.value)}
+                disabled={status !== 'upcoming'}
+                className={`text-[11px] pl-2 pr-5 py-1 rounded-full font-medium appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 min-h-[28px] ${TAG_COLORS[q.tag]||'bg-neutral-100 text-neutral-700'}`}
+                style={{ WebkitAppearance: 'none' }}
+                title="Change tag"
+                onClick={e => e.stopPropagation()}
+              >
+                {TAGS.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+              <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] opacity-60 pointer-events-none">▾</span>
+            </span>
             {!q.tag_auto && <button onClick={()=>onRevertTag(q)} title="Revert to auto" className="text-[10px] text-neutral-400 hover:text-neutral-600 shrink-0 pt-0.5">↺</button>}
             <span className="flex-1 text-[14px] leading-snug text-neutral-900 min-w-0">{q.text}</span>
             <div className="flex items-start gap-3 text-[13px] text-neutral-500 shrink-0 pl-2 pt-0.5">
@@ -826,7 +828,7 @@ function HistoryTab({ gameId }) {
 
   const copyDiscord = (r) => {
     const dateStr = r.played_at ? new Date(r.played_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
-    const lines = [`🤝 Connections — Round ${r.round_num}${dateStr ? ' — ' + dateStr : ''}`, '', `> ${r.question_text || '(no question)'}`, '']
+    const lines = [`🤝 Connections${dateStr ? ' — ' + dateStr : ''}`, '', `> ${r.question_text || '(no question)'}`, '']
     arr(r.pairings).forEach(p => {
       const asker = p.asker_discord_id ? `<@${p.asker_discord_id}>` : p.asker_name
       const target = p.target_discord_id ? `<@${p.target_discord_id}>` : p.target_name
@@ -838,11 +840,11 @@ function HistoryTab({ gameId }) {
 
   return (
     <div className="space-y-3">
-      <div className="text-sm text-neutral-600">{rowList.length} rounds played</div>
+      <div className="text-sm text-neutral-600">{rowList.length} played</div>
       {rowList.map(r => (
         <div key={r.round_num} className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4">
           <div className="flex justify-between items-start mb-2 gap-2">
-            <div className="font-semibold text-neutral-900">Round {r.round_num} <span className="text-neutral-500 font-normal text-sm">· {r.played_at ? new Date(r.played_at).toLocaleDateString() : ''}</span></div>
+            <div className="font-semibold text-neutral-900">{r.played_at ? new Date(r.played_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}</div>
             <button onClick={()=>copyDiscord(r)} className="text-xs px-2.5 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50 whitespace-nowrap shrink-0">{copiedRound === r.round_num ? 'Copied!' : 'Copy'}</button>
           </div>
           <div className="flex items-start gap-2 mb-2">
@@ -951,7 +953,7 @@ function AdminTab({ gameId, game, onGameUpdate, onGamesRefresh, onGameDeleted, c
           {arr(admins).map(a => (
             <li key={a.discord_id} className="flex justify-between py-2">
               <span>{a.global_name || a.username}</span>
-              {a.discord_id !== currentUserDiscordId && (
+              {currentUserDiscordId && a.discord_id !== currentUserDiscordId && (
                 <button onClick={()=>revokeAdmin(a.discord_id)} className="text-xs text-red-600 hover:underline">revoke</button>
               )}
             </li>
