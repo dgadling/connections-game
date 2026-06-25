@@ -512,14 +512,19 @@ def get_round(game_id: int, db: Session = Depends(get_db), user: models.DiscordU
         target = member_map.get(p.target_member_id)
         if asker and target:
             out_pairs.append({"asker_id": asker.id, "asker_name": asker.name, "asker_discord_id": asker.discord_id, "target_id": target.id, "target_name": target.name, "target_discord_id": target.discord_id})
-    question = None
-    if state.current_question_id:
-        question = db.query(models.ConnQuestion).filter(models.ConnQuestion.id == state.current_question_id).first()
-    if not question:
-        question = db.query(models.ConnQuestion).filter(models.ConnQuestion.game_id == game_id, models.ConnQuestion.status == "upcoming").order_by(models.ConnQuestion.sort_order).first()
-        if question:
-            state.current_question_id = question.id
-            db.commit()
+    # Always sync current_question to first upcoming by sort_order.
+    # This makes Round tab reflect Questions tab order immediately after reordering,
+    # and prevents stale current_question_id from causing NULL/duplicate plays
+    # during API-driven bulk round completion.
+    first_upcoming = db.query(models.ConnQuestion).filter(
+        models.ConnQuestion.game_id == game_id,
+        models.ConnQuestion.status == "upcoming"
+    ).order_by(models.ConnQuestion.sort_order).first()
+    first_id = first_upcoming.id if first_upcoming else None
+    if state.current_question_id != first_id:
+        state.current_question_id = first_id
+        db.commit()
+    question = first_upcoming
     q_out = None
     if question:
         q_out = {
@@ -538,6 +543,16 @@ def complete_round(game_id: int, db: Session = Depends(get_db), user: models.Dis
     state = db.query(models.ConnState).filter(models.ConnState.game_id == game_id).first()
     if not state:
         raise HTTPException(400, "no state")
+    # Sync current_question to first upcoming before recording play.
+    # Prevents NULL/stale question_id in ConnPlay if complete is called
+    # without a prior GET /round, or after the question queue was reordered.
+    first_upcoming = db.query(models.ConnQuestion).filter(
+        models.ConnQuestion.game_id == game_id,
+        models.ConnQuestion.status == "upcoming"
+    ).order_by(models.ConnQuestion.sort_order).first()
+    first_id = first_upcoming.id if first_upcoming else None
+    if state.current_question_id != first_id:
+        state.current_question_id = first_id
     round_num = state.current_round
     play = models.ConnPlay(game_id=game_id, round_num=round_num, question_id=state.current_question_id, played_by=user.discord_id)
     db.add(play)

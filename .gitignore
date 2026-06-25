@@ -8,3 +8,9 @@ frontend/dist/
 .DS_Store
 .env
 bun.lock
+
+# one-off migration scripts (local only, contain prod session cookies / Space data)
+migrate_corvessa.py
+patch_history.py
+migrate_*.py
+patch_*.py
