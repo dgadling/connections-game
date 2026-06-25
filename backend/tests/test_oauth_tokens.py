@@ -248,7 +248,7 @@ def test_auth_refresh_rejects_without_discord_id_hint(db_session):
 
         for client in _oauth_client(db_session):
             # No discord_id_hint cookie → 401
-            # CSRF is disabled in conftest, so we don't test CSRF here – that's enforced in production middleware
+            # CSRF is disabled in conftest, so we don't test CSRF here - that's enforced in production middleware
             resp = client.post(
                 "/auth/refresh",
                 json={"discord_id": "123456789012345678"},
@@ -265,7 +265,7 @@ def test_auth_refresh_rejects_without_discord_id_hint(db_session):
             assert resp.status_code == 401
             assert db_session.query(models.AuthSession).count() == 0
 
-            # Correct discord_id_hint – would proceed to refresh_discord_token,
+            # Correct discord_id_hint - would proceed to refresh_discord_token,
             # which we've mocked to fail → 401, no session created
             # (proves the check passed and we got to the refresh step)
             client.cookies.set("discord_id_hint", "123456789012345678")
