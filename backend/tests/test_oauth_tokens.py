@@ -30,7 +30,7 @@ def _mock_discord_api(mock_client, discord_id="123456789012345678"):
     return mock_client
 
 
-def _oauth_client(db_session):
+def _oauth_client(db_session, with_csrf=True):
     def override_get_db():
         try:
             yield db_session
@@ -38,7 +38,21 @@ def _oauth_client(db_session):
             pass
     app.dependency_overrides.clear()
     app.dependency_overrides[get_db] = override_get_db
-    client = TestClient(app, follow_redirects=False)
+    cookies = {}
+    headers = {}
+    if with_csrf:
+        # Set up valid session + CSRF HMAC for tests that hit CSRF-protected endpoints
+        # Tests that specifically want to test missing/invalid CSRF can clear these
+        from app.auth import generate_csrf_token
+        import secrets
+        session_token = secrets.token_urlsafe(32)
+        csrf_token = generate_csrf_token(session_token)
+        cookies = {"connections_session": session_token, "csrf_token": csrf_token}
+        headers = {"X-CSRF-Token": csrf_token}
+        # Note: we do NOT create an AuthSession DB row - CSRF HMAC validation
+        # only needs the session_token cookie value, not a DB lookup.
+        # Rate limiting will fall back to IP-based limiting when session not found.
+    client = TestClient(app, cookies=cookies, headers=headers, follow_redirects=False)
     try:
         yield client
     finally:
@@ -135,12 +149,11 @@ def test_auth_refresh_creates_new_session(db_session):
 
         for client in _oauth_client(db_session):
             # auth_refresh now requires CSRF token + discord_id_hint cookie matching body
-            client.cookies.set("csrf_token", "test_csrf")
             client.cookies.set("discord_id_hint", "123456789012345678")
             resp = client.post(
                 "/auth/refresh",
                 json={"discord_id": "123456789012345678"},
-                headers={"X-CSRF-Token": "test_csrf"},
+
             )
     assert resp.status_code == 200
     data = resp.json()
@@ -190,12 +203,11 @@ def test_auth_refresh_invalid_token_deletes_row_returns_401(db_session):
         mock_client_class.return_value = mock_client
 
         for client in _oauth_client(db_session):
-            client.cookies.set("csrf_token", "test_csrf")
             client.cookies.set("discord_id_hint", "123456789012345678")
             resp = client.post(
                 "/auth/refresh",
                 json={"discord_id": "123456789012345678"},
-                headers={"X-CSRF-Token": "test_csrf"},
+
             )
     assert resp.status_code == 401
     # token row deleted
@@ -309,16 +321,21 @@ def test_logout_deletes_tokens_and_clears_hint_cookie(db_session):
             yield db_session
         finally:
             pass
-    from app.auth import require_user
+    from app.auth import require_user, generate_csrf_token
     def override_require_user():
         return user
     app.dependency_overrides.clear()
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[require_user] = override_require_user
 
+    csrf_token = generate_csrf_token(session_token)
     try:
-        client = TestClient(app)
-        resp = client.post("/auth/logout", cookies={"connections_session": session_token})
+        client = TestClient(app, cookies={
+            "connections_session": session_token,
+            "csrf_token": csrf_token,
+        })
+        client.headers["X-CSRF-Token"] = csrf_token
+        resp = client.post("/auth/logout")
     finally:
         app.dependency_overrides.clear()
 

@@ -9,17 +9,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-# Disable CSRF middleware for tests before app import
-from app import middleware as app_middleware
-original_csrf_dispatch = app_middleware.CSRFMiddleware.dispatch
-async def no_csrf_dispatch(self, request, call_next):
-    return await call_next(request)
-app_middleware.CSRFMiddleware.dispatch = no_csrf_dispatch
-
 from app.db import Base, get_db
 from app.main import app
 from app import models
-from app.auth import require_user
+from app.auth import require_user, generate_csrf_token, hash_token
+import secrets
+import datetime
 
 # In-memory SQLite with StaticPool so all connections share same DB
 from sqlalchemy import event
@@ -70,8 +65,13 @@ def test_user(db_session):
     db_session.refresh(u)
     return u
 
-@pytest.fixture
-def client(db_session, test_user):
+
+def make_authed_client(db_session, user):
+    """Create TestClient with valid session + CSRF HMAC for `user`.
+    Use this in tests that construct their own TestClient instead of using the `client` fixture.
+    Caller must clear app.dependency_overrides when done.
+    Returns client (with X-CSRF-Token header set, session/csrf cookies set).
+    """
     def override_get_db():
         try:
             yield db_session
@@ -79,15 +79,46 @@ def client(db_session, test_user):
             pass
 
     def override_require_user():
-        return test_user
+        return user
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[require_user] = override_require_user
 
-    with TestClient(app) as c:
-        yield c
+    session_token = secrets.token_urlsafe(32)
+    token_hash = hash_token(session_token)
+    now = datetime.datetime.now(datetime.timezone.utc)
+    expires_at = now + datetime.timedelta(days=30)
+    auth_sess = models.AuthSession(
+        session_token_hash=token_hash,
+        discord_id=user.discord_id,
+        created_at=now,
+        expires_at=expires_at,
+        absolute_expires_at=expires_at,
+        last_used_at=now,
+    )
+    db_session.add(auth_sess)
+    db_session.commit()
 
-    app.dependency_overrides.clear()
+    csrf_token = generate_csrf_token(session_token)
+    client = TestClient(app, cookies={
+        "connections_session": session_token,
+        "csrf_token": csrf_token,
+    })
+    client.headers["X-CSRF-Token"] = csrf_token
+    # stash for cleanup / inspection if needed
+    client._test_session_token = session_token
+    client._test_csrf_token = csrf_token
+    return client
+
+
+@pytest.fixture
+def client(db_session, test_user):
+    c = make_authed_client(db_session, test_user)
+    try:
+        yield c
+    finally:
+        app.dependency_overrides.clear()
+
 
 @pytest.fixture
 def game(db_session, test_user):

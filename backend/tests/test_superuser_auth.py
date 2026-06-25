@@ -10,12 +10,10 @@ import os
 os.environ["SUPERUSER_DISCORD_ID"] = "999999999999999999"
 
 import pytest
-from fastapi.testclient import TestClient
 
 from app.main import app
-from app.db import get_db
 from app import models
-from app.auth import require_user
+from tests.conftest import make_authed_client
 
 
 # Superuser Discord ID for tests
@@ -105,19 +103,9 @@ def game_b(db_session):
 
 def make_client(db_session, user):
     """Create a TestClient authenticated as `user`."""
-    def override_get_db():
-        try:
-            yield db_session
-        finally:
-            pass
-
-    def override_require_user():
-        return user
-
-    app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[require_user] = override_require_user
-    client = TestClient(app)
-    return client
+    # Clear any previous overrides (tests call make_client multiple times)
+    app.dependency_overrides.clear()
+    return make_authed_client(db_session, user)
 
 
 def test_list_games_visibility(db_session, super_user, admin_a, admin_b, game_a, game_b):
