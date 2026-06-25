@@ -226,7 +226,7 @@ export default function App() {
           {tab === 'questions' && <QuestionsTab gameId={game.id} archived={!!game.archived_at} />}
           {tab === 'members' && <MembersTab gameId={game.id} archived={!!game.archived_at} />}
           {tab === 'history' && <HistoryTab gameId={game.id} />}
-          {tab === 'admin' && <AdminTab gameId={game.id} game={game} onGameUpdate={g => setGame({...game, ...g})} onGamesRefresh={loadGames} onGameDeleted={()=>setGame(null)} />}
+          {tab === 'admin' && <AdminTab gameId={game.id} game={game} onGameUpdate={g => setGame({...game, ...g})} onGamesRefresh={loadGames} onGameDeleted={()=>setGame(null)} currentUserDiscordId={user?.discord_id} />}
         </ErrorBoundary>
       </main>
     </div>
@@ -858,7 +858,7 @@ function HistoryTab({ gameId }) {
 }
 
 // --- Admin Tab ---
-function AdminTab({ gameId, game, onGameUpdate, onGamesRefresh, onGameDeleted }) {
+function AdminTab({ gameId, game, onGameUpdate, onGamesRefresh, onGameDeleted, currentUserDiscordId }) {
   const [invites, setInvites] = useState([])
   const [admins, setAdmins] = useState([])
   const [inviteUrl, setInviteUrl] = useState('')
@@ -946,7 +946,9 @@ function AdminTab({ gameId, game, onGameUpdate, onGamesRefresh, onGameDeleted })
           {arr(admins).map(a => (
             <li key={a.discord_id} className="flex justify-between py-2">
               <span>{a.global_name || a.username}</span>
-              <button onClick={()=>revokeAdmin(a.discord_id)} className="text-xs text-red-600 hover:underline">revoke</button>
+              {a.discord_id !== currentUserDiscordId && (
+                <button onClick={()=>revokeAdmin(a.discord_id)} className="text-xs text-red-600 hover:underline">revoke</button>
+              )}
             </li>
           ))}
         </ul>
