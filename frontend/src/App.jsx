@@ -25,8 +25,8 @@ async function api(path, opts={}) {
   const headers = { ...(opts.headers||{}) }
   if (opts.method && opts.method !== 'GET') headers['X-CSRF-Token'] = csrf()
   const r = await fetch(path, { credentials: 'include', ...opts, headers })
-  if (r.status === 401) {
-    // session expired - force re-auth
+  if (r.status === 401 && !path.startsWith('/auth/')) {
+    // session expired - force re-auth (but not for /auth/* endpoints where 401 means "not logged in")
     window.location.href = '/'
     throw new Error('401 Unauthorized - redirecting to login')
   }
