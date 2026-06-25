@@ -31,8 +31,73 @@ const TAG_COLORS = {
   vulnerable: 'bg-pink-100 text-pink-900 ring-1 ring-pink-200',
   loyal: 'bg-emerald-100 text-emerald-900 ring-1 ring-emerald-200',
 }
+const TAG_ICONS = {
+  warm: '☀️',
+  secretive: '🤫',
+  reflective: '🔮',
+  tension: '⚡',
+  vulnerable: '💧',
+  loyal: '🛡️',
+}
 
 const arr = (d) => Array.isArray(d) ? d : []
+
+function TagPicker({ tag, onChange, disabled }) {
+  const [open, setOpen] = useState(false)
+  const wrapperRef = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handleClickOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setOpen(false)
+      }
+    }
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('touchstart', handleClickOutside)
+    document.addEventListener('keydown', handleEsc)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside)
+      document.removeEventListener('keydown', handleEsc)
+    }
+  }, [open])
+
+  return (
+    <div className="relative shrink-0" ref={wrapperRef}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={(e) => { e.stopPropagation(); if (!disabled) setOpen(o => !o) }}
+        className={`w-7 h-7 rounded-full flex items-center justify-center text-[14px] shrink-0 cursor-pointer transition-all ${TAG_COLORS[tag]||'bg-neutral-100 text-neutral-700'} ${disabled ? 'opacity-60 cursor-default' : ''}`}
+        aria-label={`Change tag: ${tag}`}
+      >
+        {TAG_ICONS[tag] || '•'}
+      </button>
+      {open && (
+        <div
+          className="absolute z-50 mt-1 left-0 bg-white border border-neutral-200 rounded-xl shadow-lg w-[170px] py-1"
+          onClick={e => e.stopPropagation()}
+        >
+          {TAGS.map(t => (
+            <button
+              key={t}
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onChange(t); setOpen(false) }}
+              className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left hover:bg-neutral-50 transition-colors ${tag === t ? TAG_COLORS[t] : ''}`}
+            >
+              <span className="text-[16px]">{TAG_ICONS[t]}</span>
+              <span className="font-medium text-neutral-800">{t}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 class ErrorBoundary extends Component {
   constructor(p){ super(p); this.state = { err: null } }
@@ -517,20 +582,14 @@ function QuestionsTab({ gameId, archived }) {
                 className="text-neutral-300 hover:text-neutral-500 shrink-0 cursor-grab active:cursor-grabbing select-none text-[14px] leading-snug pt-0.5"
                 title="Drag to reorder">⋮⋮</span>
             )}
-            <span className="relative shrink-0 mt-0.5">
-              <select
-                value={q.tag}
-                onChange={e => onSetTag(q, e.target.value)}
-                disabled={status !== 'upcoming'}
-                className={`text-[11px] pl-2 pr-5 py-1 rounded-full font-medium appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 min-h-[28px] ${TAG_COLORS[q.tag]||'bg-neutral-100 text-neutral-700'}`}
-                style={{ WebkitAppearance: 'none' }}
-                title="Change tag"
-                onClick={e => e.stopPropagation()}
-              >
-                {TAGS.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-              <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] opacity-60 pointer-events-none">▾</span>
-            </span>
+            {status==='upcoming' && (
+              <TagPicker tag={q.tag} onChange={tag => onSetTag(q, tag)} />
+            )}
+            {status!=='upcoming' && (
+              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[14px] shrink-0 ${TAG_COLORS[q.tag]||'bg-neutral-100 text-neutral-700'}`} title={q.tag}>
+                {TAG_ICONS[q.tag] || '•'}
+              </span>
+            )}
             {!q.tag_auto && <button onClick={()=>onRevertTag(q)} title="Revert to auto" className="text-[10px] text-neutral-400 hover:text-neutral-600 shrink-0 pt-0.5">↺</button>}
             <span className="flex-1 text-[14px] leading-snug text-neutral-900 min-w-0">{q.text}</span>
             <div className="flex items-start gap-3 text-[13px] text-neutral-500 shrink-0 pl-2 pt-0.5">
