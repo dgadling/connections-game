@@ -335,7 +335,30 @@ def delete_question(game_id: int, qid: int, db: Session = Depends(get_db), user:
 def reorder_questions(game_id: int, payload: schemas.ReorderRequest, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
-    for i, qid in enumerate(payload.question_ids):
+    qids = payload.question_ids
+    # Validate: non-empty
+    if not qids:
+        raise HTTPException(400, "question_ids must not be empty")
+    # Validate: no duplicates
+    if len(qids) != len(set(qids)):
+        raise HTTPException(400, "duplicate question_ids")
+    # Validate: all IDs belong to this game and status=upcoming
+    rows = db.query(models.ConnQuestion.id).filter(
+        models.ConnQuestion.game_id == game_id,
+        models.ConnQuestion.status == "upcoming",
+        models.ConnQuestion.id.in_(qids)
+    ).all()
+    found_ids = {r[0] for r in rows}
+    if len(found_ids) != len(qids):
+        raise HTTPException(400, "one or more question_ids are invalid, do not belong to this game, or are not upcoming")
+    # Validate: must include ALL upcoming questions (no missing IDs)
+    total_upcoming = db.query(models.ConnQuestion.id).filter(
+        models.ConnQuestion.game_id == game_id,
+        models.ConnQuestion.status == "upcoming"
+    ).count()
+    if len(found_ids) != total_upcoming:
+        raise HTTPException(400, "question_ids must include all upcoming questions")
+    for i, qid in enumerate(qids):
         db.query(models.ConnQuestion).filter(models.ConnQuestion.id == qid, models.ConnQuestion.game_id == game_id).update({"sort_order": i})
     db.commit()
     return {"ok": True}
