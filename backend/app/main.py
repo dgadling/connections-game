@@ -256,10 +256,7 @@ async def auth_refresh(request: Request, db: Session = Depends(get_db)):
     access_token = await refresh_discord_token(db, discord_id)
     if not access_token:
         raise HTTPException(401, "refresh failed")
-    # create new session
-    # invalidate existing sessions for this discord_id
-    db.query(models.AuthSession).filter(models.AuthSession.discord_id == discord_id).delete()
-    db.commit()
+    # create new session (old sessions remain valid - multi-device support)
     session_token = create_session(db, discord_id)
     csrf_token = generate_csrf_token()
     user = db.query(models.DiscordUser).filter(models.DiscordUser.discord_id == discord_id).first()
