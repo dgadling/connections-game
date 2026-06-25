@@ -419,10 +419,8 @@ function QuestionsTab({ gameId, archived }) {
     load()
   }
 
-  const cycleTag = async (q) => {
-    const idx = TAGS.indexOf(q.tag)
-    const nextTag = TAGS[(idx + 1) % TAGS.length]
-    await api(`/api/games/${gameId}/questions/${q.id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({tag: nextTag, tag_auto: false})})
+  const setTag = async (q, tag) => {
+    await api(`/api/games/${gameId}/questions/${q.id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({tag, tag_auto: false})})
     load()
   }
 
@@ -467,7 +465,7 @@ function QuestionsTab({ gameId, archived }) {
     load()
   }
 
-  function SortableQuestionItem({ q, status, editing, editText, setEditText, onSaveEdit, onCancelEdit, onCycleTag, onRevertTag, onEditStart, onOpenHistory, onGraveyard, onRestore, onDelete }) {
+  function SortableQuestionItem({ q, status, editing, editText, setEditText, onSaveEdit, onCancelEdit, onSetTag, onRevertTag, onEditStart, onOpenHistory, onGraveyard, onRestore, onDelete }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: q.id, disabled: status !== 'upcoming' || editing === q.id })
     const style = {
       transform: CSS.Transform.toString(transform),
@@ -490,10 +488,17 @@ function QuestionsTab({ gameId, archived }) {
             {status==='upcoming' && (
               <span {...attributes} {...listeners} className="text-neutral-300 hover:text-neutral-500 shrink-0 cursor-grab select-none text-[14px] leading-snug pt-0.5 touch-none" title="Drag to reorder">⋮⋮</span>
             )}
-            <button onClick={()=>onCycleTag(q)} title="Click to change tag"
-              className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 mt-0.5 ${TAG_COLORS[q.tag]||'bg-neutral-100 text-neutral-700'}`}>
-              {q.tag}
-            </button>
+            <select
+              value={q.tag}
+              onChange={e => onSetTag(q, e.target.value)}
+              disabled={status !== 'upcoming'}
+              className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 mt-0.5 appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-indigo-400 ${TAG_COLORS[q.tag]||'bg-neutral-100 text-neutral-700'}`}
+              style={{ WebkitAppearance: 'none' }}
+              title="Change tag"
+              onClick={e => e.stopPropagation()}
+            >
+              {TAGS.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
             {!q.tag_auto && <button onClick={()=>onRevertTag(q)} title="Revert to auto" className="text-[10px] text-neutral-400 hover:text-neutral-600 shrink-0 pt-0.5">↺</button>}
             <span className="flex-1 text-[14px] leading-snug text-neutral-900 min-w-0">{q.text}</span>
             <div className="flex items-start gap-3 text-[13px] text-neutral-500 shrink-0 pl-2 pt-0.5">
@@ -657,7 +662,7 @@ function QuestionsTab({ gameId, archived }) {
                 setEditText={setEditText}
                 onSaveEdit={saveEdit}
                 onCancelEdit={() => setEditing(null)}
-                onCycleTag={cycleTag}
+                onSetTag={setTag}
                 onRevertTag={revertTag}
                 onEditStart={(qq) => { setEditing(qq.id); setEditText(qq.text) }}
                 onOpenHistory={openHistory}
