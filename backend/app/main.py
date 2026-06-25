@@ -199,10 +199,7 @@ async def auth_discord_callback(
         )
         db.add(token_row)
     db.commit()
-    # Session fixation protection - invalidate all existing sessions for this discord_id
-    db.query(models.AuthSession).filter(models.AuthSession.discord_id == discord_id).delete()
-    db.commit()
-    # Create new session
+    # Create new session (old sessions remain valid - multi-device support)
     session_token = create_session(db, discord_id)
     csrf_token = generate_csrf_token()
     # Redirect with cookies
