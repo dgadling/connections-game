@@ -862,7 +862,7 @@ function MembersTab({ gameId, archived }) {
             className="flex-1 border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           <button type="button" onClick={addMember} className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">Add</button>
         </div>
-        <div className="text-xs text-neutral-500 mt-2">Discord username (e.g. anondotj2) – or numeric snowflake</div>
+        <div className="text-xs text-neutral-500 mt-2">Discord username (e.g. anondotj2) – or numeric User ID</div>
       </div>}
 
       <div className="bg-white rounded-xl shadow-sm border border-neutral-200 divide-y divide-neutral-100">
