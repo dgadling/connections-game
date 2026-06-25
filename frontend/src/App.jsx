@@ -25,6 +25,11 @@ async function api(path, opts={}) {
   const headers = { ...(opts.headers||{}) }
   if (opts.method && opts.method !== 'GET') headers['X-CSRF-Token'] = csrf()
   const r = await fetch(path, { credentials: 'include', ...opts, headers })
+  if (r.status === 401) {
+    // session expired - force re-auth
+    window.location.href = '/'
+    throw new Error('401 Unauthorized - redirecting to login')
+  }
   if (!r.ok) {
     const txt = await r.text().catch(()=>'')
     throw new Error(`${r.status} ${txt}`)
