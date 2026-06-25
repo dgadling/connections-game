@@ -67,7 +67,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
         if method in ("POST", "PATCH", "PUT", "DELETE"):
             # CSRF + Origin check - skip initial auth endpoints that legitimately have no session/csrf yet
-            skip_csrf = path.startswith("/auth/discord/start") or path.startswith("/auth/discord/callback") or path == "/auth/refresh"
+            skip_csrf = path.startswith("/auth/discord/start") or path.startswith("/auth/discord/callback")
             if not skip_csrf:
                 # Origin / Referer check
                 origin = request.headers.get("origin") or request.headers.get("referer") or ""

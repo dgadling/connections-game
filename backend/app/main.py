@@ -36,7 +36,7 @@ async def csrf_cookie_middleware(request: Request, call_next):
     if request.cookies.get(SESSION_COOKIE) and not request.cookies.get(CSRF_COOKIE):
         response.set_cookie(
             CSRF_COOKIE, generate_csrf_token(),
-            httponly=False, secure=True, samesite="lax", path="/"
+            max_age=365*86400, httponly=False, secure=True, samesite="strict", path="/"
         )
     return response
 
@@ -205,7 +205,7 @@ async def auth_discord_callback(
     # Redirect with cookies
     resp = RedirectResponse(url=redirect_after, status_code=302)
     resp.set_cookie(SESSION_COOKIE, session_token, max_age=30*86400, httponly=True, secure=True, samesite="lax", path="/")
-    resp.set_cookie(CSRF_COOKIE, csrf_token, max_age=30*86400, httponly=False, secure=True, samesite="lax", path="/")
+    resp.set_cookie(CSRF_COOKIE, csrf_token, max_age=365*86400, httponly=False, secure=True, samesite="strict", path="/")
     resp.delete_cookie("oauth_state", path="/")
     # discord_id_hint cookie for silent auto-login via refresh_token
     resp.set_cookie("discord_id_hint", discord_id, max_age=365*86400, httponly=False, secure=True, samesite="lax", path="/")
@@ -252,6 +252,13 @@ async def auth_refresh(request: Request, db: Session = Depends(get_db)):
     discord_id = body.get("discord_id")
     if not discord_id:
         raise HTTPException(400, "discord_id required")
+    # Prevent account takeover: discord_id_hint cookie must match requested discord_id
+    # This ensures only the legitimate browser (with the hint cookie set during prior login)
+    # can refresh that specific account. Without this, any unauthenticated attacker could
+    # obtain a session for any user with a stored refresh_token.
+    discord_id_hint = request.cookies.get("discord_id_hint")
+    if not discord_id_hint or discord_id_hint != discord_id:
+        raise HTTPException(401, "discord_id_hint mismatch")
     from .auth import refresh_discord_token
     access_token = await refresh_discord_token(db, discord_id)
     if not access_token:
@@ -269,7 +276,7 @@ async def auth_refresh(request: Request, db: Session = Depends(get_db)):
         "avatar_hash": user.avatar_hash,
     })
     resp.set_cookie(SESSION_COOKIE, session_token, max_age=30*86400, httponly=True, secure=True, samesite="lax", path="/")
-    resp.set_cookie(CSRF_COOKIE, csrf_token, max_age=30*86400, httponly=False, secure=True, samesite="lax", path="/")
+    resp.set_cookie(CSRF_COOKIE, csrf_token, max_age=365*86400, httponly=False, secure=True, samesite="strict", path="/")
     # refresh hint cookie
     resp.set_cookie("discord_id_hint", discord_id, max_age=365*86400, httponly=False, secure=True, samesite="lax", path="/")
     return resp

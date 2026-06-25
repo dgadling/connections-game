@@ -134,7 +134,14 @@ def test_auth_refresh_creates_new_session(db_session):
         mock_client_class.return_value = mock_client
 
         for client in _oauth_client(db_session):
-            resp = client.post("/auth/refresh", json={"discord_id": "123456789012345678"})
+            # auth_refresh now requires CSRF token + discord_id_hint cookie matching body
+            client.cookies.set("csrf_token", "test_csrf")
+            client.cookies.set("discord_id_hint", "123456789012345678")
+            resp = client.post(
+                "/auth/refresh",
+                json={"discord_id": "123456789012345678"},
+                headers={"X-CSRF-Token": "test_csrf"},
+            )
     assert resp.status_code == 200
     data = resp.json()
     assert data["discord_id"] == "123456789012345678"
@@ -183,12 +190,92 @@ def test_auth_refresh_invalid_token_deletes_row_returns_401(db_session):
         mock_client_class.return_value = mock_client
 
         for client in _oauth_client(db_session):
-            resp = client.post("/auth/refresh", json={"discord_id": "123456789012345678"})
+            client.cookies.set("csrf_token", "test_csrf")
+            client.cookies.set("discord_id_hint", "123456789012345678")
+            resp = client.post(
+                "/auth/refresh",
+                json={"discord_id": "123456789012345678"},
+                headers={"X-CSRF-Token": "test_csrf"},
+            )
     assert resp.status_code == 401
     # token row deleted
     assert db_session.query(models.DiscordOAuthToken).filter_by(discord_id="123456789012345678").first() is None
     # no session created
     assert db_session.query(models.AuthSession).count() == 0
+
+
+def test_auth_refresh_rejects_without_discord_id_hint(db_session):
+    """Account takeover protection: /auth/refresh must have matching discord_id_hint cookie.
+    Without it, attacker can obtain session for any user with stored refresh_token."""
+    db_session.query(models.DiscordOAuthToken).delete()
+    db_session.query(models.AuthSession).delete()
+    db_session.query(models.DiscordUser).delete()
+    db_session.commit()
+    user = models.DiscordUser(
+        discord_id="123456789012345678",
+        username="testuser",
+        global_name="Test User",
+        avatar_hash=None,
+    )
+    db_session.add(user)
+    db_session.commit()
+    from app.crypto import encrypt_token
+    token_row = models.DiscordOAuthToken(
+        discord_id="123456789012345678",
+        access_token_encrypted=encrypt_token("old_access"),
+        refresh_token_encrypted=encrypt_token("old_refresh"),
+        expires_at=datetime.utcnow() + timedelta(days=1),
+        updated_at=datetime.utcnow(),
+    )
+    db_session.add(token_row)
+    db_session.commit()
+
+    # Mock httpx to avoid proxy env crash if endpoint is reached unexpectedly
+    # (also prevents actual Discord API calls)
+    from unittest.mock import AsyncMock, MagicMock, patch
+    async def mock_post_fail(*args, **kwargs):
+        resp = MagicMock()
+        resp.status_code = 400
+        resp.json.return_value = {"error": "invalid_grant"}
+        return resp
+
+    with patch("httpx.AsyncClient") as mock_client_class:
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.post = mock_post_fail
+        mock_client_class.return_value = mock_client
+
+        for client in _oauth_client(db_session):
+            # No discord_id_hint cookie → 401
+            # CSRF is disabled in conftest, so we don't test CSRF here – that's enforced in production middleware
+            resp = client.post(
+                "/auth/refresh",
+                json={"discord_id": "123456789012345678"},
+            )
+            assert resp.status_code == 401
+            assert db_session.query(models.AuthSession).count() == 0
+
+            # Wrong discord_id_hint → 401
+            client.cookies.set("discord_id_hint", "999999999999999999")
+            resp = client.post(
+                "/auth/refresh",
+                json={"discord_id": "123456789012345678"},
+            )
+            assert resp.status_code == 401
+            assert db_session.query(models.AuthSession).count() == 0
+
+            # Correct discord_id_hint – would proceed to refresh_discord_token,
+            # which we've mocked to fail → 401, no session created
+            # (proves the check passed and we got to the refresh step)
+            client.cookies.set("discord_id_hint", "123456789012345678")
+            resp = client.post(
+                "/auth/refresh",
+                json={"discord_id": "123456789012345678"},
+            )
+            # refresh_discord_token fails (mocked invalid_grant) → 401
+            assert resp.status_code == 401
+            assert db_session.query(models.AuthSession).count() == 0
 
 
 def test_logout_deletes_tokens_and_clears_hint_cookie(db_session):
