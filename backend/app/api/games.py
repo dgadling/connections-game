@@ -302,7 +302,9 @@ def patch_question(game_id: int, qid: int, payload: schemas.QuestionPatch, db: S
 @router.get("/api/games/{game_id}/questions/{qid}/history")
 def question_history(game_id: int, qid: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
-    rows = db.query(models.ConnQuestionEdit).filter(models.ConnQuestionEdit.question_id == qid).order_by(models.ConnQuestionEdit.edited_at).all()
+    rows = db.query(models.ConnQuestionEdit, models.DiscordUser).outerjoin(
+        models.DiscordUser, models.ConnQuestionEdit.edited_by == models.DiscordUser.discord_id
+    ).filter(models.ConnQuestionEdit.question_id == qid).order_by(models.ConnQuestionEdit.edited_at).all()
     return [
         {
             "id": r.id,
@@ -310,9 +312,10 @@ def question_history(game_id: int, qid: int, db: Session = Depends(get_db), user
             "old_text": r.old_text,
             "old_tag": r.old_tag,
             "edited_by": r.edited_by,
+            "edited_by_name": (du.global_name or du.username) if du else r.edited_by,
             "edited_at": r.edited_at.isoformat() if r.edited_at else None,
         }
-        for r in rows
+        for r, du in rows
     ]
 
 @router.post("/api/games/{game_id}/questions/{qid}/graveyard")

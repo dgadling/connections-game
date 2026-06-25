@@ -693,7 +693,7 @@ function QuestionsTab({ gameId, archived }) {
             <div className="text-xs text-neutral-500 mb-2 truncate">{historyQ.text}</div>
             {arr(history).length===0 ? <div className="text-neutral-500">No edits yet.</div> : (
               <ul className="space-y-2 max-h-64 overflow-auto">
-                {arr(history).map(h => <li key={h.id} className="border-b border-neutral-100 pb-2 text-xs"><div className="text-neutral-500">{h.edited_at ? new Date(h.edited_at).toLocaleString() : ''} · {h.edited_by}</div><div className="text-neutral-700"><span className="text-neutral-400">was:</span> [{h.old_tag}] {h.old_text}</div></li>)}
+                {arr(history).map(h => <li key={h.id} className="border-b border-neutral-100 pb-2 text-xs"><div className="text-neutral-500">{h.edited_at ? new Date(h.edited_at).toLocaleString() : ''} · {h.edited_by_name || h.edited_by}</div><div className="text-neutral-700"><span className="text-neutral-400">was:</span> [{h.old_tag}] {h.old_text}</div></li>)}
               </ul>
             )}
             <button onClick={()=>setHistoryQ(null)} className="mt-3 px-3 py-2 border border-neutral-300 rounded-lg text-sm w-full sm:w-auto">Close</button>
