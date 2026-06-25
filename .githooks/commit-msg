@@ -1,0 +1,26 @@
+#!/bin/sh
+# commit-msg – enforce conventional commit prefix
+set -e
+
+msg_file="$1"
+msg=$(head -n1 "$msg_file")
+
+# Allowed types: fix, feat, chore, docs, style, refactor, perf, test, build, ci, revert
+# Format: type[!][(scope)]: <description>
+# examples: fix: ..., fix(auth): ..., feat!: ..., chore(deps): ...
+if ! echo "$msg" | grep -Eq '^(fix|feat|chore|docs|style|refactor|perf|test|build|ci|revert)(\([a-z0-9._-]+\))?!?: .+'; then
+  echo "❌ commit message must start with conventional commit type"
+  echo ""
+  echo "  got: $msg"
+  echo ""
+  echo "  allowed: fix|feat|chore|docs|style|refactor|perf|test|build|ci|revert"
+  echo "  format:  type[(scope)][!]: <description>"
+  echo ""
+  echo "  examples:"
+  echo "    fix: show username in question history"
+  echo "    fix(auth): allow concurrent sessions"
+  echo "    feat(ui): rename Round to Ask"
+  echo ""
+  echo "  To bypass (emergency only): git commit --no-verify"
+  exit 1
+fi

@@ -1,21 +1,4 @@
-import { useEffect, useState, Component } from 'react'
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core'
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import { useEffect, useState, useRef, Component } from 'react'
 
 function csrf() {
   return document.cookie.split('; ').find(c => c.startsWith('csrf_token='))?.split('=')[1] || ''
@@ -450,35 +433,73 @@ function QuestionsTab({ gameId, archived }) {
   const restore = async (q) => { await api(`/api/games/${gameId}/questions/${q.id}/restore`, {method:'POST'}); load() }
   const del = async (q) => { if (!confirm('Delete permanently?')) return; await api(`/api/games/${gameId}/questions/${q.id}`, {method:'DELETE'}); load() }
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(TouchSensor, { activationConstraint: { delay: 100, tolerance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  )
+  // drag reorder – native HTML5 + touch, ported from Corvessa Space
+  const [dragIdx, setDragIdx] = useState(null)
+  const [dropIdx, setDropIdx] = useState(null)
+  const questionListRef = useRef(null)
 
-  const handleDragEndDnd = async (event) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-    const oldIndex = qs.findIndex(q => q.id === active.id)
-    const newIndex = qs.findIndex(q => q.id === over.id)
-    if (oldIndex === -1 || newIndex === -1) return
-    const newQs = arrayMove(qs, oldIndex, newIndex)
-    setQs(newQs)
-    const question_ids = newQs.map(q => q.id)
-    await api(`/api/games/${gameId}/questions/reorder`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({question_ids})})
+  const showDropLine = (pos) =>
+    dragIdx !== null && dropIdx === pos && pos !== dragIdx && pos !== dragIdx + 1
+
+  const performReorder = async (fromIdx, toIdx) => {
+    const ids = qs.map(q => q.id)
+    const [moved] = ids.splice(fromIdx, 1)
+    const adj = toIdx > fromIdx ? toIdx - 1 : toIdx
+    ids.splice(adj, 0, moved)
+    await api(`/api/games/${gameId}/questions/reorder`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({question_ids: ids})})
     load()
   }
 
-  function SortableQuestionItem({ q, status, editing, editText, setEditText, onSaveEdit, onCancelEdit, onSetTag, onRevertTag, onEditStart, onOpenHistory, onGraveyard, onRestore, onDelete }) {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: q.id, disabled: status !== 'upcoming' || editing === q.id })
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-      opacity: isDragging ? 0.4 : 1,
+  const onDragStart = (idx) => (e) => {
+    setDragIdx(idx)
+    e.dataTransfer.effectAllowed = "move"
+    e.dataTransfer.setData("text/plain", String(idx))
+  }
+
+  const onDragOver = (idx) => (e) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+    const rect = e.currentTarget.getBoundingClientRect()
+    setDropIdx(e.clientY < rect.top + rect.height / 2 ? idx : idx + 1)
+  }
+
+  const finishDrag = () => {
+    if (dragIdx !== null && dropIdx !== null && dropIdx !== dragIdx && dropIdx !== dragIdx + 1) {
+      performReorder(dragIdx, dropIdx)
     }
+    setDragIdx(null)
+    setDropIdx(null)
+  }
+
+  const onGripTouch = (idx) => (e) => {
+    e.stopPropagation()
+    setDragIdx(idx)
+  }
+
+  const onListTouchMove = (e) => {
+    if (dragIdx === null || !questionListRef.current) return
+    const y = e.touches[0].clientY
+    const items = questionListRef.current.querySelectorAll("[data-q-idx]")
+    let pos = 0
+    items.forEach(el => {
+      const rect = el.getBoundingClientRect()
+      if (y > rect.top + rect.height / 2) pos = Number(el.dataset.qIdx) + 1
+    })
+    setDropIdx(pos)
+  }
+
+  const onListTouchEnd = () => finishDrag()
+
+  function QuestionItem({ q, idx, status, editing, editText, setEditText, onSaveEdit, onCancelEdit, onSetTag, onRevertTag, onEditStart, onOpenHistory, onGraveyard, onRestore, onDelete, dragIdx, onDragStart, onDragOver, onGripTouch }) {
+    const isDragging = dragIdx === idx
     return (
-      <div ref={setNodeRef} style={style}
-        className={`bg-white rounded-lg shadow-sm border border-neutral-200 px-3 py-2.5 transition-all ${isDragging ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}`}>
+      <div
+        data-q-idx={idx}
+        draggable={status === 'upcoming' && editing !== q.id}
+        onDragStart={status === 'upcoming' ? onDragStart(idx) : undefined}
+        onDragOver={status === 'upcoming' ? onDragOver(idx) : undefined}
+        onDragEnd={finishDrag}
+        className={`bg-white rounded-lg shadow-sm border border-neutral-200 px-3 py-2.5 transition-all ${isDragging ? 'opacity-40' : ''}`}>
         {editing === q.id ? (
           <div className="flex flex-col sm:flex-row gap-2">
             <input value={editText} onChange={e=>setEditText(e.target.value)} maxLength={500} className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" autoFocus />
@@ -490,7 +511,11 @@ function QuestionsTab({ gameId, archived }) {
         ) : (
           <div className="flex items-start gap-2">
             {status==='upcoming' && (
-              <span {...attributes} {...listeners} className="text-neutral-300 hover:text-neutral-500 shrink-0 cursor-grab select-none text-[14px] leading-snug pt-0.5 touch-none" title="Drag to reorder">⋮⋮</span>
+              <span
+                onTouchStart={onGripTouch(idx)}
+                style={{ touchAction: 'none' }}
+                className="text-neutral-300 hover:text-neutral-500 shrink-0 cursor-grab active:cursor-grabbing select-none text-[14px] leading-snug pt-0.5"
+                title="Drag to reorder">⋮⋮</span>
             )}
             <span className="relative shrink-0 mt-0.5">
               <select
@@ -656,47 +681,62 @@ function QuestionsTab({ gameId, archived }) {
       </div>
 
       {/* question list */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndDnd}>
-        <SortableContext items={qs.map(q => q.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-1.5">
-            {qs.map((q) => (
-              <SortableQuestionItem
-                key={q.id}
-                q={q}
-                status={status}
-                editing={editing}
-                editText={editText}
-                setEditText={setEditText}
-                onSaveEdit={saveEdit}
-                onCancelEdit={() => setEditing(null)}
-                onSetTag={setTag}
-                onRevertTag={revertTag}
-                onEditStart={(qq) => { setEditing(qq.id); setEditText(qq.text) }}
-                onOpenHistory={openHistory}
-                onGraveyard={graveyard}
-                onRestore={restore}
-                onDelete={del}
-              />
-            ))}
-            {qs.length===0 && (
-              <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-8 text-center">
-                <div className="text-3xl mb-2">📝</div>
-                <div className="text-neutral-700 font-medium mb-1">No {status} questions yet</div>
-                {status === 'upcoming' && !archived && (
-                  usedCount > 0 ? (
-                    <div className="space-y-2">
-                      <div className="text-sm text-neutral-500">{usedCount} question{usedCount===1?'':'s'} in used pool</div>
-                      <button onClick={recycleQuestions} disabled={busy} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">♻️ Recycle used questions ({usedCount})</button>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-neutral-500">Add one above, or load the 38-question starter pack.</div>
-                  )
-                )}
-              </div>
+      <div
+        ref={questionListRef}
+        className="space-y-1.5"
+        onDragOver={e => e.preventDefault()}
+        onDrop={finishDrag}
+        onTouchMove={onListTouchMove}
+        onTouchEnd={onListTouchEnd}
+      >
+        {qs.map((q, idx) => (
+          <div key={q.id}>
+            {showDropLine(idx) && (
+              <div className="h-0.5 mx-3 rounded-full bg-indigo-600" />
+            )}
+            <QuestionItem
+              q={q}
+              idx={idx}
+              status={status}
+              editing={editing}
+              editText={editText}
+              setEditText={setEditText}
+              onSaveEdit={saveEdit}
+              onCancelEdit={() => setEditing(null)}
+              onSetTag={setTag}
+              onRevertTag={revertTag}
+              onEditStart={(qq) => { setEditing(qq.id); setEditText(qq.text) }}
+              onOpenHistory={openHistory}
+              onGraveyard={graveyard}
+              onRestore={restore}
+              onDelete={del}
+              dragIdx={dragIdx}
+              onDragStart={onDragStart}
+              onDragOver={onDragOver}
+              onGripTouch={onGripTouch}
+            />
+          </div>
+        ))}
+        {showDropLine(qs.length) && (
+          <div className="h-0.5 mx-3 rounded-full bg-indigo-600" />
+        )}
+        {qs.length===0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-8 text-center">
+            <div className="text-3xl mb-2">📝</div>
+            <div className="text-neutral-700 font-medium mb-1">No {status} questions yet</div>
+            {status === 'upcoming' && !archived && (
+              usedCount > 0 ? (
+                <div className="space-y-2">
+                  <div className="text-sm text-neutral-500">{usedCount} question{usedCount===1?'':'s'} in used pool</div>
+                  <button onClick={recycleQuestions} disabled={busy} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">♻️ Recycle used questions ({usedCount})</button>
+                </div>
+              ) : (
+                <div className="text-sm text-neutral-500">Add one above, or load the 38-question starter pack.</div>
+              )
             )}
           </div>
-        </SortableContext>
-      </DndContext>
+        )}
+      </div>
 
       {historyQ && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-40" onClick={()=>setHistoryQ(null)}>
