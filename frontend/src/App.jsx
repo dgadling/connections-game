@@ -197,7 +197,7 @@ export default function App() {
           <button onClick={()=>setGame(null)} className="text-sm text-neutral-500 hover:text-neutral-900">← games</button>
           <h1 className="text-lg sm:text-xl font-bold tracking-tight text-neutral-900 truncate">{game.name}</h1>
           <div className="ml-auto flex items-center gap-2 text-xs text-neutral-500">
-            <span className="hidden sm:inline">{user.global_name || user.username}</span>
+            <span>{user.global_name || user.username}</span>
             <button onClick={doLogout} title="Log out" aria-label="Log out"
               className="px-1.5 py-1 rounded hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 transition-colors text-base leading-none">
               ⍈
