@@ -19,6 +19,31 @@ if [ -n "$api_changed" ]; then
   fi
 fi
 
+# --- Auth bypass guard: block TEST_BYPASS_AUTH in shippable files ---
+# Prevents accidental commit of test auth bypass to production deploy configs
+# Checks: Dockerfiles, docker-compose, cloudbuild, k8s manifests, deploy scripts, .env files
+echo "  security: auth bypass guard"
+bypass_found=$(grep -r "TEST_BYPASS_AUTH\|ALLOW_TEST_AUTH" \
+  Dockerfile* docker-compose* cloudbuild* \
+  2>/dev/null || true)
+# Also check yaml files that look deploy-related
+yaml_found=$(grep -r "TEST_BYPASS_AUTH\|ALLOW_TEST_AUTH" \
+  --include="*.yml" --include="*.yaml" \
+  . 2>/dev/null | grep -E "(deploy|k8s|kubernetes|helm|cloudbuild|docker-compose)" || true)
+# Check staged .env files (shouldn't be committed anyway, but belt-and-suspenders)
+env_found=$(git diff --cached --name-only | grep -E '\.env$' | xargs -r grep -l "TEST_BYPASS_AUTH\|ALLOW_TEST_AUTH" 2>/dev/null || true)
+
+if [ -n "$bypass_found" ] || [ -n "$yaml_found" ] || [ -n "$env_found" ]; then
+  echo "❌ SECURITY BLOCKER: TEST_BYPASS_AUTH / ALLOW_TEST_AUTH found in shippable files!"
+  echo ""
+  [ -n "$bypass_found" ] && echo "Found in Docker/deploy files:" && echo "$bypass_found" && echo ""
+  [ -n "$yaml_found" ] && echo "Found in YAML deploy configs:" && echo "$yaml_found" && echo ""
+  [ -n "$env_found" ] && echo "Found in staged .env files:" && echo "$env_found" && echo ""
+  echo "Auth bypass code MUST NEVER ship to production."
+  echo "Remove TEST_BYPASS_AUTH from all deploy-related files before committing."
+  exit 1
+fi
+
 # backend: venv check + ruff + pytest
 if [ ! -x backend/.venv/bin/python ]; then
   echo "❌ backend/.venv missing – run: cd backend && python3 -m venv .venv && .venv/bin/pip install -r ../requirements.txt -r requirements-test.txt"; exit 1
