@@ -7,17 +7,14 @@ logger = logging.getLogger(__name__)
 
 def _load_key() -> bytes:
     key_str = os.environ.get("DISCORD_OAUTH_FERNET_KEY", "")
-    if key_str:
-        try:
-            # Validate key by constructing Fernet
-            Fernet(key_str.encode())
-            return key_str.encode()
-        except Exception as e:
-            logger.warning(f"DISCORD_OAUTH_FERNET_KEY invalid, using ephemeral dev key: {e}")
-    # Dev fallback: ephemeral key
-    key = Fernet.generate_key()
-    logger.warning("DISCORD_OAUTH_FERNET_KEY not set - using ephemeral dev key (tokens won't survive restart)")
-    return key
+    if not key_str:
+        raise RuntimeError("DISCORD_OAUTH_FERNET_KEY must be set")
+    try:
+        # Validate key by constructing Fernet
+        Fernet(key_str.encode())
+        return key_str.encode()
+    except Exception as e:
+        raise RuntimeError(f"DISCORD_OAUTH_FERNET_KEY invalid: {e}") from e
 
 _FERNET = Fernet(_load_key())
 
