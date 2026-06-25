@@ -836,7 +836,7 @@ function MembersTab({ gameId, archived }) {
 
   const addMember = async () => {
     if (!name.trim()) return
-    if (!discordId.trim()) { alert('Discord @username is required'); return }
+    if (!discordId.trim()) { alert('Discord username is required'); return }
     const body = { name: name.trim(), discord_id: discordId.trim() }
     try {
       await api(`/api/games/${gameId}/members`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
@@ -849,7 +849,7 @@ function MembersTab({ gameId, archived }) {
     const body = {}
     if (editName !== m.name) body.name = editName
     const disc = editDiscord.trim()
-    if (!disc) { alert('Discord @username is required'); return }
+    if (!disc) { alert('Discord username is required'); return }
     if (disc !== (m.discord_id||'')) body.discord_id = disc
     try {
       await api(`/api/games/${gameId}/members/${m.id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
@@ -871,11 +871,11 @@ function MembersTab({ gameId, archived }) {
         <div className="flex flex-col sm:flex-row gap-2">
           <input value={name} onChange={e=>setName(e.target.value)} placeholder="Character name" required
             className="flex-1 border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-          <input value={discordId} onChange={e=>setDiscordId(e.target.value)} placeholder="Discord @username (e.g. @jon_cst)" required
+          <input value={discordId} onChange={e=>setDiscordId(e.target.value)} placeholder="Discord username (e.g. anondotj2)" required
             className="flex-1 border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           <button type="button" onClick={addMember} className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">Add</button>
         </div>
-        <div className="text-xs text-neutral-500 mt-2">Discord @username (e.g. @jon_cst) – or numeric snowflake</div>
+        <div className="text-xs text-neutral-500 mt-2">Discord username (e.g. anondotj2) – or numeric snowflake</div>
       </div>}
 
       <div className="bg-white rounded-xl shadow-sm border border-neutral-200 divide-y divide-neutral-100">
@@ -884,7 +884,7 @@ function MembersTab({ gameId, archived }) {
             {editing === m.id ? (
               <div className="flex flex-col sm:flex-row gap-2">
                 <input value={editName} onChange={e=>setEditName(e.target.value)} required className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm" />
-                <input value={editDiscord} onChange={e=>setEditDiscord(e.target.value)} placeholder="Discord @username" required className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm" />
+                <input value={editDiscord} onChange={e=>setEditDiscord(e.target.value)} placeholder="Discord username" required className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm" />
                 <div className="flex gap-2">
                   <button type="button" onClick={()=>saveEdit(m)} className="flex-1 sm:flex-initial px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Save</button>
                   <button type="button" onClick={()=>setEditing(null)} className="flex-1 sm:flex-initial px-3 py-2 border border-neutral-300 rounded-lg text-sm">Cancel</button>
