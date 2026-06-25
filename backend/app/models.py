@@ -1,13 +1,13 @@
 from __future__ import annotations
+from datetime import datetime, timezone
 from sqlalchemy import (
     Column, Integer, String, Text, Boolean, TIMESTAMP, ForeignKey,
     UniqueConstraint, CheckConstraint
 )
-from datetime import datetime
 from .db import Base
 
 def now():
-    return datetime.utcnow()
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 class DiscordUser(Base):
     __tablename__ = "discord_users"
@@ -70,7 +70,7 @@ class GameMember(Base):
     deleted_at = Column(TIMESTAMP, nullable=True)
     # Partial unique indexes created in Alembic migration:
     #   uq_game_member_name_active ON (game_id, name) WHERE deleted_at IS NULL
-    #   uq_game_member_discord_active ON (game_id, discord_id) WHERE deleted_at IS NULL AND discord_id IS NOT NULL
+    #   uq_game_member_discord_active ON (game_id, discord_id) WHERE deleted_at IS NULL
 
 class ConnQuestion(Base):
     __tablename__ = "conn_questions"

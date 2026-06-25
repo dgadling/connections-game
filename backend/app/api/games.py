@@ -2,7 +2,7 @@ from __future__ import annotations
 import secrets
 import hashlib
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from .. import models, schemas
@@ -30,7 +30,7 @@ def validate_discord_id(discord_id: str) -> str:
         try:
             sid = int(normalized)
             ts = ((sid >> 22) + 1420070400000) / 1000
-            now = datetime.utcnow().timestamp()
+            now = datetime.now(timezone.utc).replace(tzinfo=None).timestamp()
             if ts < 1420070400 or ts > now + 86400:
                 raise HTTPException(400, "That doesn't look like a Discord ID — see https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID")
         except ValueError as e:
@@ -163,7 +163,7 @@ def delete_member(game_id: int, member_id: int, db: Session = Depends(get_db), u
     m = db.query(models.GameMember).filter(models.GameMember.id == member_id, models.GameMember.game_id == game_id).first()
     if not m:
         raise HTTPException(404)
-    m.deleted_at = datetime.utcnow()
+    m.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     regenerate_pairings(db, game_id)
     return {"ok": True}
@@ -259,12 +259,12 @@ def patch_question(game_id: int, qid: int, payload: schemas.QuestionPatch, db: S
         new_tag_auto = True
         new_tag = classify_sentiment(new_text)
     if new_text != q.text or new_tag != q.tag:
-        edit = models.ConnQuestionEdit(question_id=q.id, old_text=q.text, old_tag=q.tag, edited_by=user.discord_id, edited_at=datetime.utcnow())
+        edit = models.ConnQuestionEdit(question_id=q.id, old_text=q.text, old_tag=q.tag, edited_by=user.discord_id, edited_at=datetime.now(timezone.utc).replace(tzinfo=None))
         db.add(edit)
     q.text = new_text
     q.tag = new_tag
     q.tag_auto = new_tag_auto
-    q.updated_at = datetime.utcnow()
+    q.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     return {
         "id": q.id,
@@ -575,7 +575,7 @@ def complete_round(game_id: int, db: Session = Depends(get_db), user: models.Dis
     # next question
     nq = db.query(models.ConnQuestion).filter(models.ConnQuestion.game_id == game_id, models.ConnQuestion.status == "upcoming").order_by(models.ConnQuestion.sort_order).first()
     state.current_question_id = nq.id if nq else None
-    state.updated_at = datetime.utcnow()
+    state.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     return {"ok": True, "next_round": state.current_round}
 
@@ -624,7 +624,7 @@ def join_game(payload: schemas.JoinRequest, request: Request, db: Session = Depe
     # rate limiting enforced in middleware
     token_hash = hashlib.sha256(payload.invite_token.encode()).hexdigest()
     invite = db.query(models.GameInvite).filter(models.GameInvite.token_hash == token_hash).first()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     if not invite or invite.expires_at < now:
         raise HTTPException(403, "invalid or expired invite")
     game_id = invite.game_id
@@ -644,7 +644,7 @@ def create_invite(game_id: int, db: Session = Depends(get_db), user: models.Disc
     require_game_writable(game_id, db)
     token = secrets.token_urlsafe(12)
     token_hash = hashlib.sha256(token.encode()).hexdigest()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     invite = models.GameInvite(
         token_hash=token_hash,
         game_id=game_id,
@@ -660,7 +660,7 @@ def create_invite(game_id: int, db: Session = Depends(get_db), user: models.Disc
 @router.get("/api/games/{game_id}/invites")
 def list_invites(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_game_admin(game_id, user.discord_id, db)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     # delete expired rows for this game
     db.query(models.GameInvite).filter(
         models.GameInvite.game_id == game_id,
@@ -695,7 +695,7 @@ def archive_game(game_id: int, db: Session = Depends(get_db), user: models.Disco
     game = db.query(models.Game).filter(models.Game.id == game_id).first()
     if not game:
         raise HTTPException(404)
-    game.archived_at = datetime.utcnow()
+    game.archived_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     return {"ok": True}
 

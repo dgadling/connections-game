@@ -2,7 +2,7 @@ from __future__ import annotations
 import os
 import secrets
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import Request, HTTPException, Depends
 from sqlalchemy.orm import Session
 from .db import get_db
@@ -39,7 +39,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> models.
     sess = db.query(models.AuthSession).filter(models.AuthSession.session_token_hash == token_hash).first()
     if not sess:
         return None
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     if sess.expires_at < now or sess.absolute_expires_at < now:
         db.delete(sess)
         db.commit()
@@ -78,7 +78,7 @@ def create_session(db: Session, discord_id: str) -> str:
     # invalidate existing sessions for this discord_id? spec says invalidate any existing session at OAuth login - do that in oauth callback, not here
     token = secrets.token_urlsafe(32)
     token_hash = hash_token(token)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     sess = models.AuthSession(
         session_token_hash=token_hash,
         discord_id=discord_id,
@@ -178,7 +178,7 @@ async def refresh_discord_token(db: Session, discord_id: str) -> str | None:
             return None
 
     # update DB
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     token_row.access_token_encrypted = encrypt_token(new_access_token)
     token_row.refresh_token_encrypted = encrypt_token(new_refresh_token)
     token_row.expires_at = now + timedelta(seconds=expires_in)

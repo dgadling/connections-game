@@ -1,51 +1,53 @@
 from __future__ import annotations
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, Literal
 from datetime import datetime
 
 QuestionTag = Literal["warm", "secretive", "reflective", "tension", "vulnerable", "loyal"]
 
-class GameCreate(BaseModel):
+class _BaseModel(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+class _OutModel(BaseModel):
+    model_config = ConfigDict(extra='forbid', from_attributes=True)
+
+class GameCreate(_BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
 
-class GameOut(BaseModel):
+class GameOut(_OutModel):
     id: int
     name: str
     owner_discord_id: str
     archived_at: Optional[datetime] = None
-    class Config:
-        from_attributes = True
 
-class MemberCreate(BaseModel):
+class MemberCreate(_BaseModel):
     name: str
     discord_id: str
 
-class MemberPatch(BaseModel):
+class MemberPatch(_BaseModel):
     name: Optional[str] = None
     discord_id: Optional[str] = None
 
-class MemberOut(BaseModel):
+class MemberOut(_OutModel):
     id: int
     game_id: int
     name: str
     discord_id: str
     deleted_at: Optional[datetime]
-    class Config:
-        from_attributes = True
 
-class QuestionCreate(BaseModel):
+class QuestionCreate(_BaseModel):
     text: str = Field(..., max_length=500)
 
-class QuestionPatch(BaseModel):
+class QuestionPatch(_BaseModel):
     text: Optional[str] = Field(None, max_length=500)
     tag: Optional[QuestionTag] = None
     tag_auto: Optional[bool] = None
 
-class QuestionImport(BaseModel):
+class QuestionImport(_BaseModel):
     questions: list[str] = Field(..., min_length=1)
     # accepts raw list of question strings; tags are auto-classified
 
-class QuestionOut(BaseModel):
+class QuestionOut(_OutModel):
     id: int
     game_id: int
     text: str
@@ -54,11 +56,9 @@ class QuestionOut(BaseModel):
     status: str
     sort_order: int
     edit_count: int = 0
-    class Config:
-        from_attributes = True
 
-class JoinRequest(BaseModel):
+class JoinRequest(_BaseModel):
     invite_token: str
 
-class ReorderRequest(BaseModel):
+class ReorderRequest(_BaseModel):
     question_ids: list[int]
