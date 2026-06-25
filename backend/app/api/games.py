@@ -555,6 +555,8 @@ def complete_round(game_id: int, db: Session = Depends(get_db), user: models.Dis
     first_id = first_upcoming.id if first_upcoming else None
     if state.current_question_id != first_id:
         state.current_question_id = first_id
+    if first_id is None:
+        raise HTTPException(400, "no question available")
     round_num = state.current_round
     play = models.ConnPlay(game_id=game_id, round_num=round_num, question_id=state.current_question_id, played_by=user.discord_id)
     db.add(play)

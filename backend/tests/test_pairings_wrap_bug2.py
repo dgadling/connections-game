@@ -10,6 +10,10 @@ def test_pairings_wrap_after_n_minus_1_rounds(db_session, game, test_user):
     for i in range(4):
         m = models.GameMember(game_id=game.id, name=f"Member{i}", discord_id=f"member{i}_test")
         db_session.add(m)
+    # Seed questions - complete_round now rejects NULL question_id
+    for i in range(10):
+        q = models.ConnQuestion(game_id=game.id, text=f"Q{i}", tag="warm", tag_auto=True, status="upcoming", sort_order=i)
+        db_session.add(q)
     db_session.commit()
 
     orig_req = games_module.require_membership
