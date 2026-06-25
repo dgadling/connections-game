@@ -14,3 +14,8 @@ migrate_corvessa.py
 patch_history.py
 migrate_*.py
 patch_*.py
+
+# Playwright E2E test artifacts
+/frontend/playwright-report/
+/frontend/test-results/
+backend/e2e_test.db*

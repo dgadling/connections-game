@@ -438,7 +438,7 @@ function QuestionItem({ q, idx, status, editing, editText, setEditText, onSaveEd
       className={`bg-white rounded-lg shadow-sm border border-neutral-200 px-3 py-2.5 transition-all ${isDragging ? 'opacity-40' : ''}`}>
       {editing === q.id ? (
         <div className="flex flex-col sm:flex-row gap-2">
-          <input value={editText} onChange={e=>setEditText(e.target.value)} maxLength={500} className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" autoFocus />
+          <input value={editText} onChange={e=>setEditText(e.target.value)} maxLength={500} placeholder="Edit question…" className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" autoFocus />
           <div className="flex gap-2">
             <button type="button" onClick={()=>onSaveEdit(q)} className="flex-1 sm:flex-initial px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Save</button>
             <button type="button" onClick={onCancelEdit} className="flex-1 sm:flex-initial px-3 py-2 border border-neutral-300 rounded-lg text-sm">Cancel</button>
@@ -780,7 +780,7 @@ function QuestionsTab({ gameId, archived }) {
 
       {Boolean(historyQ) && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-40" onClick={()=>setHistoryQ(null)}>
-          <div className="bg-white rounded-xl shadow-xl p-4 sm:p-5 max-w-lg w-full text-sm" onClick={e=>e.stopPropagation()}>
+          <div role="dialog" aria-label="Edit history" className="bg-white rounded-xl shadow-xl p-4 sm:p-5 max-w-lg w-full text-sm" onClick={e=>e.stopPropagation()}>
             <div className="font-semibold mb-3">Edit history</div>
             <div className="text-xs text-neutral-500 mb-2 truncate">Current: [{historyQ.tag}] {historyQ.text}</div>
             {arr(history).length===0 ? <div className="text-neutral-500">No edits yet.</div> : (
