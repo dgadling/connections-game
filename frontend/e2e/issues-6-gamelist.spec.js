@@ -16,7 +16,7 @@ test('GameList: active games first, no join-code input', async ({ page }) => {
   await page.getByRole('button', { name: 'Create' }).click();
 
   // Go back to GameList
-  await page.getByRole('button', { name: /games/ }).click();
+  await page.getByRole('button', { name: '← games' }).click();
 
   // Assert Active games list appears BEFORE "New game" card in DOM order
   const activeGamesText = page.getByText(/active game/);
@@ -44,7 +44,7 @@ test('GameList: invite URL auto-join populates game name', async ({ page }) => {
   await page.getByRole('button', { name: 'Create' }).click();
 
   // Go to Admin tab to create invite
-  await page.getByRole('button', { name: /Admin/ }).click();
+  await page.locator('nav').getByRole('button', { name: /Admin/ }).click();
   await page.getByRole('button', { name: 'Generate invite' }).click();
 
   // Extract invite token from displayed URL
@@ -56,7 +56,7 @@ test('GameList: invite URL auto-join populates game name', async ({ page }) => {
   const token = tokenMatch[1];
 
   // Go back to games list, then navigate to invite URL (simulating fresh join)
-  await page.getByRole('button', { name: /games/ }).click();
+  await page.getByRole('button', { name: '← games' }).click();
   await page.goto(`/?invite=${token}`);
 
   // Auto-join should fire, game name should populate (not empty)

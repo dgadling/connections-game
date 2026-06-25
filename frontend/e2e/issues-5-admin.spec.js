@@ -10,7 +10,7 @@ test('admin invites empty state says "No pending invites."', async ({ page }) =>
   await page.getByRole('button', { name: 'Create' }).click();
 
   // Go to Admin tab
-  await page.getByRole('button', { name: /Admin/ }).click();
+  await page.locator('nav').getByRole('button', { name: /Admin/ }).click();
 
   // Check invites section
   const invitesSection = page.locator('text=Invite links').locator('..');
