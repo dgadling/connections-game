@@ -16,7 +16,7 @@ class GameOut(BaseModel):
 
 class MemberCreate(BaseModel):
     name: str
-    discord_id: Optional[str] = None
+    discord_id: str
 
 class MemberPatch(BaseModel):
     name: Optional[str] = None
@@ -26,7 +26,7 @@ class MemberOut(BaseModel):
     id: int
     game_id: int
     name: str
-    discord_id: Optional[str]
+    discord_id: str
     deleted_at: Optional[datetime]
     class Config:
         from_attributes = True
@@ -54,10 +54,6 @@ class QuestionOut(BaseModel):
     edit_count: int = 0
     class Config:
         from_attributes = True
-
-class ClaimRequest(BaseModel):
-    member_id: Optional[int] = None
-    name: Optional[str] = None
 
 class JoinRequest(BaseModel):
     invite_token: str

@@ -50,7 +50,6 @@ def test_invite_join_creates_admin_membership(client, game, db_session, test_use
         assert r.status_code == 200, f"Join failed: {r.status_code} {r.text}"
         data = r.json()
         assert data["game_id"] == game.id
-        assert "claim_needed" in data
     finally:
         app.dependency_overrides.clear()
 

@@ -108,7 +108,7 @@ def game(db_session, test_user):
 @pytest.fixture
 def members(db_session, game):
     ms = [
-        models.GameMember(game_id=game.id, name="Alice", discord_id=None),
+        models.GameMember(game_id=game.id, name="Alice", discord_id="alice_test"),
         models.GameMember(game_id=game.id, name="Bob", discord_id="987654321098765432"),
     ]
     for m in ms:

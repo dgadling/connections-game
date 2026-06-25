@@ -406,8 +406,8 @@ function RoundTab({ gameId, archived }) {
     const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     const lines = [`🤝 Connections — ${dateStr}`, '', `> ${data.question?.text || '(no question)'}`, '']
     arr(data.pairings).forEach(p => {
-      const asker = formatDiscordMention(p.asker_discord_id) || p.asker_name
-      const target = formatDiscordMention(p.target_discord_id) || p.target_name
+      const asker = formatDiscordMention(p.asker_discord_id)
+      const target = formatDiscordMention(p.target_discord_id)
       lines.push(`• ${asker} answers about ${target}`)
     })
     navigator.clipboard.writeText(lines.join('\n'))
@@ -836,8 +836,8 @@ function MembersTab({ gameId, archived }) {
 
   const addMember = async () => {
     if (!name.trim()) return
-    const body = { name: name.trim() }
-    if (discordId.trim()) body.discord_id = discordId.trim()
+    if (!discordId.trim()) { alert('Discord @username is required'); return }
+    const body = { name: name.trim(), discord_id: discordId.trim() }
     try {
       await api(`/api/games/${gameId}/members`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
       setName(''); setDiscordId('')
@@ -849,18 +849,14 @@ function MembersTab({ gameId, archived }) {
     const body = {}
     if (editName !== m.name) body.name = editName
     const disc = editDiscord.trim()
-    if (disc !== (m.discord_id||'')) body.discord_id = disc || null
+    if (!disc) { alert('Discord @username is required'); return }
+    if (disc !== (m.discord_id||'')) body.discord_id = disc
     try {
       await api(`/api/games/${gameId}/members/${m.id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
       setEditing(null); load()
     } catch(e) { alert('Save failed: ' + e.message) }
   }
 
-  const unclaim = async (m) => {
-    if (!confirm(`Unclaim ${m.name}? They'll become an unclaimed slot.`)) return
-    await api(`/api/games/${gameId}/members/${m.id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({discord_id: null})})
-    load()
-  }
   const delMember = async (m) => { await api(`/api/games/${gameId}/members/${m.id}`, {method:'DELETE'}); load() }
   const restore = async (m) => { try { await api(`/api/games/${gameId}/members/${m.id}/restore`, {method:'POST'}); load() } catch(e) { alert('Restore failed: ' + e.message) } }
 
@@ -873,13 +869,13 @@ function MembersTab({ gameId, archived }) {
 {!archived && <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5">
         <div className="font-semibold mb-3 text-neutral-900">Add member</div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <input value={name} onChange={e=>setName(e.target.value)} placeholder="Character name"
+          <input value={name} onChange={e=>setName(e.target.value)} placeholder="Character name" required
             className="flex-1 border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-          <input value={discordId} onChange={e=>setDiscordId(e.target.value)} placeholder="Discord @username (e.g. @jon_cst)"
+          <input value={discordId} onChange={e=>setDiscordId(e.target.value)} placeholder="Discord @username (e.g. @jon_cst)" required
             className="flex-1 border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           <button onClick={addMember} className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">Add</button>
         </div>
-        <div className="text-xs text-neutral-500 mt-2">Discord @username (e.g. @jon_cst) – or numeric snowflake. Leave blank for unclaimed.</div>
+        <div className="text-xs text-neutral-500 mt-2">Discord @username (e.g. @jon_cst) – or numeric snowflake</div>
       </div>}
 
       <div className="bg-white rounded-xl shadow-sm border border-neutral-200 divide-y divide-neutral-100">
@@ -887,8 +883,8 @@ function MembersTab({ gameId, archived }) {
           <div key={m.id} className="p-3 sm:p-4">
             {editing === m.id ? (
               <div className="flex flex-col sm:flex-row gap-2">
-                <input value={editName} onChange={e=>setEditName(e.target.value)} className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm" />
-                <input value={editDiscord} onChange={e=>setEditDiscord(e.target.value)} placeholder="Discord @username" className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm" />
+                <input value={editName} onChange={e=>setEditName(e.target.value)} required className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm" />
+                <input value={editDiscord} onChange={e=>setEditDiscord(e.target.value)} placeholder="Discord @username" required className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm" />
                 <div className="flex gap-2">
                   <button onClick={()=>saveEdit(m)} className="flex-1 sm:flex-initial px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Save</button>
                   <button onClick={()=>setEditing(null)} className="flex-1 sm:flex-initial px-3 py-2 border border-neutral-300 rounded-lg text-sm">Cancel</button>
@@ -898,11 +894,10 @@ function MembersTab({ gameId, archived }) {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <span className="font-medium text-neutral-900">{m.name}</span>
-                  {m.discord_id ? <span className="text-xs text-emerald-700 ml-2">✓ claimed</span> : <span className="text-xs text-neutral-500 ml-2">unclaimed</span>}
+                  {m.discord_id && <span className="text-neutral-500 text-sm ml-2">@{m.discord_id.replace(/^@/, '')}</span>}
                 </div>
                 {!archived && <div className="flex gap-4 text-xs text-neutral-500">
                   <button onClick={()=>{setEditing(m.id); setEditName(m.name); setEditDiscord(m.discord_id||'')}} className="hover:text-neutral-900 py-1">Edit</button>
-                  {m.discord_id && <button onClick={()=>unclaim(m)} className="hover:text-neutral-900 py-1">Unclaim</button>}
                   <button onClick={()=>delMember(m)} className="hover:text-red-600 py-1">Delete</button>
                 </div>}
               </div>
@@ -929,6 +924,7 @@ function MembersTab({ gameId, archived }) {
   )
 }
 
+
 // --- History Tab ---
 function HistoryTab({ gameId }) {
   const [rows, setRows] = useState([])
@@ -946,8 +942,8 @@ function HistoryTab({ gameId }) {
     const dateStr = r.played_at ? new Date(r.played_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
     const lines = [`🤝 Connections${dateStr ? ' — ' + dateStr : ''}`, '', `> ${r.question_text || '(no question)'}`, '']
     arr(r.pairings).forEach(p => {
-      const asker = formatDiscordMention(p.asker_discord_id) || p.asker_name
-      const target = formatDiscordMention(p.target_discord_id) || p.target_name
+      const asker = formatDiscordMention(p.asker_discord_id)
+      const target = formatDiscordMention(p.target_discord_id)
       lines.push(`• ${asker} answers about ${target}`)
     })
     navigator.clipboard.writeText(lines.join('\n'))
@@ -998,7 +994,7 @@ function AdminTab({ gameId, game, onGameUpdate, onGamesRefresh, onGameDeleted, c
   }
   const revokeInvite = async (id) => { await api(`/api/games/${gameId}/invites/${id}`, {method:'DELETE'}); loadInvites() }
   const revokeAdmin = async (discord_id) => {
-    if (!confirm('Revoke admin access? Their character will become unclaimed.')) return
+    if (!confirm('Revoke admin access?')) return
     await api(`/api/games/${gameId}/admins/${discord_id}`, {method:'DELETE'}); loadAdmins()
   }
   const doRename = async () => {

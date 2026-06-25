@@ -8,7 +8,7 @@ def test_reorder_updates_current_question(db_session, game, test_user):
     """Reordering upcoming questions should update current_question in get_round (no stale cache)"""
     # Add 3 members so pairings work
     for i in range(3):
-        m = models.GameMember(game_id=game.id, name=f"Member{i}")
+        m = models.GameMember(game_id=game.id, name=f"Member{i}", discord_id=f"member{i}_test")
         db_session.add(m)
     # Add 2 questions
     q1 = models.ConnQuestion(game_id=game.id, text="Question 1", tag="warm", status="upcoming", sort_order=0)

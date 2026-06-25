@@ -8,7 +8,7 @@ def test_round1_pairings_after_adding_members(db_session, game, test_user):
     """When members are added to a fresh game, round 1 should have pairings"""
     # game fixture starts with 0 members, add 5
     for i in range(5):
-        m = models.GameMember(game_id=game.id, name=f"Member{i}")
+        m = models.GameMember(game_id=game.id, name=f"Member{i}", discord_id=f"member{i}_test")
         db_session.add(m)
     db_session.commit()
 

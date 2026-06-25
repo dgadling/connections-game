@@ -6,7 +6,7 @@ from app.api.games import regenerate_pairings
 def test_regenerate_preserves_current_round(db_session, game, members):
     """When roster changes, pairings with round_num <= current_round must be preserved"""
     # Need 3+ members for pairings to generate
-    m3 = models.GameMember(game_id=game.id, name="Carol", discord_id=None)
+    m3 = models.GameMember(game_id=game.id, name="Carol", discord_id="carol_test")
     db_session.add(m3)
     db_session.commit()
     db_session.refresh(m3)
@@ -55,7 +55,7 @@ def test_regenerate_deletes_future_rounds_only(db_session, game):
     # Create 4 members
     ms = []
     for name in ["A", "B", "C", "D"]:
-        m = models.GameMember(game_id=game.id, name=name, discord_id=None)
+        m = models.GameMember(game_id=game.id, name=name, discord_id=f"test_{name.lower()}")
         db_session.add(m)
         ms.append(m)
     db_session.commit()

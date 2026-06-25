@@ -1,5 +1,5 @@
 def test_member_create_returns_dict(client, game):
-    r = client.post(f"/api/games/{game.id}/members", json={"name": "Charlie"})
+    r = client.post(f"/api/games/{game.id}/members", json={"name": "Charlie", "discord_id": "charlie_test"})
     assert r.status_code == 200
     data = r.json()
     assert isinstance(data, dict)

@@ -8,7 +8,7 @@ def test_pairings_wrap_after_n_minus_1_rounds(db_session, game, test_user):
     """With 4 members (3 pairing groups), round 4+ should wrap and still have pairings"""
     # Add 4 members
     for i in range(4):
-        m = models.GameMember(game_id=game.id, name=f"Member{i}")
+        m = models.GameMember(game_id=game.id, name=f"Member{i}", discord_id=f"member{i}_test")
         db_session.add(m)
     db_session.commit()
 

@@ -119,9 +119,9 @@ def list_members(game_id: int, include_deleted: bool = False, db: Session = Depe
 def create_member(game_id: int, payload: schemas.MemberCreate, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
-    discord_id = payload.discord_id
-    if discord_id:
-        discord_id = validate_discord_id(discord_id)
+    if not payload.discord_id or not payload.discord_id.strip():
+        raise HTTPException(400, "discord_id is required")
+    discord_id = validate_discord_id(payload.discord_id)
     m = models.GameMember(game_id=game_id, name=payload.name, discord_id=discord_id)
     db.add(m)
     try:
@@ -144,8 +144,9 @@ def patch_member(game_id: int, member_id: int, payload: schemas.MemberPatch, db:
         m.name = payload.name
     if "discord_id" in payload.model_dump(exclude_unset=True):
         discord_id = payload.discord_id
-        if discord_id:
-            discord_id = validate_discord_id(discord_id)
+        if discord_id is None or not str(discord_id).strip():
+            raise HTTPException(400, "discord_id cannot be empty")
+        discord_id = validate_discord_id(discord_id)
         m.discord_id = discord_id
     try:
         db.commit()
@@ -182,48 +183,6 @@ def restore_member(game_id: int, member_id: int, db: Session = Depends(get_db), 
         raise HTTPException(400, "Name conflict") from e
     regenerate_pairings(db, game_id)
     return {"id": m.id, "name": m.name, "discord_id": m.discord_id, "game_id": m.game_id}
-
-# Claim
-@router.get("/api/games/{game_id}/members/unclaimed")
-def unclaimed_members(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
-    require_membership(game_id, user.discord_id, db)
-    rows = db.query(models.GameMember).filter(
-        models.GameMember.game_id == game_id,
-        models.GameMember.deleted_at.is_(None),
-        models.GameMember.discord_id.is_(None)
-    ).all()
-    return [{"id": r.id, "name": r.name} for r in rows]
-
-@router.post("/api/games/{game_id}/members/claim")
-def claim_member(game_id: int, payload: schemas.ClaimRequest, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
-    require_membership(game_id, user.discord_id, db)
-    require_game_writable(game_id, db)
-    if bool(payload.member_id) == bool(payload.name):
-        raise HTTPException(400, "provide member_id XOR name")
-    if payload.member_id:
-        m = db.query(models.GameMember).filter(models.GameMember.id == payload.member_id, models.GameMember.game_id == game_id, models.GameMember.deleted_at.is_(None)).first()
-        if not m:
-            raise HTTPException(404)
-        if m.discord_id is not None:
-            raise HTTPException(400, "already claimed")
-        m.discord_id = user.discord_id
-        try:
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            raise HTTPException(400, "Discord ID already claimed in this game") from e
-        return {"member_id": m.id, "name": m.name, "discord_id": m.discord_id}
-    else:
-        m = models.GameMember(game_id=game_id, name=payload.name, discord_id=user.discord_id)
-        db.add(m)
-        try:
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            raise HTTPException(400, "Name already in use") from e
-        db.refresh(m)
-        regenerate_pairings(db, game_id)
-        return {"member_id": m.id, "name": m.name, "discord_id": m.discord_id}
 
 # Questions
 @router.get("/api/games/{game_id}/questions")
@@ -651,22 +610,7 @@ def join_game(payload: schemas.JoinRequest, request: Request, db: Session = Depe
         db.add(models.GameMembership(game_id=game_id, discord_id=user.discord_id))
     db.delete(invite)
     db.commit()
-    # check claim_needed
-    claimed = db.query(models.GameMember).filter(
-        models.GameMember.game_id == game_id,
-        models.GameMember.deleted_at.is_(None),
-        models.GameMember.discord_id == user.discord_id
-    ).first()
-    claim_needed = claimed is None
-    unclaimed = []
-    if claim_needed:
-        rows = db.query(models.GameMember).filter(
-            models.GameMember.game_id == game_id,
-            models.GameMember.deleted_at.is_(None),
-            models.GameMember.discord_id.is_(None)
-        ).all()
-        unclaimed = [{"id": r.id, "name": r.name} for r in rows]
-    return {"game_id": game_id, "claim_needed": claim_needed, "unclaimed_members": unclaimed}
+    return {"game_id": game_id}
 
 @router.post("/api/games/{game_id}/invites")
 def create_invite(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
@@ -771,10 +715,6 @@ def revoke_admin(game_id: int, discord_id: str, db: Session = Depends(get_db), u
     mem = db.query(models.GameMembership).filter(models.GameMembership.game_id == game_id, models.GameMembership.discord_id == discord_id).first()
     if mem:
         db.delete(mem)
-    # unclaim game_members for that user
-    members = db.query(models.GameMember).filter(models.GameMember.game_id == game_id, models.GameMember.discord_id == discord_id).all()
-    for m in members:
-        m.discord_id = None
     db.commit()
     return {"ok": True}
 

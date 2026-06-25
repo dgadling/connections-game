@@ -13,7 +13,7 @@ def test_history_includes_pairings_with_names_and_discord_ids(client, game, ques
     )
     db_session.add(play)
 
-    # Create pairing for round 1 - Alice (no discord_id) asks about Bob (has discord_id)
+    # Create pairing for round 1 - Alice asks about Bob
     alice, bob = members[0], members[1]
     pairing = models.ConnPairing(
         game_id=game.id,
@@ -46,10 +46,9 @@ def test_history_includes_pairings_with_names_and_discord_ids(client, game, ques
 
     assert p["asker_name"] == "Alice"
     assert p["target_name"] == "Bob"
-    # Bob has discord_id set in fixture
+    # Both have discord_id set in fixture
     assert p["target_discord_id"] == "987654321098765432"
-    # Alice has no discord_id
-    assert p["asker_discord_id"] is None
+    assert p["asker_discord_id"] == "alice_test"
 
 
 def test_history_includes_played_by_username_and_question_tag(client, game, questions, db_session, test_user):

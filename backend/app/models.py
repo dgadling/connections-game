@@ -64,7 +64,7 @@ class GameMember(Base):
     id = Column(Integer, primary_key=True)
     game_id = Column(Integer, ForeignKey("games.id", ondelete="CASCADE"), nullable=False)
     name = Column(String, nullable=False)
-    discord_id = Column(String, nullable=True)
+    discord_id = Column(String, nullable=False)
     sort_order = Column(Integer, nullable=False, default=0)
     created_at = Column(TIMESTAMP, default=now, nullable=False)
     deleted_at = Column(TIMESTAMP, nullable=True)

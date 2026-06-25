@@ -178,7 +178,7 @@ def test_archived_game_blocks_mutations(db_session, admin_a, game_a):
         resp = client.post(f"/api/games/{game_a.id}/questions", json={"text": "x"})
         assert resp.status_code == 403
         # member_add
-        resp = client.post(f"/api/games/{game_a.id}/members", json={"name": "Test"})
+        resp = client.post(f"/api/games/{game_a.id}/members", json={"name": "Test", "discord_id": "test_user"})
         assert resp.status_code == 403
         # rename
         resp = client.patch(f"/api/games/{game_a.id}", json={"name": "new"})
@@ -296,8 +296,8 @@ def test_delete_as_non_member(db_session, admin_a, outsider, game_a):
 def test_delete_archived_cascades(db_session, admin_a, game_a):
     from datetime import datetime
     # seed related rows
-    m1 = models.GameMember(game_id=game_a.id, name="Alice")
-    m2 = models.GameMember(game_id=game_a.id, name="Bob")
+    m1 = models.GameMember(game_id=game_a.id, name="Alice", discord_id="alice_test")
+    m2 = models.GameMember(game_id=game_a.id, name="Bob", discord_id="bob_test")
     db_session.add_all([m1, m2])
     db_session.flush()
     q = models.ConnQuestion(game_id=game_a.id, text="Q?", tag="warm", tag_auto=True, status="upcoming", sort_order=0)
