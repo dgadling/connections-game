@@ -273,10 +273,10 @@ export default function App() {
 
       <main className="max-w-4xl mx-auto px-4 py-4 sm:py-6 pb-20 sm:pb-6">
         <ErrorBoundary>
-          {tab === 'ask' && <RoundTab gameId={game.id} archived={!!game.archived_at} />}
+          {tab === 'ask' && <RoundTab gameId={game.id} game={game} archived={!!game.archived_at} />}
           {tab === 'questions' && <QuestionsTab gameId={game.id} archived={!!game.archived_at} />}
           {tab === 'members' && <MembersTab gameId={game.id} archived={!!game.archived_at} />}
-          {tab === 'history' && <HistoryTab gameId={game.id} />}
+          {tab === 'history' && <HistoryTab gameId={game.id} game={game} />}
           {tab === 'admin' && <AdminTab gameId={game.id} game={game} onGameUpdate={g => setGame({...game, ...g})} onGamesRefresh={loadGames} onGameDeleted={()=>setGame(null)} currentUserDiscordId={user?.discord_id} />}
         </ErrorBoundary>
       </main>
@@ -361,15 +361,17 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
 }
 
 // --- Round Tab ---
-function RoundTab({ gameId, archived }) {
+function RoundTab({ gameId, game, archived }) {
   const [data, setData] = useState(null)
   const [copied, setCopied] = useState(false)
   const load = useCallback(() => api(`/api/games/${gameId}/round`).then(setData).catch(()=>setData(null)), [gameId])
   useEffect(() => { load() }, [load])
   const complete = async () => { await api(`/api/games/${gameId}/round/complete`, {method:'POST'}); load() }
 
-  const formatDiscordMention = (id) => {
-    if (!id) return null
+  const formatDiscordMention = (id, name) => {
+    // Role mode: suppress individual mentions, use plain name
+    if (game?.discord_role_id) return name || null
+    if (!id) return name || null
     if (/^\d{17,20}$/.test(id)) return `<@${id}>`
     return id.startsWith('@') ? id : '@' + id
   }
@@ -377,10 +379,14 @@ function RoundTab({ gameId, archived }) {
   const copyDiscord = () => {
     if (!data) return
     const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    const lines = [`🤝 Connections — ${dateStr}`, '', `> ${data.question?.text || '(no question)'}`, '']
+    const lines = []
+    if (game?.discord_role_id) {
+      lines.push(`<@&${game.discord_role_id}>`)
+    }
+    lines.push(`🤝 Connections — ${dateStr}`, '', `> ${data.question?.text || '(no question)'}`, '')
     arr(data.pairings).forEach(p => {
-      const asker = formatDiscordMention(p.asker_discord_id)
-      const target = formatDiscordMention(p.target_discord_id)
+      const asker = formatDiscordMention(p.asker_discord_id, p.asker_name)
+      const target = formatDiscordMention(p.target_discord_id, p.target_name)
       lines.push(`• ${asker} answers about ${target}`)
     })
     navigator.clipboard.writeText(lines.join('\n'))
@@ -823,8 +829,9 @@ function MembersTab({ gameId, archived }) {
 
   const addMember = async () => {
     if (!name.trim()) return
-    if (!discordId.trim()) { alert('Discord username is required'); return }
-    const body = { name: name.trim(), discord_id: discordId.trim() }
+    const body = { name: name.trim() }
+    const disc = discordId.trim()
+    if (disc) body.discord_id = disc
     try {
       await api(`/api/games/${gameId}/members`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
       setName(''); setDiscordId('')
@@ -836,8 +843,8 @@ function MembersTab({ gameId, archived }) {
     const body = {}
     if (editName !== m.name) body.name = editName
     const disc = editDiscord.trim()
-    if (!disc) { alert('Discord username is required'); return }
-    if (disc !== (m.discord_id||'')) body.discord_id = disc
+    // Allow clearing discord_id – send null if empty, else send value if changed
+    if (disc !== (m.discord_id||'')) body.discord_id = disc || null
     try {
       await api(`/api/games/${gameId}/members/${m.id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
       setEditing(null); load()
@@ -858,11 +865,11 @@ function MembersTab({ gameId, archived }) {
         <div className="flex flex-col sm:flex-row gap-2">
           <input value={name} onChange={e=>setName(e.target.value)} placeholder="Character name" required
             className="flex-1 border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-          <input value={discordId} onChange={e=>setDiscordId(e.target.value)} placeholder="Discord username (e.g. anondotj2)" required
+          <input value={discordId} onChange={e=>setDiscordId(e.target.value)} placeholder="Discord username (optional)"
             className="flex-1 border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           <button type="button" onClick={addMember} className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">Add</button>
         </div>
-        <div className="text-xs text-neutral-500 mt-2">Discord username (e.g. anondotj2) – or numeric User ID</div>
+        <div className="text-xs text-neutral-500 mt-2">Used for @mentions in Copy-to-Discord (when no role is set). Leave blank to use character name only.</div>
       </div>}
 
       <div className="bg-white rounded-xl shadow-sm border border-neutral-200 divide-y divide-neutral-100">
@@ -871,7 +878,7 @@ function MembersTab({ gameId, archived }) {
             {editing === m.id ? (
               <div className="flex flex-col sm:flex-row gap-2">
                 <input value={editName} onChange={e=>setEditName(e.target.value)} required className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm" />
-                <input value={editDiscord} onChange={e=>setEditDiscord(e.target.value)} placeholder="Discord username" required className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm" />
+                <input value={editDiscord} onChange={e=>setEditDiscord(e.target.value)} placeholder="Discord username (optional)" className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm" />
                 <div className="flex gap-2">
                   <button type="button" onClick={()=>saveEdit(m)} className="flex-1 sm:flex-initial px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Save</button>
                   <button type="button" onClick={()=>setEditing(null)} className="flex-1 sm:flex-initial px-3 py-2 border border-neutral-300 rounded-lg text-sm">Cancel</button>
@@ -913,24 +920,29 @@ function MembersTab({ gameId, archived }) {
 
 
 // --- History Tab ---
-function HistoryTab({ gameId }) {
+function HistoryTab({ gameId, game }) {
   const [rows, setRows] = useState([])
   const [copiedRound, setCopiedRound] = useState(null)
   useEffect(()=>{ api(`/api/games/${gameId}/history`).then(d => setRows(arr(d))).catch(()=>setRows([])) }, [gameId])
   const rowList = arr(rows)
 
-  const formatDiscordMention = (id) => {
-    if (!id) return null
+  const formatDiscordMention = (id, name) => {
+    if (game?.discord_role_id) return name || null
+    if (!id) return name || null
     if (/^\d{17,20}$/.test(id)) return `<@${id}>`
     return id.startsWith('@') ? id : '@' + id
   }
 
   const copyDiscord = (r) => {
     const dateStr = r.played_at ? new Date(r.played_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
-    const lines = [`🤝 Connections${dateStr ? ' — ' + dateStr : ''}`, '', `> ${r.question_text || '(no question)'}`, '']
+    const lines = []
+    if (game?.discord_role_id) {
+      lines.push(`<@&${game.discord_role_id}>`)
+    }
+    lines.push(`🤝 Connections${dateStr ? ' — ' + dateStr : ''}`, '', `> ${r.question_text || '(no question)'}`, '')
     arr(r.pairings).forEach(p => {
-      const asker = formatDiscordMention(p.asker_discord_id)
-      const target = formatDiscordMention(p.target_discord_id)
+      const asker = formatDiscordMention(p.asker_discord_id, p.asker_name)
+      const target = formatDiscordMention(p.target_discord_id, p.target_name)
       lines.push(`• ${asker} answers about ${target}`)
     })
     navigator.clipboard.writeText(lines.join('\n'))
@@ -969,10 +981,12 @@ function AdminTab({ gameId, game, onGameUpdate, onGamesRefresh, onGameDeleted, c
   const [admins, setAdmins] = useState([])
   const [inviteUrl, setInviteUrl] = useState('')
   const [rename, setRename] = useState(game.name)
+  const [roleId, setRoleId] = useState(game.discord_role_id || '')
 
   const loadInvites = useCallback(() => api(`/api/games/${gameId}/invites`).then(d => setInvites(arr(d))).catch(()=>setInvites([])), [gameId])
   const loadAdmins = useCallback(() => api(`/api/games/${gameId}/admins`).then(d => setAdmins(arr(d))).catch(()=>setAdmins([])), [gameId])
   useEffect(()=>{ loadInvites(); loadAdmins() }, [loadInvites, loadAdmins])
+  useEffect(()=>{ setRoleId(game.discord_role_id || '') }, [game.discord_role_id])
 
   const createInvite = async () => {
     const res = await api(`/api/games/${gameId}/invites`, {method:'POST'})
@@ -988,6 +1002,14 @@ function AdminTab({ gameId, game, onGameUpdate, onGamesRefresh, onGameDeleted, c
     if (!rename.trim() || rename === game.name) return
     await api(`/api/games/${gameId}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: rename.trim()})})
     onGameUpdate({name: rename.trim()}); if (onGamesRefresh) onGamesRefresh(); alert('Renamed.')
+  }
+  const doSaveRole = async () => {
+    const v = roleId.trim()
+    try {
+      await api(`/api/games/${gameId}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({discord_role_id: v || null})})
+      onGameUpdate({discord_role_id: v || null})
+      alert('Role saved.')
+    } catch(e) { alert('Save failed: ' + e.message) }
   }
   const doArchive = async (archived) => {
     await api(`/api/games/${gameId}/${archived ? 'archive' : 'unarchive'}`, {method:'POST'})
@@ -1011,6 +1033,11 @@ function AdminTab({ gameId, game, onGameUpdate, onGamesRefresh, onGameDeleted, c
           <input value={rename} onChange={e=>setRename(e.target.value)} className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           <button type="button" onClick={doRename} className="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Rename</button>
         </div>
+        <div className="flex flex-col sm:flex-row gap-2 mb-3">
+          <input value={roleId} onChange={e=>setRoleId(e.target.value)} placeholder="Discord role ID (optional)" className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <button type="button" onClick={doSaveRole} className="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Save role</button>
+        </div>
+        <div className="text-xs text-neutral-500 mb-3">When set, Copy-to-Discord uses plain character names and prepends a role ping. Leave blank to use individual @mentions.</div>
         <div className="flex flex-wrap gap-2">
         {!game.archived_at
           ? <button type="button" onClick={()=>doArchive(true)} className="px-3 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Archive game</button>

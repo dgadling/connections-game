@@ -33,7 +33,7 @@ def downgrade() -> None:
     """Downgrade schema."""
     # Revert unique index
     op.drop_index('uq_game_member_discord_active', table_name='game_members')
-    # Make discord_id NOT NULL again – will fail if NULLs exist
+    # Make discord_id NOT NULL again - will fail if NULLs exist
     with op.batch_alter_table('game_members', schema=None) as batch_op:
         batch_op.alter_column('discord_id', existing_type=sa.String(), nullable=False)
     op.create_index('uq_game_member_discord_active', 'game_members', ['game_id', 'discord_id'], unique=True, sqlite_where=sa.text('deleted_at IS NULL'))

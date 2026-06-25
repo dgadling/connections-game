@@ -30,28 +30,28 @@ test('#3 member UI – no "Discord @username" strings', async () => {
 test('#3 member UI – correct placeholder text present', async () => {
   const src = await fs.readFile(appPath, 'utf8')
   
-  // REQUIRED strings (the fix)
-  assert.ok(src.includes('Discord username (e.g. anondotj2)'),
-    'Member add form must show "Discord username (e.g. anondotj2)" placeholder')
+  // Issue #17: Discord ID is now optional
+  // REQUIRED strings (updated for #17)
+  assert.ok(src.includes('Discord username (optional)'),
+    'Member add form must show "Discord username (optional)" placeholder (issue #17)')
   
-  assert.ok(src.includes('numeric User ID'),
-    'Member help text must say "numeric User ID", NOT "numeric snowflake"')
+  assert.ok(src.includes('Used for @mentions in Copy-to-Discord'),
+    'Member help text must explain Copy-to-Discord usage (issue #17)')
   
   // Edit form placeholder
-  assert.ok(/placeholder="Discord username"/.test(src),
-    'Member edit form must have placeholder="Discord username" (no @)')
+  assert.ok(/placeholder="Discord username \(optional\)"/.test(src),
+    'Member edit form must have placeholder="Discord username (optional)"')
 })
 
 test('#3 member UI – alert messages cleaned', async () => {
   const src = await fs.readFile(appPath, 'utf8')
   
-  // Alert messages should say "Discord username is required", NOT "Discord @username is required"
+  // Issue #17: discord_id is optional, so "is required" alerts should NOT exist
   assert.ok(!src.includes('Discord @username is required'),
     'Alert messages must NOT say "Discord @username is required"')
   
-  // The fixed version should exist
-  assert.ok(src.includes('Discord username is required'),
-    'Alert messages must say "Discord username is required"')
+  assert.ok(!src.includes('Discord username is required'),
+    'Alert messages must NOT say "Discord username is required" – discord_id is optional as of issue #17')
 })
 
 test('#3 member UI – all Discord ID input fields use correct placeholder', async () => {
