@@ -6,4 +6,4 @@ pydantic==2.9.2
 httpx==0.27.2
 python-multipart==0.0.30
 itsdangerous==2.2.0
-cryptography==44.0.0
+cryptography==49.0.0
