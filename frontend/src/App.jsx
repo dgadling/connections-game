@@ -1067,7 +1067,7 @@ function AdminTab({ gameId, game, onGameUpdate, onGamesRefresh, onGameDeleted, c
               <button type="button" onClick={()=>revokeInvite(inv.id)} className="text-red-600 hover:underline">revoke</button>
             </li>
           ))}
-          {arr(invites).length===0 && <li className="text-neutral-500 py-2">No invites yet.</li>}
+          {arr(invites).length===0 && <li className="text-neutral-500 py-2">No pending invites.</li>}
         </ul>
       </div>
 
