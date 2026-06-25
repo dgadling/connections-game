@@ -13,18 +13,33 @@ from ..pairing import generate_groups
 
 router = APIRouter()
 
-def validate_discord_id(snowflake: str):
-    if not re.match(r'^\d{17,20}$', snowflake):
-        raise HTTPException(400, "Invalid Discord ID format")
-    # snowflake timestamp check
-    try:
-        sid = int(snowflake)
-        ts = ((sid >> 22) + 1420070400000) / 1000
-        now = datetime.utcnow().timestamp()
-        if ts < 1420070400 or ts > now + 86400:
-            raise HTTPException(400, "That doesn't look like a Discord ID — see https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID")
-    except ValueError as e:
-        raise HTTPException(400, "Invalid Discord ID") from e
+def validate_discord_id(discord_id: str) -> str:
+    """Validate Discord snowflake OR username.
+    Returns normalized ID (username without leading @, snowflake unchanged).
+    """
+    if not discord_id:
+        raise HTTPException(400, "Discord ID must be a numeric snowflake (17-20 digits) or a username (2-32 chars, letters/numbers/_/.)")
+    if len(discord_id) > 64:
+        raise HTTPException(400, "Discord ID must be a numeric snowflake (17-20 digits) or a username (2-32 chars, letters/numbers/_/.)")
+    # Strip leading @ for usernames
+    normalized = discord_id.lstrip("@")
+    if not normalized:
+        raise HTTPException(400, "Discord ID must be a numeric snowflake (17-20 digits) or a username (2-32 chars, letters/numbers/_/.)")
+    # Numeric snowflake path (back-compat)
+    if re.match(r'^\d{17,20}$', normalized):
+        try:
+            sid = int(normalized)
+            ts = ((sid >> 22) + 1420070400000) / 1000
+            now = datetime.utcnow().timestamp()
+            if ts < 1420070400 or ts > now + 86400:
+                raise HTTPException(400, "That doesn't look like a Discord ID — see https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID")
+        except ValueError as e:
+            raise HTTPException(400, "Invalid Discord ID") from e
+        return normalized
+    # Username/handle path
+    if re.match(r'^[\w.]{2,32}$', normalized):
+        return normalized
+    raise HTTPException(400, "Discord ID must be a numeric snowflake (17-20 digits) or a username (2-32 chars, letters/numbers/_/.)")
 
 @router.post("/api/games", response_model=schemas.GameOut)
 def create_game(payload: schemas.GameCreate, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
@@ -104,9 +119,10 @@ def list_members(game_id: int, include_deleted: bool = False, db: Session = Depe
 def create_member(game_id: int, payload: schemas.MemberCreate, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
-    if payload.discord_id:
-        validate_discord_id(payload.discord_id)
-    m = models.GameMember(game_id=game_id, name=payload.name, discord_id=payload.discord_id)
+    discord_id = payload.discord_id
+    if discord_id:
+        discord_id = validate_discord_id(discord_id)
+    m = models.GameMember(game_id=game_id, name=payload.name, discord_id=discord_id)
     db.add(m)
     try:
         db.commit()
@@ -127,9 +143,10 @@ def patch_member(game_id: int, member_id: int, payload: schemas.MemberPatch, db:
     if payload.name is not None:
         m.name = payload.name
     if "discord_id" in payload.model_dump(exclude_unset=True):
-        if payload.discord_id:
-            validate_discord_id(payload.discord_id)
-        m.discord_id = payload.discord_id
+        discord_id = payload.discord_id
+        if discord_id:
+            discord_id = validate_discord_id(discord_id)
+        m.discord_id = discord_id
     try:
         db.commit()
     except Exception as e:

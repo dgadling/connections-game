@@ -395,13 +395,19 @@ function RoundTab({ gameId, archived }) {
   useEffect(() => { load() }, [gameId])
   const complete = async () => { await api(`/api/games/${gameId}/round/complete`, {method:'POST'}); load() }
 
+  const formatDiscordMention = (id) => {
+    if (!id) return null
+    if (/^\d{17,20}$/.test(id)) return `<@${id}>`
+    return id.startsWith('@') ? id : '@' + id
+  }
+
   const copyDiscord = () => {
     if (!data) return
     const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     const lines = [`🤝 Connections — ${dateStr}`, '', `> ${data.question?.text || '(no question)'}`, '']
     arr(data.pairings).forEach(p => {
-      const asker = p.asker_discord_id ? `<@${p.asker_discord_id}>` : p.asker_name
-      const target = p.target_discord_id ? `<@${p.target_discord_id}>` : p.target_name
+      const asker = formatDiscordMention(p.asker_discord_id) || p.asker_name
+      const target = formatDiscordMention(p.target_discord_id) || p.target_name
       lines.push(`• ${asker} answers about ${target}`)
     })
     navigator.clipboard.writeText(lines.join('\n'))
@@ -869,11 +875,11 @@ function MembersTab({ gameId, archived }) {
         <div className="flex flex-col sm:flex-row gap-2">
           <input value={name} onChange={e=>setName(e.target.value)} placeholder="Character name"
             className="flex-1 border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-          <input value={discordId} onChange={e=>setDiscordId(e.target.value)} placeholder="Discord ID (optional)"
-            className="flex-1 border border-neutral-300 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <input value={discordId} onChange={e=>setDiscordId(e.target.value)} placeholder="Discord @username (e.g. @jon_cst)"
+            className="flex-1 border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           <button onClick={addMember} className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">Add</button>
         </div>
-        <div className="text-xs text-neutral-500 mt-2">Leave Discord ID blank for an unclaimed character slot. Numeric snowflake only (17–20 digits).</div>
+        <div className="text-xs text-neutral-500 mt-2">Discord @username (e.g. @jon_cst) – or numeric snowflake. Leave blank for unclaimed.</div>
       </div>}
 
       <div className="bg-white rounded-xl shadow-sm border border-neutral-200 divide-y divide-neutral-100">
@@ -882,7 +888,7 @@ function MembersTab({ gameId, archived }) {
             {editing === m.id ? (
               <div className="flex flex-col sm:flex-row gap-2">
                 <input value={editName} onChange={e=>setEditName(e.target.value)} className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm" />
-                <input value={editDiscord} onChange={e=>setEditDiscord(e.target.value)} placeholder="Discord ID or blank" className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm font-mono" />
+                <input value={editDiscord} onChange={e=>setEditDiscord(e.target.value)} placeholder="Discord @username" className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm" />
                 <div className="flex gap-2">
                   <button onClick={()=>saveEdit(m)} className="flex-1 sm:flex-initial px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Save</button>
                   <button onClick={()=>setEditing(null)} className="flex-1 sm:flex-initial px-3 py-2 border border-neutral-300 rounded-lg text-sm">Cancel</button>
@@ -930,12 +936,18 @@ function HistoryTab({ gameId }) {
   useEffect(()=>{ api(`/api/games/${gameId}/history`).then(d => setRows(arr(d))).catch(()=>setRows([])) }, [gameId])
   const rowList = arr(rows)
 
+  const formatDiscordMention = (id) => {
+    if (!id) return null
+    if (/^\d{17,20}$/.test(id)) return `<@${id}>`
+    return id.startsWith('@') ? id : '@' + id
+  }
+
   const copyDiscord = (r) => {
     const dateStr = r.played_at ? new Date(r.played_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
     const lines = [`🤝 Connections${dateStr ? ' — ' + dateStr : ''}`, '', `> ${r.question_text || '(no question)'}`, '']
     arr(r.pairings).forEach(p => {
-      const asker = p.asker_discord_id ? `<@${p.asker_discord_id}>` : p.asker_name
-      const target = p.target_discord_id ? `<@${p.target_discord_id}>` : p.target_name
+      const asker = formatDiscordMention(p.asker_discord_id) || p.asker_name
+      const target = formatDiscordMention(p.target_discord_id) || p.target_name
       lines.push(`• ${asker} answers about ${target}`)
     })
     navigator.clipboard.writeText(lines.join('\n'))
