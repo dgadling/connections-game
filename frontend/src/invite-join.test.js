@@ -26,16 +26,16 @@ test('GameList – auto-join from ?invite=TOKEN URL', () => {
   )
 })
 
-test('GameList – manual "Join with invite code" UI', () => {
-  const checks = [
-    { name: 'UI text "Join with invite" / "invite code"', re: /Join with invite/i },
-    { name: 'invite code input field', re: /invite.*input|input.*invite/i },
-    { name: 'Join button calls /api/games/join', re: /\/api\/games\/join/ },
-  ]
-  const missing = checks.filter(c => !c.re.test(src))
-  assert.equal(missing.length, 0,
-    `Manual join UI incomplete. Missing:\n  - ` + missing.map(m => m.name).join('\n  - ')
+test('GameList – manual join is via invite URL, not code input', () => {
+  // Issue #6: "Join with invite code" UI was removed – join is via full URL only (?invite=TOKEN)
+  // Verify the old "Join with invite code" input UI is gone
+  const hasJoinCodeUI = /Join with invite/i.test(src)
+  assert.equal(hasJoinCodeUI, false,
+    'Manual "Join with invite code" UI should be removed per issue #6. Join is via invite URL (?invite=TOKEN) only.'
   )
+  // Verify auto-join from URL still works
+  const hasUrlJoin = /\/api\/games\/join/.test(src) && /URLSearchParams|get.*invite/i.test(src)
+  assert.ok(hasUrlJoin, 'Invite URL auto-join flow (?invite=TOKEN) must still exist')
 })
 
 test('GameList – join error handling is user-visible', () => {

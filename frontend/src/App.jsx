@@ -292,24 +292,6 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
     setName(''); onRefresh()
     setGame({id: g.id, name: g.name, archived_at: g.archived_at})
   }
-  const [inviteCode, setInviteCode] = useState('')
-  const [joinError, setJoinError] = useState('')
-  const joinGame = async () => {
-    if (!inviteCode.trim()) return
-    setJoinError('')
-    try {
-      const res = await api('/api/games/join', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invite_token: inviteCode.trim() })
-      })
-      setInviteCode('')
-      onRefresh()
-      setGame({ id: res.game_id, name: '', archived_at: null })
-    } catch (e) {
-      setJoinError(e.message || 'Join failed')
-    }
-  }
   // Fetch fresh game details before navigating – prevents stale archived_at
   const openGame = async (gameId) => {
     try {
@@ -339,32 +321,25 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
         </div>
       </header>
       <main className="max-w-3xl mx-auto px-4 py-6">
-        <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5 mb-5">
-          <div className="font-semibold mb-2">New game</div>
-          <div className="flex gap-2">
-            <input value={name} onChange={e=>setName(e.target.value)} placeholder="Campaign name…" className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" onKeyDown={e=>e.key==='Enter'&&createGame()} />
-            <button type="button" onClick={createGame} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 whitespace-nowrap">Create</button>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5 mb-5">
-          <div className="font-semibold mb-2">Join with invite code</div>
-          <div className="flex gap-2">
-            <input value={inviteCode} onChange={e=>{setInviteCode(e.target.value); setJoinError('')}} placeholder="Paste invite code…" className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" onKeyDown={e=>e.key==='Enter'&&joinGame()} />
-            <button type="button" onClick={joinGame} className="px-4 py-2 bg-neutral-800 text-white rounded-lg text-sm font-medium hover:bg-neutral-900 whitespace-nowrap">Join</button>
-          </div>
-          {Boolean(joinError) && <div className="text-sm text-red-600 mt-2">{joinError}</div>}
-        </div>
         <div className="flex items-center justify-between mb-2 px-1">
           <div className="text-sm text-neutral-600">{arr(games).filter(g=>!g.archived_at).length} active game{arr(games).filter(g=>!g.archived_at).length===1?"":"s"}</div>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2 mb-6">
           {arr(games).filter(g=>!g.archived_at).map(g => (
             <button type="button" key={g.id} onClick={()=>openGame(g.id)}
               className="w-full text-left bg-white rounded-xl shadow-sm border border-neutral-200 p-4 hover:border-indigo-300 transition-colors">
               <div className="font-medium">{g.name}</div>
             </button>
           ))}
-          {arr(games).filter(g=>!g.archived_at).length===0 && <div className="text-neutral-500 text-sm bg-white rounded-xl shadow-sm border border-neutral-200 p-4">No active games — create one or join with an invite code above.</div>}
+          {arr(games).filter(g=>!g.archived_at).length===0 && <div className="text-neutral-500 text-sm bg-white rounded-xl shadow-sm border border-neutral-200 p-4">No active games — create one below, or follow an invite link to join.</div>}
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5 mb-5">
+          <div className="font-semibold mb-2">New game</div>
+          <div className="flex gap-2">
+            <input value={name} onChange={e=>setName(e.target.value)} placeholder="Campaign name…" className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" onKeyDown={e=>e.key==='Enter'&&createGame()} />
+            <button type="button" onClick={createGame} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 whitespace-nowrap">Create</button>
+          </div>
         </div>
 
         {arr(games).filter(g=>g.archived_at).length > 0 && (
