@@ -1,7 +1,8 @@
 import pytest
 import os
-# Set test Fernet key before importing app (crypto.py fails hard if missing)
+# Set test secrets before importing app (crypto.py / auth.py fail hard if missing)
 os.environ.setdefault("DISCORD_OAUTH_FERNET_KEY", "90foexqFdX4NAEKsnTCevgfgtbK2yzSG0Sccebc1PA8=")
+os.environ.setdefault("DISCORD_CLIENT_SECRET", "test_csrf_secret_for_pytest_only_do_not_use_in_prod_12345")
 
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine

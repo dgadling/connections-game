@@ -91,8 +91,20 @@ def create_session(db: Session, discord_id: str) -> str:
     db.commit()
     return token
 
-def generate_csrf_token() -> str:
-    return secrets.token_urlsafe(32)
+def generate_csrf_token(session_token: str) -> str:
+    """Generate CSRF token bound to session via HMAC.
+
+    Prevents subdomain cookie injection attacks where an attacker
+    who can set cookies on a sibling subdomain could otherwise
+    forge a CSRF token (classic double-submit weakness).
+    """
+    import hmac
+    # Use DISCORD_CLIENT_SECRET as CSRF HMAC key - fail hard if missing,
+    # consistent with DISCORD_OAUTH_FERNET_KEY handling.
+    secret = DISCORD_CLIENT_SECRET.encode()
+    if not secret:
+        raise RuntimeError("DISCORD_CLIENT_SECRET must be set (used for CSRF HMAC)")
+    return hmac.new(secret, session_token.encode(), hashlib.sha256).hexdigest()
 
 DISCORD_CLIENT_ID = os.environ.get("DISCORD_CLIENT_ID", "1519114145864356001")
 DISCORD_CLIENT_SECRET = os.environ.get("DISCORD_CLIENT_SECRET", "")

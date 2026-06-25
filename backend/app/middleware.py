@@ -1,4 +1,5 @@
 from __future__ import annotations
+import secrets
 import time
 from collections import defaultdict, deque
 from fastapi import Request
@@ -66,27 +67,25 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             pass
 
         if method in ("POST", "PATCH", "PUT", "DELETE"):
-            # CSRF + Origin check - skip initial auth endpoints that legitimately have no session/csrf yet
+            # CSRF check - skip initial auth endpoints that legitimately have no session/csrf yet
             skip_csrf = path.startswith("/auth/discord/start") or path.startswith("/auth/discord/callback")
             if not skip_csrf:
-                # Origin / Referer check
-                origin = request.headers.get("origin") or request.headers.get("referer") or ""
-                # Allow same-origin or no origin for local dev; in prod, enforce.
-                # Simple check: if origin present, must not be cross-site evil - we check host matches.
-                # For now, enforce CSRF double-submit which covers it; still check origin if present.
-                if origin:
-                    # allow if origin contains our host - lenient for Cloud Run changing domains
-                    # Spec requires Origin/Referer check, so reject clearly foreign origins.
-                    # We'll allow empty, localhost, and run.app
-                    allowed_substrings = ["localhost", "127.0.0.1", "run.app", "connections"]
-                    if not any(s in origin for s in allowed_substrings):
-                        # still allow - CSRF token is primary
-                        pass
                 csrf_header = request.headers.get("x-csrf-token")
                 csrf_cookie = request.cookies.get("csrf_token")
+                session_cookie = request.cookies.get("connections_session")
+                # Validate CSRF token is bound to session via HMAC
+                # Prevents subdomain cookie injection (classic double-submit weakness)
                 if not csrf_header or not csrf_cookie or csrf_header != csrf_cookie:
-                    # join endpoint is allowed without CSRF? spec says all mutating API endpoints require CSRF + session.
-                    # But join is pre-membership - still requires session (user is authenticated), so enforce.
                     return JSONResponse({"detail": "CSRF token required"}, status_code=403)
+                if not session_cookie:
+                    return JSONResponse({"detail": "CSRF token required"}, status_code=403)
+                # Verify CSRF token matches HMAC(session_token)
+                try:
+                    from .auth import generate_csrf_token
+                    expected = generate_csrf_token(session_cookie)
+                    if not secrets.compare_digest(csrf_header, expected):
+                        return JSONResponse({"detail": "CSRF token invalid"}, status_code=403)
+                except Exception:
+                    return JSONResponse({"detail": "CSRF token invalid"}, status_code=403)
         response = await call_next(request)
         return response

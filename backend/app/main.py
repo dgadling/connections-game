@@ -33,9 +33,10 @@ app.add_middleware(CSRFMiddleware)
 async def csrf_cookie_middleware(request: Request, call_next):
     response = await call_next(request)
     # Ensure CSRF cookie is set for authenticated sessions
-    if request.cookies.get(SESSION_COOKIE) and not request.cookies.get(CSRF_COOKIE):
+    session_token = request.cookies.get(SESSION_COOKIE)
+    if session_token and not request.cookies.get(CSRF_COOKIE):
         response.set_cookie(
-            CSRF_COOKIE, generate_csrf_token(),
+            CSRF_COOKIE, generate_csrf_token(session_token),
             max_age=365*86400, httponly=False, secure=True, samesite="strict", path="/"
         )
     return response
@@ -201,7 +202,7 @@ async def auth_discord_callback(
     db.commit()
     # Create new session (old sessions remain valid - multi-device support)
     session_token = create_session(db, discord_id)
-    csrf_token = generate_csrf_token()
+    csrf_token = generate_csrf_token(session_token)
     # Redirect with cookies
     resp = RedirectResponse(url=redirect_after, status_code=302)
     resp.set_cookie(SESSION_COOKIE, session_token, max_age=30*86400, httponly=True, secure=True, samesite="lax", path="/")
@@ -265,7 +266,7 @@ async def auth_refresh(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(401, "refresh failed")
     # create new session (old sessions remain valid - multi-device support)
     session_token = create_session(db, discord_id)
-    csrf_token = generate_csrf_token()
+    csrf_token = generate_csrf_token(session_token)
     user = db.query(models.DiscordUser).filter(models.DiscordUser.discord_id == discord_id).first()
     if not user:
         raise HTTPException(401, "user not found")
