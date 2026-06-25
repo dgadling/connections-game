@@ -289,7 +289,7 @@ def question_history(game_id: int, qid: int, db: Session = Depends(get_db), user
             "old_tag": r.old_tag,
             "edited_by": r.edited_by,
             "edited_by_name": (du.global_name or du.username) if du else r.edited_by,
-            "edited_at": r.edited_at.isoformat() if r.edited_at else None,
+            "edited_at": (r.edited_at.isoformat() + "Z") if r.edited_at else None,
         }
         for r, du in rows
     ]
