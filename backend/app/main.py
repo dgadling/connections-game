@@ -302,11 +302,11 @@ def privacy():
 <!doctype html><html><head><meta charset=utf-8><title>Privacy Policy — Connections Game</title></head>
 <body style="font-family:sans-serif;max-width:640px;margin:40px auto;padding:0 16px">
 <h1>Privacy Policy — Connections Game</h1>
-<p>We store your Discord ID, Discord username, global display name, and avatar hash — public profile data from Discord's <code>identify</code> scope, nothing else.</p>
+<p>We store your Discord ID, Discord username, global display name, and avatar hash — public profile data from Discord's <code>identify</code> scope. We also store encrypted Discord OAuth access and refresh tokens, used for silent auto-login. Tokens are deleted when you log out.</p>
 <p>Game content (member names, questions, pairing history) is visible only to admins of that specific game. Admins for one game cannot access data from games they are not members of.</p>
 <p>We do not share, sell, or transfer your data to third parties.</p>
 <p>To delete your account data, contact dave@toasterwaffles.com.</p>
-<p><em>Last updated: 2026-06-23</em></p>
+<p><em>Last updated: 2026-06-25</em></p>
 </body></html>
 """)
 
