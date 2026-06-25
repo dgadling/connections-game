@@ -18,11 +18,12 @@ class GameOut(_OutModel):
     id: int
     name: str
     owner_discord_id: str
+    discord_role_id: Optional[str] = None
     archived_at: Optional[datetime] = None
 
 class MemberCreate(_BaseModel):
     name: str
-    discord_id: str
+    discord_id: Optional[str] = None
 
 class MemberPatch(_BaseModel):
     name: Optional[str] = None
@@ -32,7 +33,7 @@ class MemberOut(_OutModel):
     id: int
     game_id: int
     name: str
-    discord_id: str
+    discord_id: Optional[str] = None
     deleted_at: Optional[datetime]
 
 class QuestionCreate(_BaseModel):

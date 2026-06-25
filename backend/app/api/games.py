@@ -41,6 +41,28 @@ def validate_discord_id(discord_id: str) -> str:
         return normalized
     raise HTTPException(400, "Discord ID must be a numeric snowflake (17-20 digits) or a username (2-32 chars, letters/numbers/_/.)")
 
+
+def validate_discord_id_optional(discord_id: str | None) -> str | None:
+    """Validate Discord ID if provided, else return None."""
+    if discord_id is None:
+        return None
+    discord_id = discord_id.strip()
+    if not discord_id:
+        return None
+    return validate_discord_id(discord_id)
+
+
+def validate_discord_role_id(role_id: str | None) -> str | None:
+    """Validate Discord role snowflake (17-20 digits), allow None/empty to clear."""
+    if role_id is None:
+        return None
+    role_id = role_id.strip()
+    if not role_id:
+        return None
+    if not re.match(r'^\d{17,20}$', role_id):
+        raise HTTPException(400, "Discord role ID must be a numeric snowflake (17-20 digits)")
+    return role_id
+
 @router.post("/api/games", response_model=schemas.GameOut)
 def create_game(payload: schemas.GameCreate, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     from ..auth import is_superuser
@@ -88,9 +110,16 @@ def rename_game(game_id: int, payload: dict, db: Session = Depends(get_db), user
     require_game_admin(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
     game = db.query(models.Game).filter(models.Game.id == game_id).first()
+    changed = False
     name = payload.get("name")
     if name:
         game.name = name
+        changed = True
+    if "discord_role_id" in payload:
+        role_id = validate_discord_role_id(payload.get("discord_role_id"))
+        game.discord_role_id = role_id
+        changed = True
+    if changed:
         db.commit()
     return {"ok": True}
 
@@ -119,9 +148,7 @@ def list_members(game_id: int, include_deleted: bool = False, db: Session = Depe
 def create_member(game_id: int, payload: schemas.MemberCreate, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
-    if not payload.discord_id or not payload.discord_id.strip():
-        raise HTTPException(400, "discord_id is required")
-    discord_id = validate_discord_id(payload.discord_id)
+    discord_id = validate_discord_id_optional(payload.discord_id)
     m = models.GameMember(game_id=game_id, name=payload.name, discord_id=discord_id)
     db.add(m)
     try:
@@ -143,10 +170,7 @@ def patch_member(game_id: int, member_id: int, payload: schemas.MemberPatch, db:
     if payload.name is not None:
         m.name = payload.name
     if "discord_id" in payload.model_dump(exclude_unset=True):
-        discord_id = payload.discord_id
-        if discord_id is None or not str(discord_id).strip():
-            raise HTTPException(400, "discord_id cannot be empty")
-        discord_id = validate_discord_id(discord_id)
+        discord_id = validate_discord_id_optional(payload.discord_id)
         m.discord_id = discord_id
     try:
         db.commit()

@@ -57,3 +57,52 @@ def test_member_discord_username_accepted(client, game):
 
     r = client.post(f"/api/games/{game.id}/members", json={"name": "Bad3", "discord_id": "x" * 33})  # too long
     assert r.status_code == 400
+
+
+def test_member_discord_id_optional(client, game):
+    """GameMember.discord_id is optional (issue #17)"""
+    # Create without discord_id
+    r = client.post(f"/api/games/{game.id}/members", json={"name": "NoDiscord"})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["name"] == "NoDiscord"
+    assert data["discord_id"] is None
+
+    # Create with empty string → normalized to None
+    r = client.post(f"/api/games/{game.id}/members", json={"name": "EmptyDiscord", "discord_id": ""})
+    assert r.status_code == 200
+    assert r.json()["discord_id"] is None
+
+    # Patch to clear discord_id
+    member_id = data["id"]
+    r = client.patch(f"/api/games/{game.id}/members/{member_id}", json={"discord_id": None})
+    assert r.status_code == 200
+    assert r.json()["discord_id"] is None
+
+    # Patch to set discord_id
+    r = client.patch(f"/api/games/{game.id}/members/{member_id}", json={"discord_id": "test_user"})
+    assert r.status_code == 200
+    assert r.json()["discord_id"] == "test_user"
+
+
+def test_game_discord_role_id(client, game):
+    """Game.discord_role_id can be set/cleared (issue #17)"""
+    # Set role_id
+    role = "1407476013709135975"
+    r = client.patch(f"/api/games/{game.id}", json={"discord_role_id": role})
+    assert r.status_code == 200
+
+    r = client.get(f"/api/games/{game.id}")
+    assert r.status_code == 200
+    assert r.json()["discord_role_id"] == role
+
+    # Clear role_id
+    r = client.patch(f"/api/games/{game.id}", json={"discord_role_id": None})
+    assert r.status_code == 200
+    r = client.get(f"/api/games/{game.id}")
+    assert r.json()["discord_role_id"] is None
+
+    # Invalid role_id rejected
+    r = client.patch(f"/api/games/{game.id}", json={"discord_role_id": "not_a_snowflake"})
+    assert r.status_code == 400
+

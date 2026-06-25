@@ -41,6 +41,7 @@ class Game(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     owner_discord_id = Column(String, ForeignKey("discord_users.discord_id"), nullable=False)
+    discord_role_id = Column(String, nullable=True)
     created_at = Column(TIMESTAMP, default=now, nullable=False)
     archived_at = Column(TIMESTAMP, nullable=True)
 
@@ -64,13 +65,13 @@ class GameMember(Base):
     id = Column(Integer, primary_key=True)
     game_id = Column(Integer, ForeignKey("games.id", ondelete="CASCADE"), nullable=False)
     name = Column(String, nullable=False)
-    discord_id = Column(String, nullable=False)
+    discord_id = Column(String, nullable=True)
     sort_order = Column(Integer, nullable=False, default=0)
     created_at = Column(TIMESTAMP, default=now, nullable=False)
     deleted_at = Column(TIMESTAMP, nullable=True)
     # Partial unique indexes created in Alembic migration:
     #   uq_game_member_name_active ON (game_id, name) WHERE deleted_at IS NULL
-    #   uq_game_member_discord_active ON (game_id, discord_id) WHERE deleted_at IS NULL
+    #   uq_game_member_discord_active ON (game_id, discord_id) WHERE deleted_at IS NULL AND discord_id IS NOT NULL
 
 class ConnQuestion(Base):
     __tablename__ = "conn_questions"
