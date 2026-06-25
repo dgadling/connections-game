@@ -610,7 +610,8 @@ def join_game(payload: schemas.JoinRequest, request: Request, db: Session = Depe
         db.add(models.GameMembership(game_id=game_id, discord_id=user.discord_id))
     db.delete(invite)
     db.commit()
-    return {"game_id": game_id}
+    game = db.query(models.Game).filter(models.Game.id == game_id).first()
+    return {"game_id": game_id, "name": game.name if game else "", "archived_at": game.archived_at.isoformat() + "Z" if game and game.archived_at else None}
 
 @router.post("/api/games/{game_id}/invites")
 def create_invite(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):

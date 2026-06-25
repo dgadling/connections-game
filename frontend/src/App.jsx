@@ -175,7 +175,7 @@ export default function App() {
     }).then(res => {
       // Refresh game list, then navigate to joined game
       loadGames()
-      setGame({ id: res.game_id, name: '' })
+      setGame({ id: res.game_id, name: res.name || '', archived_at: res.archived_at || null })
     }).catch(e => {
       alert('Invite join failed: ' + e.message)
       loadGames()
