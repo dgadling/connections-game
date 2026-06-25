@@ -26,6 +26,15 @@ module.exports = {
     'react/react-in-jsx-scope': 'off',
     'react/prop-types': 'off', // not using PropTypes
 
+    'react/no-unstable-nested-components': 'error',
+    'react/jsx-no-leaked-render': 'error',
+    'react/button-has-type': 'error',
+    'react/hook-use-state': 'error',
+    'react/no-array-index-key': 'error',
+    'react/jsx-no-constructed-context-values': 'error',
+    'react/jsx-no-useless-fragment': 'error',
+    'react/iframe-missing-sandbox': 'error',
+
     // General hygiene
     'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     'no-console': 'off',
