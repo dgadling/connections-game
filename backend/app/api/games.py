@@ -704,6 +704,21 @@ def unarchive_game(game_id: int, db: Session = Depends(get_db), user: models.Dis
     db.commit()
     return {"ok": True}
 
+@router.delete("/api/games/{game_id}")
+def delete_game(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
+    require_game_admin(game_id, user.discord_id, db)
+    game = db.query(models.Game).filter(models.Game.id == game_id).first()
+    if not game:
+        raise HTTPException(404)
+    if game.archived_at is None:
+        raise HTTPException(400, "game must be archived before deletion")
+    # ConnPairing.asker_member_id / target_member_id are RESTRICT; delete pairings first
+    # to avoid FK violation when GameMember rows cascade-delete from Game
+    db.query(models.ConnPairing).filter(models.ConnPairing.game_id == game_id).delete()
+    db.delete(game)
+    db.commit()
+    return {"ok": True}
+
 @router.get("/api/games/{game_id}/admins")
 def list_admins(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_game_admin(game_id, user.discord_id, db)

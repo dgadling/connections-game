@@ -251,3 +251,83 @@ def test_list_games_includes_archived(db_session, admin_a):
         assert games_by_id[g_arch.id]["archived_at"] is not None
     finally:
         app.dependency_overrides.clear()
+
+
+def test_delete_archived_game_as_admin(db_session, admin_a, game_a):
+    from datetime import datetime
+    game_a.archived_at = datetime.utcnow()
+    db_session.commit()
+
+    client = make_client(db_session, admin_a)
+    try:
+        resp = client.delete(f"/api/games/{game_a.id}")
+        assert resp.status_code == 200, resp.text
+        db_session.expire_all()
+        g = db_session.query(models.Game).filter(models.Game.id == game_a.id).first()
+        assert g is None, "game should be deleted"
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_delete_unarchived_game_blocked(db_session, admin_a, game_a):
+    # game_a is active (not archived)
+    client = make_client(db_session, admin_a)
+    try:
+        resp = client.delete(f"/api/games/{game_a.id}")
+        assert resp.status_code == 400, f"delete of unarchived game should 400, got {resp.status_code}"
+        assert "archived" in resp.text.lower()
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_delete_as_non_member(db_session, admin_a, outsider, game_a):
+    from datetime import datetime
+    game_a.archived_at = datetime.utcnow()
+    db_session.commit()
+
+    client = make_client(db_session, outsider)
+    try:
+        resp = client.delete(f"/api/games/{game_a.id}")
+        assert resp.status_code == 403, f"non-member should get 403, got {resp.status_code}"
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_delete_archived_cascades(db_session, admin_a, game_a):
+    from datetime import datetime
+    # seed related rows
+    m1 = models.GameMember(game_id=game_a.id, name="Alice")
+    m2 = models.GameMember(game_id=game_a.id, name="Bob")
+    db_session.add_all([m1, m2])
+    db_session.flush()
+    q = models.ConnQuestion(game_id=game_a.id, text="Q?", tag="warm", tag_auto=True, status="upcoming", sort_order=0)
+    db_session.add(q)
+    db_session.flush()
+    # pairing (RESTRICT FK - this is why we delete pairings first in the endpoint)
+    pair = models.ConnPairing(game_id=game_a.id, round_num=1, asker_member_id=m1.id, target_member_id=m2.id)
+    db_session.add(pair)
+    play = models.ConnPlay(game_id=game_a.id, round_num=1, question_id=q.id, played_by=admin_a.discord_id)
+    db_session.add(play)
+    # archive game
+    game_a.archived_at = datetime.utcnow()
+    db_session.commit()
+
+    gid = game_a.id
+
+    client = make_client(db_session, admin_a)
+    try:
+        resp = client.delete(f"/api/games/{gid}")
+        assert resp.status_code == 200, resp.text
+    finally:
+        app.dependency_overrides.clear()
+
+    db_session.expire_all()
+    assert db_session.query(models.Game).filter(models.Game.id == gid).first() is None
+    assert db_session.query(models.GameMember).filter(models.GameMember.game_id == gid).count() == 0
+    assert db_session.query(models.ConnQuestion).filter(models.ConnQuestion.game_id == gid).count() == 0
+    assert db_session.query(models.ConnPlay).filter(models.ConnPlay.game_id == gid).count() == 0
+    assert db_session.query(models.ConnPairing).filter(models.ConnPairing.game_id == gid).count() == 0
+    # ConnQuestionEdit cascades from question
+    assert db_session.query(models.ConnState).filter(models.ConnState.game_id == gid).first() is None
+    # GameMembership cascades
+    assert db_session.query(models.GameMembership).filter(models.GameMembership.game_id == gid).count() == 0

@@ -158,6 +158,7 @@ def test_auth_refresh_invalid_token_deletes_row_returns_401(db_session):
         avatar_hash=None,
     )
     db_session.add(user)
+    db_session.flush()
     token_row = models.DiscordOAuthToken(
         discord_id="123456789012345678",
         access_token_encrypted=encrypt_token("old_access"),

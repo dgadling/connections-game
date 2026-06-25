@@ -226,7 +226,7 @@ export default function App() {
           {tab === 'questions' && <QuestionsTab gameId={game.id} archived={!!game.archived_at} />}
           {tab === 'members' && <MembersTab gameId={game.id} archived={!!game.archived_at} />}
           {tab === 'history' && <HistoryTab gameId={game.id} />}
-          {tab === 'admin' && <AdminTab gameId={game.id} game={game} onGameUpdate={g => setGame({...game, ...g})} onGamesRefresh={loadGames} />}
+          {tab === 'admin' && <AdminTab gameId={game.id} game={game} onGameUpdate={g => setGame({...game, ...g})} onGamesRefresh={loadGames} onGameDeleted={()=>setGame(null)} />}
         </ErrorBoundary>
       </main>
     </div>
@@ -858,7 +858,7 @@ function HistoryTab({ gameId }) {
 }
 
 // --- Admin Tab ---
-function AdminTab({ gameId, game, onGameUpdate, onGamesRefresh }) {
+function AdminTab({ gameId, game, onGameUpdate, onGamesRefresh, onGameDeleted }) {
   const [invites, setInvites] = useState([])
   const [admins, setAdmins] = useState([])
   const [inviteUrl, setInviteUrl] = useState('')
@@ -889,6 +889,13 @@ function AdminTab({ gameId, game, onGameUpdate, onGamesRefresh }) {
     if (onGamesRefresh) onGamesRefresh()
     alert(archived ? 'Archived.' : 'Unarchived.')
   }
+  const doDelete = async () => {
+    if (!confirm(`Delete ${game.name} permanently? This cannot be undone. All questions, members, and history will be lost.`)) return
+    await api(`/api/games/${gameId}`, {method:'DELETE'})
+    alert('Game deleted.')
+    if (onGamesRefresh) onGamesRefresh()
+    if (onGameDeleted) onGameDeleted()
+  }
 
   return (
     <div className="space-y-4">
@@ -898,10 +905,15 @@ function AdminTab({ gameId, game, onGameUpdate, onGamesRefresh }) {
           <input value={rename} onChange={e=>setRename(e.target.value)} className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           <button onClick={doRename} className="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Rename</button>
         </div>
+        <div className="flex flex-wrap gap-2">
         {!game.archived_at
           ? <button onClick={()=>doArchive(true)} className="px-3 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Archive game</button>
-          : <button onClick={()=>doArchive(false)} className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm hover:bg-amber-100">Unarchive game</button>
+          : <>
+              <button onClick={()=>doArchive(false)} className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm hover:bg-amber-100">Unarchive game</button>
+              <button onClick={doDelete} className="px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700">Delete game permanently</button>
+            </>
         }
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5">

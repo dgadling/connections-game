@@ -39,14 +39,14 @@ def test_list_questions_serialization(client, game, questions):
         assert_iso_or_none(q["created_at"])
         assert_iso_or_none(q["updated_at"])
 
-def test_question_history_serialization(client, game, questions, db_session):
+def test_question_history_serialization(client, game, questions, db_session, test_user):
     from app import models
     q = questions[0]
     edit = models.ConnQuestionEdit(
         question_id=q.id,
         old_text="old",
         old_tag="warm",
-        edited_by="123456789012345678",
+        edited_by=test_user.discord_id,
         edited_at=datetime.utcnow()
     )
     db_session.add(edit)
