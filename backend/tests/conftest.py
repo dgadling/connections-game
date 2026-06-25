@@ -16,6 +16,15 @@ from app.auth import require_user, generate_csrf_token, hash_token
 import secrets
 import datetime
 
+# Clear rate limiter between tests - RateLimiter is module-global in app.middleware,
+# otherwise mutation counts leak across tests and cause 429 flakes (e.g. test_tag_validation)
+@pytest.fixture(autouse=True)
+def clear_rate_limiter():
+    from app.middleware import limiter
+    limiter.buckets.clear()
+    yield
+    limiter.buckets.clear()
+
 # In-memory SQLite with StaticPool so all connections share same DB
 from sqlalchemy import event
 engine = create_engine(
