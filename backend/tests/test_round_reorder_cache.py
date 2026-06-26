@@ -30,6 +30,10 @@ def test_reorder_updates_current_question(db_session, game, test_user):
         assert state.current_question_id == q1.id
 
         # Reorder: swap Q1 and Q2 sort_order
+        # Use temp negative values to avoid unique constraint violation (uq_question_game_status_sort)
+        q1.sort_order = -10
+        q2.sort_order = -11
+        db_session.flush()
         q1.sort_order = 1
         q2.sort_order = 0
         db_session.commit()

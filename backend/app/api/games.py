@@ -366,25 +366,37 @@ def reorder_questions(game_id: int, payload: schemas.ReorderRequest, db: Session
     # Validate: no duplicates
     if len(qids) != len(set(qids)):
         raise HTTPException(400, "duplicate question_ids")
-    # Validate: all IDs belong to this game and status=upcoming
-    rows = db.query(models.ConnQuestion.id).filter(
+    # Lock all upcoming questions FOR UPDATE to prevent concurrent reorder races
+    locked_qs = db.query(models.ConnQuestion).filter(
         models.ConnQuestion.game_id == game_id,
-        models.ConnQuestion.status == "upcoming",
-        models.ConnQuestion.id.in_(qids)
-    ).all()
-    found_ids = {r[0] for r in rows}
+        models.ConnQuestion.status == "upcoming"
+    ).with_for_update().all()
+    locked_ids = {q.id for q in locked_qs}
+    # Validate: all IDs belong to this game and status=upcoming
+    found_ids = set(qids) & locked_ids
     if len(found_ids) != len(qids):
         raise HTTPException(400, "one or more question_ids are invalid, do not belong to this game, or are not upcoming")
     # Validate: must include ALL upcoming questions (no missing IDs)
-    total_upcoming = db.query(models.ConnQuestion.id).filter(
-        models.ConnQuestion.game_id == game_id,
-        models.ConnQuestion.status == "upcoming"
-    ).count()
-    if len(found_ids) != total_upcoming:
+    if len(found_ids) != len(locked_ids):
         raise HTTPException(400, "question_ids must include all upcoming questions")
-    for i, qid in enumerate(qids):
-        db.query(models.ConnQuestion).filter(models.ConnQuestion.id == qid, models.ConnQuestion.game_id == game_id).update({"sort_order": i})
-    db.commit()
+    try:
+        # Two-phase update to avoid unique constraint violations during reorder:
+        # 1. Move all to temporary negative sort_order values (injective, no collisions)
+        for q in locked_qs:
+            q.sort_order = -q.sort_order - 10000
+        db.flush()
+        # 2. Set final sort_order values
+        q_map = {q.id: q for q in locked_qs}
+        for i, qid in enumerate(qids):
+            q_map[qid].sort_order = i
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        # Unique constraint violation or other race - return 409
+        from sqlalchemy.exc import IntegrityError
+        if isinstance(e, IntegrityError):
+            raise HTTPException(409, "concurrent reorder conflict") from e
+        raise
     return {"ok": True}
 
 

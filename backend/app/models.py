@@ -2,7 +2,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from sqlalchemy import (
     Column, Integer, String, Text, Boolean, TIMESTAMP, ForeignKey,
-    UniqueConstraint, CheckConstraint
+    UniqueConstraint, CheckConstraint, Index, text as sa_text
 )
 from .db import Base
 
@@ -88,6 +88,15 @@ class ConnQuestion(Base):
         CheckConstraint("length(text) <= 500", name="ck_question_len"),
         CheckConstraint("tag IN ('warm','secretive','reflective','tension','vulnerable','loyal')", name="ck_question_tag"),
         CheckConstraint("status IN ('upcoming','used','graveyard')", name="ck_question_status"),
+        Index(
+            "uq_question_game_status_sort",
+            "game_id",
+            "status",
+            "sort_order",
+            unique=True,
+            sqlite_where=sa_text("status='upcoming'"),
+            postgresql_where=sa_text("status='upcoming'"),
+        ),
     )
 
 class ConnQuestionEdit(Base):
