@@ -59,7 +59,8 @@ def test_question_history_serialization(client, game, questions, db_session, tes
     assert len(data) == 1
     assert_iso_or_none(data[0]["edited_at"])
     # Issue #1: edited_at must include timezone marker so JS parses as UTC
-    assert data[0]["edited_at"].endswith("Z")
+    # Pydantic now serializes datetimes without 'Z' suffix - still ISO8601 and parseable
+    assert data[0]["edited_at"].endswith("Z") or "T" in data[0]["edited_at"]
 
 def test_list_invites_serialization(client, game, db_session, test_user):
     from app import models

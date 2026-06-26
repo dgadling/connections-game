@@ -67,4 +67,5 @@ def test_reorder_empty_list_returns_400(client, game, questions):
         f"/api/games/{game.id}/questions/reorder",
         json={"question_ids": []}
     )
-    assert r.status_code == 400, f"empty list should be rejected, got {r.status_code}: {r.text}"
+    # Validation moved to Pydantic (issue #25) - now returns 422 instead of 400
+    assert r.status_code == 422, f"empty list should be rejected, got {r.status_code}: {r.text}"

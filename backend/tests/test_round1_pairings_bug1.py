@@ -17,10 +17,15 @@ def test_round1_pairings_after_adding_members(db_session, game, test_user):
     games_module.require_membership = lambda *a, **k: test_user
     try:
         result = get_round(game.id, db_session, test_user)
-        assert result["round_num"] == 1
-        assert len(result["pairings"]) == 5, f"Round 1 should have 5 pairings, got {len(result['pairings'])}"
+        # get_round now returns Pydantic model (issue #25)
+        round_num = result.round_num if hasattr(result, 'round_num') else result["round_num"]
+        pairings = result.pairings if hasattr(result, 'pairings') else result["pairings"]
+        assert round_num == 1
+        assert len(pairings) == 5, f"Round 1 should have 5 pairings, got {len(pairings)}"
         # Verify derangement (no self-pairings)
-        for p in result["pairings"]:
-            assert p["asker_id"] != p["target_id"]
+        for p in pairings:
+            asker_id = p.asker_id if hasattr(p, 'asker_id') else p["asker_id"]
+            target_id = p.target_id if hasattr(p, 'target_id') else p["target_id"]
+            assert asker_id != target_id
     finally:
         games_module.require_membership = orig_req

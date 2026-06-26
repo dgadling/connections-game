@@ -51,19 +51,20 @@ def test_member_discord_username_accepted(client, game):
     assert data["discord_id"] == "134515788454428673"
 
     # Test invalid username rejected
+    # Validation moved to Pydantic (issue #25) - now returns 422 instead of 400
     r = client.post(f"/api/games/{game.id}/members", json={"name": "Bad", "discord_id": "a"})  # too short
-    assert r.status_code == 400
+    assert r.status_code == 422
 
     r = client.post(f"/api/games/{game.id}/members", json={"name": "Bad2", "discord_id": "bad@name"})  # invalid char
-    assert r.status_code == 400
+    assert r.status_code == 422
 
     r = client.post(f"/api/games/{game.id}/members", json={"name": "Bad3", "discord_id": "x" * 33})  # too long
-    assert r.status_code == 400
+    assert r.status_code == 422
 
     # Issue #16: consecutive dots must be rejected (Discord allows leading/trailing ./_)
     for bad_id in ["a..b", "test..user", "..abc", "abc.."]:
         r = client.post(f"/api/games/{game.id}/members", json={"name": "Bad", "discord_id": bad_id})
-        assert r.status_code == 400, f"{bad_id} should be rejected"
+        assert r.status_code == 422, f"{bad_id} should be rejected"
 
     # Leading/trailing ./_ are allowed per Discord (fixed 2026-06-25)
     for good_id in [".abc", "_abc", "abc.", "abc_", ".a.", "_a_"]:
@@ -115,6 +116,7 @@ def test_game_discord_role_id(client, game):
     assert r.json()["discord_role_id"] is None
 
     # Invalid role_id rejected
+    # Validation moved to Pydantic (issue #25) - now returns 422 instead of 400
     r = client.patch(f"/api/games/{game.id}", json={"discord_role_id": "not_a_snowflake"})
-    assert r.status_code == 400
+    assert r.status_code == 422
 

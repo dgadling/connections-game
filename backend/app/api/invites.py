@@ -7,13 +7,13 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..db import get_db
 from ..auth import require_user
-from ..timeutil import utcnow, serialize_datetime
+from ..timeutil import utcnow
 from .common import require_game_admin, require_game_writable
 
 router = APIRouter(prefix="/api/games", tags=["invites"])
 
 
-@router.post("/join")
+@router.post("/join", response_model=schemas.JoinGameResponse)
 def join_game(payload: schemas.JoinRequest, request: Request, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     # rate limiting enforced in middleware
     token_hash = hashlib.sha256(payload.invite_token.encode()).hexdigest()
@@ -29,10 +29,14 @@ def join_game(payload: schemas.JoinRequest, request: Request, db: Session = Depe
     db.delete(invite)
     db.commit()
     game = db.query(models.Game).filter(models.Game.id == game_id).first()
-    return {"game_id": game_id, "name": game.name if game else "", "archived_at": serialize_datetime(game.archived_at) if game else None}
+    return schemas.JoinGameResponse(
+        game_id=game_id,
+        name=game.name if game else "",
+        archived_at=game.archived_at if game else None
+    )
 
 
-@router.post("/{game_id}/invites")
+@router.post("/{game_id}/invites", response_model=schemas.InviteCreateResponse)
 def create_invite(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_game_admin(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
@@ -49,10 +53,14 @@ def create_invite(game_id: int, db: Session = Depends(get_db), user: models.Disc
     db.add(invite)
     db.commit()
     db.refresh(invite)
-    return {"id": invite.id, "invite_token": token, "expires_at": serialize_datetime(invite.expires_at)}
+    return schemas.InviteCreateResponse(
+        id=invite.id,
+        invite_token=token,
+        expires_at=invite.expires_at
+    )
 
 
-@router.get("/{game_id}/invites")
+@router.get("/{game_id}/invites", response_model=list[schemas.InviteListItem])
 def list_invites(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_game_admin(game_id, user.discord_id, db)
     now = utcnow()
@@ -63,18 +71,18 @@ def list_invites(game_id: int, db: Session = Depends(get_db), user: models.Disco
     ).delete(synchronize_session=False)
     db.commit()
     rows = db.query(models.GameInvite).filter(models.GameInvite.game_id == game_id).order_by(models.GameInvite.created_at.desc()).all()
-    out = []
-    for r in rows:
-        out.append({
-            "id": r.id,
-            "token_prefix": r.token_hash[:6],
-            "created_at": serialize_datetime(r.created_at),
-            "expires_at": serialize_datetime(r.expires_at),
-        })
-    return out
+    return [
+        schemas.InviteListItem(
+            id=r.id,
+            token_prefix=r.token_hash[:6],
+            created_at=r.created_at,
+            expires_at=r.expires_at,
+        )
+        for r in rows
+    ]
 
 
-@router.delete("/{game_id}/invites/{invite_id}")
+@router.delete("/{game_id}/invites/{invite_id}", response_model=schemas.OkResponse)
 def revoke_invite(game_id: int, invite_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_game_admin(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
@@ -83,4 +91,4 @@ def revoke_invite(game_id: int, invite_id: int, db: Session = Depends(get_db), u
         raise HTTPException(404)
     db.delete(inv)
     db.commit()
-    return {"ok": True}
+    return schemas.OkResponse()

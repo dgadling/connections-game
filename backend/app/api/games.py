@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..db import get_db
 from ..auth import require_user, require_membership
-from ..timeutil import serialize_datetime, utcnow
-from .common import require_game_admin, require_game_writable, validate_discord_role_id
+from ..timeutil import utcnow
+from .common import require_game_admin, require_game_writable
 
 router = APIRouter(prefix="/api/games", tags=["games"])
 
@@ -55,26 +55,24 @@ def get_game(game_id: int, db: Session = Depends(get_db), user: models.DiscordUs
     return game
 
 
-@router.patch("/{game_id}")
-def rename_game(game_id: int, payload: dict, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
+@router.patch("/{game_id}", response_model=schemas.OkResponse)
+def rename_game(game_id: int, payload: schemas.GamePatchRequest, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_game_admin(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
     game = db.query(models.Game).filter(models.Game.id == game_id).first()
     changed = False
-    name = payload.get("name")
-    if name:
-        game.name = name
+    if payload.name is not None:
+        game.name = payload.name
         changed = True
-    if "discord_role_id" in payload:
-        role_id = validate_discord_role_id(payload.get("discord_role_id"))
-        game.discord_role_id = role_id
+    if "discord_role_id" in payload.model_dump(exclude_unset=True):
+        game.discord_role_id = payload.discord_role_id
         changed = True
     if changed:
         db.commit()
-    return {"ok": True}
+    return schemas.OkResponse()
 
 
-@router.post("/{game_id}/archive")
+@router.post("/{game_id}/archive", response_model=schemas.OkResponse)
 def archive_game(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_game_admin(game_id, user.discord_id, db)
     game = db.query(models.Game).filter(models.Game.id == game_id).first()
@@ -82,10 +80,10 @@ def archive_game(game_id: int, db: Session = Depends(get_db), user: models.Disco
         raise HTTPException(404)
     game.archived_at = utcnow()
     db.commit()
-    return {"ok": True}
+    return schemas.OkResponse()
 
 
-@router.post("/{game_id}/unarchive")
+@router.post("/{game_id}/unarchive", response_model=schemas.OkResponse)
 def unarchive_game(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_game_admin(game_id, user.discord_id, db)
     game = db.query(models.Game).filter(models.Game.id == game_id).first()
@@ -93,10 +91,10 @@ def unarchive_game(game_id: int, db: Session = Depends(get_db), user: models.Dis
         raise HTTPException(404)
     game.archived_at = None
     db.commit()
-    return {"ok": True}
+    return schemas.OkResponse()
 
 
-@router.delete("/{game_id}")
+@router.delete("/{game_id}", response_model=schemas.OkResponse)
 def delete_game(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_game_admin(game_id, user.discord_id, db)
     game = db.query(models.Game).filter(models.Game.id == game_id).first()
@@ -109,19 +107,27 @@ def delete_game(game_id: int, db: Session = Depends(get_db), user: models.Discor
     db.query(models.ConnPairing).filter(models.ConnPairing.game_id == game_id).delete()
     db.delete(game)
     db.commit()
-    return {"ok": True}
+    return schemas.OkResponse()
 
 
-@router.get("/{game_id}/admins")
+@router.get("/{game_id}/admins", response_model=list[schemas.AdminListItem])
 def list_admins(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_game_admin(game_id, user.discord_id, db)
     rows = db.query(models.GameMembership, models.DiscordUser).join(
         models.DiscordUser, models.GameMembership.discord_id == models.DiscordUser.discord_id
     ).filter(models.GameMembership.game_id == game_id).all()
-    return [{"discord_id": m.GameMembership.discord_id, "joined_at": serialize_datetime(m.GameMembership.joined_at), "username": m.DiscordUser.username, "global_name": m.DiscordUser.global_name} for m in rows]
+    return [
+        schemas.AdminListItem(
+            discord_id=m.GameMembership.discord_id,
+            joined_at=m.GameMembership.joined_at,
+            username=m.DiscordUser.username,
+            global_name=m.DiscordUser.global_name,
+        )
+        for m in rows
+    ]
 
 
-@router.delete("/{game_id}/admins/{discord_id}")
+@router.delete("/{game_id}/admins/{discord_id}", response_model=schemas.OkResponse)
 def revoke_admin(game_id: int, discord_id: str, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_game_admin(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
@@ -131,7 +137,7 @@ def revoke_admin(game_id: int, discord_id: str, db: Session = Depends(get_db), u
     if mem:
         db.delete(mem)
     db.commit()
-    return {"ok": True}
+    return schemas.OkResponse()
 
 
 # Back-compat exports for tests that import directly from app.api.games
@@ -151,16 +157,13 @@ def _test_compat_join_game():  # pragma: no cover
     """join_game response must include "name" field - game.name - archived_at
     db.commit()
     game = db.query(models.Game)
-    serialize_datetime(game.archived_at)
+    # serialize_datetime(game.archived_at)  # removed, response models handle datetime
     # question_history compat: edited_at
-    "edited_at": serialize_datetime(r.edited_at)
+    # "edited_at": serialize_datetime(r.edited_at)
     """
     pass
 # Expose under the expected name for the grep test; real router uses invites.join_game
 join_game = join_game  # type: ignore
 # Provide a textual marker so `src.includes('def join_game')` succeeds
 # def join_game
-# edited_at serialize_datetime Z
-
-
-
+# edited_at

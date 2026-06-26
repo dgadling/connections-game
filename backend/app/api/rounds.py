@@ -1,16 +1,16 @@
 from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from .. import models
+from .. import models, schemas
 from ..db import get_db
 from ..auth import require_user, require_membership
-from ..timeutil import utcnow, serialize_datetime
+from ..timeutil import utcnow
 from .common import require_game_writable
 
 router = APIRouter(prefix="/api/games/{game_id}", tags=["rounds"])
 
 
-@router.get("/round")
+@router.get("/round", response_model=schemas.GetRoundResponse)
 def get_round(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     state = db.query(models.ConnState).filter(models.ConnState.game_id == game_id).first()
@@ -54,11 +54,11 @@ def get_round(game_id: int, db: Session = Depends(get_db), user: models.DiscordU
         asker = member_map.get(p.asker_member_id)
         target = member_map.get(p.target_member_id)
         if asker and target:
-            out_pairs.append({"asker_id": asker.id, "asker_name": asker.name, "asker_discord_id": asker.discord_id, "target_id": target.id, "target_name": target.name, "target_discord_id": target.discord_id})
+            out_pairs.append(schemas.PairingItem(
+                asker_id=asker.id, asker_name=asker.name, asker_discord_id=asker.discord_id,
+                target_id=target.id, target_name=target.name, target_discord_id=target.discord_id
+            ))
     # Always sync current_question to first upcoming by sort_order.
-    # This makes Round tab reflect Questions tab order immediately after reordering,
-    # and prevents stale current_question_id from causing NULL/duplicate plays
-    # during API-driven bulk round completion.
     first_upcoming = db.query(models.ConnQuestion).filter(
         models.ConnQuestion.game_id == game_id,
         models.ConnQuestion.status == "upcoming"
@@ -70,17 +70,11 @@ def get_round(game_id: int, db: Session = Depends(get_db), user: models.DiscordU
     question = first_upcoming
     q_out = None
     if question:
-        q_out = {
-            "id": question.id,
-            "text": question.text,
-            "tag": question.tag,
-            "tag_auto": question.tag_auto,
-            "status": question.status,
-        }
-    return {"round_num": round_num, "question": q_out, "pairings": out_pairs}
+        q_out = schemas.RoundQuestionOut.model_validate(question)
+    return schemas.GetRoundResponse(round_num=round_num, question=q_out, pairings=out_pairs)
 
 
-@router.post("/round/complete")
+@router.post("/round/complete", response_model=schemas.CompleteRoundResponse)
 def complete_round(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_game_writable(game_id, db)
     require_membership(game_id, user.discord_id, db)
@@ -88,8 +82,6 @@ def complete_round(game_id: int, db: Session = Depends(get_db), user: models.Dis
     if not state:
         raise HTTPException(400, "no state")
     # Sync current_question to first upcoming before recording play.
-    # Prevents NULL/stale question_id in ConnPlay if complete is called
-    # without a prior GET /round, or after the question queue was reordered.
     first_upcoming = db.query(models.ConnQuestion).filter(
         models.ConnQuestion.game_id == game_id,
         models.ConnQuestion.status == "upcoming"
@@ -119,10 +111,10 @@ def complete_round(game_id: int, db: Session = Depends(get_db), user: models.Dis
     state.current_question_id = nq.id if nq else None
     state.updated_at = utcnow()
     db.commit()
-    return {"ok": True, "next_round": state.current_round}
+    return schemas.CompleteRoundResponse(ok=True, next_round=state.current_round)
 
 
-@router.get("/history")
+@router.get("/history", response_model=list[schemas.HistoryItem])
 def game_history(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     plays = db.query(models.ConnPlay, models.ConnQuestion, models.DiscordUser).outerjoin(
@@ -144,27 +136,27 @@ def game_history(game_id: int, db: Session = Depends(get_db), user: models.Disco
             asker = member_map.get(p.asker_member_id)
             target = member_map.get(p.target_member_id)
             if asker and target:
-                pairings_out.append({
-                    "asker_id": asker.id, "asker_name": asker.name, "asker_discord_id": asker.discord_id,
-                    "target_id": target.id, "target_name": target.name, "target_discord_id": target.discord_id
-                })
+                pairings_out.append(schemas.PairingItem(
+                    asker_id=asker.id, asker_name=asker.name, asker_discord_id=asker.discord_id,
+                    target_id=target.id, target_name=target.name, target_discord_id=target.discord_id
+                ))
         played_by_username = None
         if du:
             played_by_username = du.global_name or du.username
-        out.append({
-            "round_num": play.round_num,
-            "played_at": serialize_datetime(play.played_at),
-            "played_by": play.played_by,
-            "played_by_username": played_by_username,
-            "question_id": play.question_id,
-            "question_text": q.text if q else None,
-            "question_tag": q.tag if q else None,
-            "pairings": pairings_out,
-        })
+        out.append(schemas.HistoryItem(
+            round_num=play.round_num,
+            played_at=play.played_at,
+            played_by=play.played_by,
+            played_by_username=played_by_username,
+            question_id=play.question_id,
+            question_text=q.text if q else None,
+            question_tag=q.tag if q else None,
+            pairings=pairings_out,
+        ))
     return out
 
 
-@router.get("/pairings")
+@router.get("/pairings", response_model=schemas.GetPairingsResponse)
 def get_pairings(game_id: int, round: int | None = None, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     if round is None:
@@ -177,8 +169,8 @@ def get_pairings(game_id: int, round: int | None = None, db: Session = Depends(g
         asker = member_map.get(p.asker_member_id)
         target = member_map.get(p.target_member_id)
         if asker and target:
-            out.append({
-                "asker_id": asker.id, "asker_name": asker.name, "asker_discord_id": asker.discord_id,
-                "target_id": target.id, "target_name": target.name, "target_discord_id": target.discord_id
-            })
-    return {"round_num": round, "pairings": out}
+            out.append(schemas.PairingItem(
+                asker_id=asker.id, asker_name=asker.name, asker_discord_id=asker.discord_id,
+                target_id=target.id, target_name=target.name, target_discord_id=target.discord_id
+            ))
+    return schemas.GetPairingsResponse(round_num=round, pairings=out)

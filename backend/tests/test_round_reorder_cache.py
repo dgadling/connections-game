@@ -21,9 +21,16 @@ def test_reorder_updates_current_question(db_session, game, test_user):
     orig_req = games_module.require_membership
     games_module.require_membership = lambda *a, **k: test_user
     try:
+        # helper to extract question text from Pydantic model or dict
+        def _qtext(res):
+            q = res.question if hasattr(res, 'question') else res["question"]
+            if q is None:
+                return None
+            return q.text if hasattr(q, 'text') else q["text"]
+
         # First get_round - should return Q1
         result = get_round(game.id, db_session, test_user)
-        assert result["question"]["text"] == "Question 1", f"expected Q1, got {result['question']}"
+        assert _qtext(result) == "Question 1", f"expected Q1, got {result}"
 
         # Verify state
         state = db_session.query(models.ConnState).filter(models.ConnState.game_id == game.id).first()
@@ -41,13 +48,14 @@ def test_reorder_updates_current_question(db_session, game, test_user):
         # get_round again - SHOULD return Q2 now (first in sort_order)
         # BUG: currently returns cached Q1
         result = get_round(game.id, db_session, test_user)
-        assert result["question"]["text"] == "Question 2", f"After reorder, expected Q2, got {result['question']['text'] if result['question'] else None} - BUG: current_question_id is cached stale"
+        assert _qtext(result) == "Question 2", f"After reorder, expected Q2, got {_qtext(result)} - BUG: current_question_id is cached stale"
 
         # Verify state updated
         state = db_session.query(models.ConnState).filter(models.ConnState.game_id == game.id).first()
         assert state.current_question_id == q2.id, f"state.current_question_id should be Q2 ({q2.id}), got {state.current_question_id}"
 
         # Complete round - should record Q2
+        # complete_round now returns Pydantic model; ignore return value
         complete_round(game.id, db_session, test_user)
         play = db_session.query(models.ConnPlay).filter(models.ConnPlay.game_id == game.id, models.ConnPlay.round_num == 1).first()
         assert play is not None

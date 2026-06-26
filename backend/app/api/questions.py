@@ -6,13 +6,13 @@ from .. import models, schemas
 from ..db import get_db
 from ..auth import require_user, require_membership
 from ..tagging import classify_sentiment
-from ..timeutil import utcnow, serialize_datetime
+from ..timeutil import utcnow
 from .common import require_game_writable
 
 router = APIRouter(prefix="/api/games/{game_id}/questions", tags=["questions"])
 
 
-@router.get("")
+@router.get("", response_model=list[schemas.QuestionListItem])
 def list_questions(game_id: int, status: str = "upcoming", db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     # count edits per question to avoid N+1
@@ -29,24 +29,24 @@ def list_questions(game_id: int, status: str = "upcoming", db: Session = Depends
         models.ConnQuestion.game_id == game_id,
         models.ConnQuestion.status == status
     ).order_by(models.ConnQuestion.sort_order).all()
-    return [
-        {
-            "id": q.id,
-            "game_id": q.game_id,
-            "text": q.text,
-            "tag": q.tag,
-            "tag_auto": q.tag_auto,
-            "status": q.status,
-            "sort_order": q.sort_order,
-            "edit_count": edit_count,
-            "created_at": serialize_datetime(q.created_at),
-            "updated_at": serialize_datetime(q.updated_at),
-        }
-        for q, edit_count in rows
-    ]
+    out = []
+    for q, edit_count in rows:
+        out.append(schemas.QuestionListItem(
+            id=q.id,
+            game_id=q.game_id,
+            text=q.text,
+            tag=q.tag,
+            tag_auto=q.tag_auto,
+            status=q.status,
+            sort_order=q.sort_order,
+            edit_count=edit_count,
+            created_at=q.created_at,
+            updated_at=q.updated_at,
+        ))
+    return out
 
 
-@router.post("")
+@router.post("", response_model=schemas.QuestionCreateResponse)
 def create_question(game_id: int, payload: schemas.QuestionCreate, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
@@ -57,10 +57,10 @@ def create_question(game_id: int, payload: schemas.QuestionCreate, db: Session =
     db.add(q)
     db.commit()
     db.refresh(q)
-    return {"question_id": q.id, "tag": q.tag, "tag_auto": True}
+    return schemas.QuestionCreateResponse(question_id=q.id, tag=q.tag, tag_auto=True)
 
 
-@router.patch("/{qid}")
+@router.patch("/{qid}", response_model=schemas.QuestionPatchResponse)
 def patch_question(game_id: int, qid: int, payload: schemas.QuestionPatch, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
@@ -94,37 +94,30 @@ def patch_question(game_id: int, qid: int, payload: schemas.QuestionPatch, db: S
     q.tag_auto = new_tag_auto
     q.updated_at = utcnow()
     db.commit()
-    return {
-        "id": q.id,
-        "text": q.text,
-        "tag": q.tag,
-        "tag_auto": q.tag_auto,
-        "status": q.status,
-        "sort_order": q.sort_order,
-    }
+    return q
 
 
-@router.get("/{qid}/history")
+@router.get("/{qid}/history", response_model=list[schemas.QuestionHistoryItem])
 def question_history(game_id: int, qid: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     rows = db.query(models.ConnQuestionEdit, models.DiscordUser).outerjoin(
         models.DiscordUser, models.ConnQuestionEdit.edited_by == models.DiscordUser.discord_id
     ).filter(models.ConnQuestionEdit.question_id == qid).order_by(models.ConnQuestionEdit.edited_at).all()
     return [
-        {
-            "id": r.id,
-            "question_id": r.question_id,
-            "old_text": r.old_text,
-            "old_tag": r.old_tag,
-            "edited_by": r.edited_by,
-            "edited_by_name": (du.global_name or du.username) if du else r.edited_by,
-            "edited_at": serialize_datetime(r.edited_at),
-        }
+        schemas.QuestionHistoryItem(
+            id=r.id,
+            question_id=r.question_id,
+            old_text=r.old_text,
+            old_tag=r.old_tag,
+            edited_by=r.edited_by,
+            edited_by_name=(du.global_name or du.username) if du else r.edited_by,
+            edited_at=r.edited_at,
+        )
         for r, du in rows
     ]
 
 
-@router.post("/{qid}/graveyard")
+@router.post("/{qid}/graveyard", response_model=schemas.OkResponse)
 def graveyard_question(game_id: int, qid: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
@@ -132,10 +125,10 @@ def graveyard_question(game_id: int, qid: int, db: Session = Depends(get_db), us
     if q:
         q.status = "graveyard"
         db.commit()
-    return {"ok": True}
+    return schemas.OkResponse()
 
 
-@router.post("/{qid}/restore")
+@router.post("/{qid}/restore", response_model=schemas.OkResponse)
 def restore_question(game_id: int, qid: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
@@ -148,10 +141,10 @@ def restore_question(game_id: int, qid: int, db: Session = Depends(get_db), user
     if q.tag_auto:
         q.tag = classify_sentiment(q.text)
     db.commit()
-    return {"ok": True}
+    return schemas.OkResponse()
 
 
-@router.delete("/{qid}")
+@router.delete("/{qid}", response_model=schemas.OkResponse)
 def delete_question(game_id: int, qid: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
@@ -161,17 +154,14 @@ def delete_question(game_id: int, qid: int, db: Session = Depends(get_db), user:
             raise HTTPException(400, "Question must be archived before permanent deletion")
         db.delete(q)
         db.commit()
-    return {"ok": True}
+    return schemas.OkResponse()
 
 
-@router.post("/reorder")
+@router.post("/reorder", response_model=schemas.OkResponse)
 def reorder_questions(game_id: int, payload: schemas.ReorderRequest, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
     qids = payload.question_ids
-    # Validate: non-empty
-    if not qids:
-        raise HTTPException(400, "question_ids must not be empty")
     # Validate: no duplicates
     if len(qids) != len(set(qids)):
         raise HTTPException(400, "duplicate question_ids")
@@ -206,10 +196,10 @@ def reorder_questions(game_id: int, payload: schemas.ReorderRequest, db: Session
         if isinstance(e, IntegrityError):
             raise HTTPException(409, "concurrent reorder conflict") from e
         raise
-    return {"ok": True}
+    return schemas.OkResponse()
 
 
-@router.post("/recycle")
+@router.post("/recycle", response_model=schemas.RecycleResponse)
 def recycle_questions(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
@@ -229,10 +219,10 @@ def recycle_questions(game_id: int, db: Session = Depends(get_db), user: models.
         q.sort_order = sort_order
         sort_order += 1
     db.commit()
-    return {"recycled_count": len(used_qs)}
+    return schemas.RecycleResponse(recycled_count=len(used_qs))
 
 
-@router.post("/seed")
+@router.post("/seed", response_model=schemas.SeedResponse)
 def seed_questions(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
@@ -262,10 +252,10 @@ def seed_questions(game_id: int, db: Session = Depends(get_db), user: models.Dis
         inserted += 1
         existing_texts.add(text.lower().strip())
     db.commit()
-    return {"inserted": inserted, "total_bank": len(STARTER_QUESTIONS)}
+    return schemas.SeedResponse(inserted=inserted, total_bank=len(STARTER_QUESTIONS))
 
 
-@router.post("/import")
+@router.post("/import", response_model=schemas.ImportQuestionsResponse)
 def import_questions(game_id: int, payload: schemas.QuestionImport, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
@@ -280,11 +270,9 @@ def import_questions(game_id: int, payload: schemas.QuestionImport, db: Session 
     }
     inserted = 0
     skipped = 0
-    for raw in payload.questions:
-        text = raw.strip()
-        if not text or len(text) > 500:
-            skipped += 1
-            continue
+    # Note: payload.questions are already validated by Pydantic (strip, 1-500 chars)
+    # We still count duplicates as skipped to preserve existing behavior
+    for text in payload.questions:
         if text.lower() in existing_texts:
             skipped += 1
             continue
@@ -298,17 +286,14 @@ def import_questions(game_id: int, payload: schemas.QuestionImport, db: Session 
         inserted += 1
         existing_texts.add(text.lower())
     db.commit()
-    return {"inserted": inserted, "skipped": skipped}
+    return schemas.ImportQuestionsResponse(inserted=inserted, skipped=skipped)
 
 
-@router.get("/export")
+@router.get("/export", response_model=list[schemas.ExportQuestionItem])
 def export_questions(game_id: int, status: str = "all", db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     q = db.query(models.ConnQuestion).filter(models.ConnQuestion.game_id == game_id)
     if status != "all":
         q = q.filter(models.ConnQuestion.status == status)
     rows = q.order_by(models.ConnQuestion.sort_order).all()
-    return [
-        {"text": r.text, "tag": r.tag, "status": r.status, "sort_order": r.sort_order}
-        for r in rows
-    ]
+    return rows

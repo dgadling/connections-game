@@ -4,9 +4,9 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..db import get_db
 from ..auth import require_user, require_membership
-from ..timeutil import utcnow, serialize_datetime
+from ..timeutil import utcnow
 from ..pairing import generate_groups
-from .common import require_game_writable, validate_discord_id_optional
+from .common import require_game_writable
 
 router = APIRouter(prefix="/api/games/{game_id}/members", tags=["members"])
 
@@ -37,33 +37,21 @@ def regenerate_pairings(db: Session, game_id: int):
     db.commit()
 
 
-@router.get("")
+@router.get("", response_model=list[schemas.MemberListItem])
 def list_members(game_id: int, include_deleted: bool = False, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     q = db.query(models.GameMember).filter(models.GameMember.game_id == game_id)
     if not include_deleted:
         q = q.filter(models.GameMember.deleted_at.is_(None))
     rows = q.order_by(models.GameMember.sort_order).all()
-    return [
-        {
-            "id": m.id,
-            "game_id": m.game_id,
-            "name": m.name,
-            "discord_id": m.discord_id,
-            "sort_order": m.sort_order,
-            "created_at": serialize_datetime(m.created_at),
-            "deleted_at": serialize_datetime(m.deleted_at),
-        }
-        for m in rows
-    ]
+    return rows
 
 
-@router.post("")
+@router.post("", response_model=schemas.MemberResponse)
 def create_member(game_id: int, payload: schemas.MemberCreate, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
-    discord_id = validate_discord_id_optional(payload.discord_id)
-    m = models.GameMember(game_id=game_id, name=payload.name, discord_id=discord_id)
+    m = models.GameMember(game_id=game_id, name=payload.name, discord_id=payload.discord_id)
     db.add(m)
     try:
         db.commit()
@@ -72,10 +60,10 @@ def create_member(game_id: int, payload: schemas.MemberCreate, db: Session = Dep
         raise HTTPException(400, "Name or Discord ID already in use") from e
     db.refresh(m)
     regenerate_pairings(db, game_id)
-    return {"id": m.id, "name": m.name, "discord_id": m.discord_id, "game_id": m.game_id}
+    return m
 
 
-@router.patch("/{member_id}")
+@router.patch("/{member_id}", response_model=schemas.MemberResponse)
 def patch_member(game_id: int, member_id: int, payload: schemas.MemberPatch, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
@@ -85,18 +73,17 @@ def patch_member(game_id: int, member_id: int, payload: schemas.MemberPatch, db:
     if payload.name is not None:
         m.name = payload.name
     if "discord_id" in payload.model_dump(exclude_unset=True):
-        discord_id = validate_discord_id_optional(payload.discord_id)
-        m.discord_id = discord_id
+        m.discord_id = payload.discord_id
     try:
         db.commit()
     except Exception as e:
         db.rollback()
         raise HTTPException(400, "Name or Discord ID conflict") from e
     regenerate_pairings(db, game_id)
-    return {"id": m.id, "name": m.name, "discord_id": m.discord_id, "game_id": m.game_id}
+    return m
 
 
-@router.delete("/{member_id}")
+@router.delete("/{member_id}", response_model=schemas.OkResponse)
 def delete_member(game_id: int, member_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
@@ -106,10 +93,10 @@ def delete_member(game_id: int, member_id: int, db: Session = Depends(get_db), u
     m.deleted_at = utcnow()
     db.commit()
     regenerate_pairings(db, game_id)
-    return {"ok": True}
+    return schemas.OkResponse()
 
 
-@router.post("/{member_id}/restore")
+@router.post("/{member_id}/restore", response_model=schemas.MemberResponse)
 def restore_member(game_id: int, member_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_membership(game_id, user.discord_id, db)
     require_game_writable(game_id, db)
@@ -123,4 +110,4 @@ def restore_member(game_id: int, member_id: int, db: Session = Depends(get_db), 
         db.rollback()
         raise HTTPException(400, "Name conflict") from e
     regenerate_pairings(db, game_id)
-    return {"id": m.id, "name": m.name, "discord_id": m.discord_id, "game_id": m.game_id}
+    return m

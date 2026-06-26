@@ -20,20 +20,32 @@ def test_pairings_wrap_after_n_minus_1_rounds(db_session, game, test_user):
     games_module.require_membership = lambda *a, **k: test_user
     try:
         # Complete rounds 1-3
+        def _get_pairings(res):
+            # get_round now returns Pydantic model (issue #25); support both dict and model
+            if hasattr(res, 'pairings'):
+                return res.pairings
+            return res["pairings"]
+        def _get_round_num(res):
+            if hasattr(res, 'round_num'):
+                return res.round_num
+            return res["round_num"]
         for rnd in range(1, 4):
             result = get_round(game.id, db_session, test_user)
-            assert len(result["pairings"]) == 4, f"Round {rnd} should have 4 pairings"
+            pairings = _get_pairings(result)
+            assert len(pairings) == 4, f"Round {rnd} should have 4 pairings"
             complete_round(game.id, db_session, test_user)
 
         # Round 4 - should wrap (4 players = 3 groups, round 4 = group 0)
         result = get_round(game.id, db_session, test_user)
-        assert result["round_num"] == 4
-        assert len(result["pairings"]) == 4, f"Round 4 should wrap and have 4 pairings, got {len(result['pairings'])}"
+        assert _get_round_num(result) == 4
+        pairings = _get_pairings(result)
+        assert len(pairings) == 4, f"Round 4 should wrap and have 4 pairings, got {len(pairings)}"
 
         # Round 5 - should also wrap
         complete_round(game.id, db_session, test_user)
         result = get_round(game.id, db_session, test_user)
-        assert result["round_num"] == 5
-        assert len(result["pairings"]) == 4, "Round 5 should wrap and have 4 pairings"
+        assert _get_round_num(result) == 5
+        pairings = _get_pairings(result)
+        assert len(pairings) == 4, "Round 5 should wrap and have 4 pairings"
     finally:
         games_module.require_membership = orig_req
