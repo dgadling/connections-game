@@ -383,7 +383,10 @@ function RoundTab({ gameId, game, archived }) {
     if (game?.discord_role_id) {
       lines.push(`<@&${game.discord_role_id}>`)
     }
-    lines.push(`🤝 Connections — ${dateStr}`, '', `> ${data.question?.text || '(no question)'}`, '')
+    const qTag = data.question?.tag
+    const qEmoji = TAG_ICONS[qTag] || ''
+    const qText = data.question?.text || '(no question)'
+    lines.push(`🤝 Connections — ${dateStr}`, '', `> ${qEmoji}${qText}`, '')
     arr(data.pairings).forEach(p => {
       const asker = formatDiscordMention(p.asker_discord_id, p.asker_name)
       const target = formatDiscordMention(p.target_discord_id, p.target_name)
@@ -939,7 +942,9 @@ function HistoryTab({ gameId, game }) {
     if (game?.discord_role_id) {
       lines.push(`<@&${game.discord_role_id}>`)
     }
-    lines.push(`🤝 Connections${dateStr ? ' — ' + dateStr : ''}`, '', `> ${r.question_text || '(no question)'}`, '')
+    const qEmoji = TAG_ICONS[r.question_tag] || ''
+    const qText = r.question_text || '(no question)'
+    lines.push(`🤝 Connections${dateStr ? ' — ' + dateStr : ''}`, '', `> ${qEmoji}${qText}`, '')
     arr(r.pairings).forEach(p => {
       const asker = formatDiscordMention(p.asker_discord_id, p.asker_name)
       const target = formatDiscordMention(p.target_discord_id, p.target_name)
