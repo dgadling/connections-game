@@ -26,6 +26,12 @@ jobs:
       - name: Ruff lint
         run: ruff check .
       - name: Pytest
+        env:
+          DISCORD_CLIENT_ID: test_client_id
+          DISCORD_CLIENT_SECRET: test_secret_32_chars_min_xxx
+          DISCORD_REDIRECT_URI: http://localhost/test
+          DISCORD_OAUTH_FERNET_KEY: apzkrYXo_4Dsr3gK8IXnormnjtG3C3Xw3CL-Jzl84Os=
+          SUPERUSER_DISCORD_ID: "123456789"
         run: pytest -v
 
   frontend:

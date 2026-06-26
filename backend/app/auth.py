@@ -100,6 +100,11 @@ def create_session(db: Session, discord_id: str) -> str:
     db.commit()
     return token
 
+DISCORD_CLIENT_ID = os.environ["DISCORD_CLIENT_ID"]
+DISCORD_CLIENT_SECRET = os.environ["DISCORD_CLIENT_SECRET"]
+REDIRECT_URI = os.environ["DISCORD_REDIRECT_URI"]
+
+
 def generate_csrf_token(session_token: str) -> str:
     """Generate CSRF token bound to session via HMAC.
 
@@ -114,17 +119,6 @@ def generate_csrf_token(session_token: str) -> str:
     if not secret:
         raise RuntimeError("DISCORD_CLIENT_SECRET must be set (used for CSRF HMAC)")
     return hmac.new(secret, session_token.encode(), hashlib.sha256).hexdigest()
-
-DISCORD_CLIENT_ID = os.environ.get("DISCORD_CLIENT_ID", "1519114145864356001")
-DISCORD_CLIENT_SECRET = os.environ.get("DISCORD_CLIENT_SECRET", "")
-if not DISCORD_CLIENT_SECRET:
-    try:
-        with open(os.path.expanduser("~/workspace/.auth/discord_oauth_client_secret"), "r") as f:
-            DISCORD_CLIENT_SECRET = f.read().strip()
-    except Exception:
-        pass
-
-REDIRECT_URI = os.environ.get("DISCORD_REDIRECT_URI", "https://connections-285405137493.us-central1.run.app/auth/discord/callback")
 
 def discord_oauth_url(state: str, prompt_none: bool = True) -> str:
     from urllib.parse import urlencode
