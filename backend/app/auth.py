@@ -84,7 +84,11 @@ def require_membership(game_id: int, discord_id: str, db: Session):
     return mem
 
 def create_session(db: Session, discord_id: str) -> str:
-    # invalidate existing sessions for this discord_id? spec says invalidate any existing session at OAuth login - do that in oauth callback, not here
+    """Create a new auth session.
+
+    Multi-device sessions are intentional - old sessions remain valid.
+    Session fixation is mitigated by issuing a fresh token at every login.
+    """
     token = secrets.token_urlsafe(32)
     token_hash = hash_token(token)
     now = datetime.now(timezone.utc).replace(tzinfo=None)

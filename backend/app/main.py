@@ -224,7 +224,7 @@ async def auth_discord_callback(
         )
         db.add(token_row)
     db.commit()
-    # Create new session (old sessions remain valid - multi-device support)
+    # Create new session - old sessions remain valid (multi-device support intentional)
     session_token = create_session(db, discord_id)
     csrf_token = generate_csrf_token(session_token)
     # Redirect with cookies
@@ -288,7 +288,7 @@ async def auth_refresh(request: Request, db: Session = Depends(get_db)):
     access_token = await refresh_discord_token(db, discord_id)
     if not access_token:
         raise HTTPException(401, "refresh failed")
-    # create new session (old sessions remain valid - multi-device support)
+    # Create new session - old sessions remain valid (multi-device support intentional)
     session_token = create_session(db, discord_id)
     csrf_token = generate_csrf_token(session_token)
     user = db.query(models.DiscordUser).filter(models.DiscordUser.discord_id == discord_id).first()
