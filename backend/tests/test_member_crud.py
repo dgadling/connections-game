@@ -58,6 +58,11 @@ def test_member_discord_username_accepted(client, game):
     r = client.post(f"/api/games/{game.id}/members", json={"name": "Bad3", "discord_id": "x" * 33})  # too long
     assert r.status_code == 400
 
+    # Issue #16: leading/trailing ./_ and consecutive dots must be rejected
+    for bad_id in [".abc", "_abc", "abc.", "abc_", "a..b", ".a.", "_a_"]:
+        r = client.post(f"/api/games/{game.id}/members", json={"name": "Bad", "discord_id": bad_id})
+        assert r.status_code == 400, f"{bad_id} should be rejected"
+
 
 def test_member_discord_id_optional(client, game):
     """GameMember.discord_id is optional (issue #17)"""
