@@ -24,6 +24,9 @@ class AuthSession(Base):
     expires_at = Column(TIMESTAMP, nullable=False)
     absolute_expires_at = Column(TIMESTAMP, nullable=False)
     last_used_at = Column(TIMESTAMP, default=now, nullable=False)
+    __table_args__ = (
+        Index("ix_auth_sessions_expires_at", "expires_at"),
+    )
 
 class OAuthState(Base):
     __tablename__ = "oauth_states"
@@ -32,6 +35,9 @@ class OAuthState(Base):
     created_at = Column(TIMESTAMP, default=now, nullable=False)
     expires_at = Column(TIMESTAMP, nullable=False)
     used_silent_auth = Column(Boolean, default=False, nullable=False)
+    __table_args__ = (
+        Index("ix_oauth_states_expires_at", "expires_at"),
+    )
 
 class Game(Base):
     __tablename__ = "games"
@@ -128,6 +134,7 @@ class ConnPlay(Base):
     played_by = Column(String, ForeignKey("discord_users.discord_id"), nullable=False)
     __table_args__ = (
         UniqueConstraint("game_id", "round_num", name="uq_play_round"),
+        Index("ix_conn_plays_played_at", "played_at"),
     )
 
 class ConnState(Base):
