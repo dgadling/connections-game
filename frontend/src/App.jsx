@@ -1,21 +1,34 @@
 import { useEffect, useState, useRef, useCallback, Component } from 'react'
+import toast from 'react-hot-toast'
 
 function csrf() {
   return document.cookie.split('; ').find(c => c.startsWith('csrf_token='))?.split('=')[1] || ''
 }
 
+function toastErr(e) {
+  const msg = e?.message || String(e || 'Request failed')
+  toast.error(msg)
+  // also log for debugging
+  console.error(e)
+}
+
 async function api(path, opts={}) {
   const headers = { ...(opts.headers||{}) }
   if (opts.method && opts.method !== 'GET') headers['X-CSRF-Token'] = csrf()
-  const r = await fetch(path, { credentials: 'include', ...opts, headers })
+  let r
+  try {
+    r = await fetch(path, { credentials: 'include', ...opts, headers })
+  } catch (e) {
+    throw new Error('Network error – check your connection')
+  }
   if (r.status === 401 && !path.startsWith('/auth/')) {
     // session expired - force re-auth (but not for /auth/* endpoints where 401 means "not logged in")
     window.location.href = '/'
-    throw new Error('401 Unauthorized - redirecting to login')
+    throw new Error('Session expired – redirecting to login')
   }
   if (!r.ok) {
     const txt = await r.text().catch(()=>'')
-    throw new Error(`${r.status} ${txt}`)
+    throw new Error(txt || `Request failed (${r.status})`)
   }
   const ct = r.headers.get('content-type') || ''
   if (ct.includes('json')) return await r.json()
@@ -100,28 +113,33 @@ function TagPicker({ tag, onChange, disabled }) {
 class ErrorBoundary extends Component {
   constructor(p){ super(p); this.state = { err: null } }
   static getDerivedStateFromError(err){ return { err } }
-  componentDidCatch(err, info){ console.error('💥 React crash:', err, info.componentStack) }
+  componentDidCatch(err, info){ console.error('💥 React crash:', err, info.componentStack); toast.error('Something crashed – see details below') }
   render(){
     if (this.state.err) {
-      return <div className="p-4 bg-red-50 border border-red-300 rounded-xl text-sm">
-        <div className="font-bold text-red-800 mb-2">Render crash caught</div>
-        <pre className="whitespace-pre-wrap text-xs">{String(this.state.err.stack || this.state.err)}</pre>
-        <button type="button" onClick={()=>this.setState({err:null})} className="mt-2 px-2 py-1 border rounded text-xs">Retry</button>
+      return <div className="p-4 bg-red-50 border border-red-300 rounded-xl text-sm max-w-2xl mx-auto my-8">
+        <div className="font-bold text-red-800 mb-2">Something went wrong</div>
+        <pre className="whitespace-pre-wrap text-xs text-red-900/80">{String(this.state.err.message || this.state.err)}</pre>
+        <div className="flex gap-2 mt-3">
+          <button type="button" onClick={()=>this.setState({err:null})} className="px-3 py-1.5 bg-white border border-red-300 rounded text-xs hover:bg-red-50">Try again</button>
+          <button type="button" onClick={()=>window.location.reload()} className="px-3 py-1.5 bg-red-600 text-white rounded text-xs hover:bg-red-700">Reload page</button>
+        </div>
       </div>
     }
     return this.props.children
   }
 }
+export { ErrorBoundary }
 
 export default function App() {
   const [user, setUser] = useState(undefined)
   const [games, setGames] = useState([])
+  const [gamesLoading, setGamesLoading] = useState(false)
   const [game, setGame] = useState(null)
   const [tab, setTab] = useState('ask')
   const [signingIn, setSigningIn] = useState(false)
 
   const doLogout = async () => {
-    try { await api('/auth/logout', { method: 'POST' }) } catch(e) { /* ignore */ }
+    try { await api('/auth/logout', { method: 'POST' }) } catch(e) { toastErr(e) }
     setUser(null); setGame(null)
   }
 
@@ -147,9 +165,18 @@ export default function App() {
     })
   }, [])
 
-  const loadGames = useCallback(() => {
+  const loadGames = useCallback(async () => {
     if (!user) return
-    api('/api/games').then(d => setGames(arr(d))).catch(()=>setGames([]))
+    setGamesLoading(true)
+    try {
+      const d = await api('/api/games')
+      setGames(arr(d))
+    } catch (e) {
+      toastErr(e)
+      setGames([])
+    } finally {
+      setGamesLoading(false)
+    }
   }, [user])
   useEffect(() => { loadGames() }, [loadGames])
 
@@ -168,18 +195,22 @@ export default function App() {
     // Clear the URL immediately to prevent double-join on refresh
     const cleanUrl = window.location.pathname
     window.history.replaceState({}, '', cleanUrl)
-    api('/api/games/join', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ invite_token: inviteToken })
-    }).then(res => {
-      // Refresh game list, then navigate to joined game
-      loadGames()
-      setGame({ id: res.game_id, name: res.name || '', archived_at: res.archived_at || null })
-    }).catch(e => {
-      alert('Invite join failed: ' + e.message)
-      loadGames()
-    })
+    ;(async () => {
+      try {
+        const res = await api('/api/games/join', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ invite_token: inviteToken })
+        })
+        // Refresh game list, then navigate to joined game
+        await loadGames()
+        setGame({ id: res.game_id, name: res.name || '', archived_at: res.archived_at || null })
+        toast.success('Joined game!')
+      } catch (e) {
+        toastErr(e)
+        loadGames()
+      }
+    })()
   }, [user, loadGames])
 
   if (user === undefined) return (
@@ -215,18 +246,19 @@ export default function App() {
                   window.location = auth_url
                 } catch (e) {
                   setSigningIn(false)
-                  alert('Sign-in failed: ' + e.message)
+                  toastErr(e)
                 }
               }}
-              className="w-full px-4 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium shadow-sm"
-            >Sign in with Discord</button>
+              disabled={signingIn}
+              className="w-full px-4 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium shadow-sm disabled:opacity-60"
+            >{signingIn ? 'Signing in…' : 'Sign in with Discord'}</button>
           </>
         )}
       </div>
     </div>
   )
 
-  if (!game) return <GameList user={user} games={games} setGame={setGame} onRefresh={loadGames} onLogout={doLogout} />
+  if (!game) return <GameList user={user} games={games} gamesLoading={gamesLoading} setGame={setGame} onRefresh={loadGames} onLogout={doLogout} />
 
   const tabs = [
     ['ask','Ask', '💬'],
@@ -284,24 +316,34 @@ export default function App() {
   )
 }
 
-function GameList({ user, games, setGame, onRefresh, onLogout }) {
+function GameList({ user, games, gamesLoading, setGame, onRefresh, onLogout }) {
   const [name, setName] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [openingId, setOpeningId] = useState(null)
   const createGame = async () => {
-    if (!name.trim()) return
-    const g = await api('/api/games', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: name.trim()})})
-    setName(''); onRefresh()
-    setGame({id: g.id, name: g.name, archived_at: g.archived_at})
+    if (!name.trim() || creating) return
+    setCreating(true)
+    try {
+      const g = await api('/api/games', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: name.trim()})})
+      setName(''); await onRefresh()
+      setGame({id: g.id, name: g.name, archived_at: g.archived_at})
+      toast.success('Game created')
+    } catch (e) { toastErr(e) } finally { setCreating(false) }
   }
   // Fetch fresh game details before navigating – prevents stale archived_at
   const openGame = async (gameId) => {
+    if (openingId) return
+    setOpeningId(gameId)
     try {
       const g = await api(`/api/games/${gameId}`)
       setGame({ id: g.id, name: g.name, archived_at: g.archived_at })
     } catch (e) {
+      toastErr(e)
       // Fall back to list data if fetch fails
       const fallback = arr(games).find(x => x.id === gameId)
       if (fallback) setGame({ id: fallback.id, name: fallback.name, archived_at: fallback.archived_at })
-      else alert('Failed to open game: ' + e.message)
+    } finally {
+      setOpeningId(null)
     }
   }
   return (
@@ -322,23 +364,28 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
       </header>
       <main className="max-w-3xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-2 px-1">
-          <div className="text-sm text-neutral-600">{arr(games).filter(g=>!g.archived_at).length} active game{arr(games).filter(g=>!g.archived_at).length===1?"":"s"}</div>
+          <div className="text-sm text-neutral-600">{gamesLoading ? 'Loading…' : `${arr(games).filter(g=>!g.archived_at).length} active game${arr(games).filter(g=>!g.archived_at).length===1?"":"s"}`}</div>
         </div>
         <div className="space-y-2 mb-6">
           {arr(games).filter(g=>!g.archived_at).map(g => (
-            <button type="button" key={g.id} onClick={()=>openGame(g.id)}
-              className="w-full text-left bg-white rounded-xl shadow-sm border border-neutral-200 p-4 hover:border-indigo-300 transition-colors">
-              <div className="font-medium">{g.name}</div>
+            <button type="button" key={g.id} onClick={()=>openGame(g.id)} disabled={!!openingId}
+              className="w-full text-left bg-white rounded-xl shadow-sm border border-neutral-200 p-4 hover:border-indigo-300 transition-colors disabled:opacity-60">
+              <div className="font-medium">{g.name}{openingId===g.id ? ' …' : ''}</div>
             </button>
           ))}
-          {arr(games).filter(g=>!g.archived_at).length===0 && <div className="text-neutral-500 text-sm bg-white rounded-xl shadow-sm border border-neutral-200 p-4">No active games — create one below, or follow an invite link to join.</div>}
+          {!gamesLoading && arr(games).filter(g=>!g.archived_at).length===0 && <div className="text-neutral-500 text-sm bg-white rounded-xl shadow-sm border border-neutral-200 p-4">No active games — create one below, or follow an invite link to join.</div>}
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5 mb-5">
           <div className="font-semibold mb-2">New game</div>
           <div className="flex gap-2">
-            <input value={name} onChange={e=>setName(e.target.value)} placeholder="Campaign name…" className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" onKeyDown={e=>e.key==='Enter'&&createGame()} />
-            <button type="button" onClick={createGame} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 whitespace-nowrap">Create</button>
+            <input value={name} onChange={e=>setName(e.target.value)} placeholder="Campaign name…" disabled={creating}
+              className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-neutral-50"
+              onKeyDown={e=>e.key==='Enter'&&createGame()} />
+            <button type="button" onClick={createGame} disabled={creating || !name.trim()}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 whitespace-nowrap disabled:opacity-60">
+              {creating ? 'Creating…' : 'Create'}
+            </button>
           </div>
         </div>
 
@@ -347,9 +394,9 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
             <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mt-6 mb-2 px-1">Archived</div>
             <div className="space-y-2">
               {arr(games).filter(g=>g.archived_at).map(g => (
-                <button type="button" key={g.id} onClick={()=>openGame(g.id)}
-                  className="w-full text-left bg-white rounded-xl shadow-sm border border-neutral-200 p-4 hover:border-neutral-300 transition-colors opacity-75">
-                  <div className="font-medium text-neutral-700">{g.name}</div>
+                <button type="button" key={g.id} onClick={()=>openGame(g.id)} disabled={!!openingId}
+                  className="w-full text-left bg-white rounded-xl shadow-sm border border-neutral-200 p-4 hover:border-neutral-300 transition-colors opacity-75 disabled:opacity-40">
+                  <div className="font-medium text-neutral-700">{g.name}{openingId===g.id ? ' …' : ''}</div>
                 </button>
               ))}
             </div>
@@ -363,10 +410,31 @@ function GameList({ user, games, setGame, onRefresh, onLogout }) {
 // --- Round Tab ---
 function RoundTab({ gameId, game, archived }) {
   const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [completing, setCompleting] = useState(false)
   const [copied, setCopied] = useState(false)
-  const load = useCallback(() => api(`/api/games/${gameId}/round`).then(setData).catch(()=>setData(null)), [gameId])
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const d = await api(`/api/games/${gameId}/round`)
+      setData(d)
+    } catch (e) {
+      toastErr(e)
+      setData(null)
+    } finally {
+      setLoading(false)
+    }
+  }, [gameId])
   useEffect(() => { load() }, [load])
-  const complete = async () => { await api(`/api/games/${gameId}/round/complete`, {method:'POST'}); load() }
+  const complete = async () => {
+    if (completing) return
+    setCompleting(true)
+    try {
+      await api(`/api/games/${gameId}/round/complete`, {method:'POST'})
+      toast.success('Round marked complete')
+      await load()
+    } catch (e) { toastErr(e) } finally { setCompleting(false) }
+  }
 
   const formatDiscordMention = (id, name) => {
     // Role mode: suppress individual mentions, use plain name
@@ -392,11 +460,12 @@ function RoundTab({ gameId, game, archived }) {
       const target = formatDiscordMention(p.target_discord_id, p.target_name)
       lines.push(`• ${asker} answers about ${target}`)
     })
-    navigator.clipboard.writeText(lines.join('\n'))
+    navigator.clipboard.writeText(lines.join('\n')).then(()=>toast.success('Copied to clipboard')).catch(()=>toastErr(new Error('Copy failed')))
     setCopied(true); setTimeout(()=>setCopied(false), 1500)
   }
 
-  if (!data) return <div className="text-neutral-500">Loading…</div>
+  if (loading) return <div className="text-neutral-500">Loading…</div>
+  if (!data) return <div className="bg-white rounded-xl shadow-sm border border-red-200 p-4 text-sm text-red-700">Failed to load round. <button type="button" onClick={load} className="underline">Retry</button></div>
 
   const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
@@ -428,29 +497,37 @@ function RoundTab({ gameId, game, archived }) {
           {arr(data.pairings).length === 0 && <div className="text-sm text-neutral-500">No pairings yet — add 3+ members.</div>}
         </div>
         {Boolean(data.question && arr(data.pairings).length > 0 && !archived) && (
-          <button type="button" onClick={complete} className="mt-4 w-full sm:w-auto px-4 py-2.5 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700">Mark round complete</button>
+          <button type="button" onClick={complete} disabled={completing}
+            className="mt-4 w-full sm:w-auto px-4 py-2.5 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 disabled:opacity-60">
+            {completing ? 'Saving…' : 'Mark round complete'}
+          </button>
         )}
       </div>
     </div>
   )
 }
 
-function QuestionItem({ q, idx, status, editing, editText, setEditText, onSaveEdit, onCancelEdit, onSetTag, onRevertTag, onEditStart, onOpenHistory, onGraveyard, onRestore, onDelete, dragIdx, onDragStart, onDragOver, onDragEnd, onGripTouch }) {
+function QuestionItem({ q, idx, status, editing, editText, setEditText, onSaveEdit, onCancelEdit, onSetTag, onRevertTag, onEditStart, onOpenHistory, onGraveyard, onRestore, onDelete, dragIdx, onDragStart, onDragOver, onDragEnd, onGripTouch, saving }) {
   const isDragging = dragIdx === idx
   return (
     <div
       data-q-idx={idx}
-      draggable={status === 'upcoming' && editing !== q.id}
+      draggable={status === 'upcoming' && editing !== q.id && !saving}
       onDragStart={status === 'upcoming' ? onDragStart(idx) : undefined}
       onDragOver={status === 'upcoming' ? onDragOver(idx) : undefined}
       onDragEnd={onDragEnd}
       className={`bg-white rounded-lg shadow-sm border border-neutral-200 px-3 py-2.5 transition-all ${isDragging ? 'opacity-40' : ''}`}>
       {editing === q.id ? (
         <div className="flex flex-col sm:flex-row gap-2">
-          <input value={editText} onChange={e=>setEditText(e.target.value)} maxLength={500} placeholder="Edit question…" className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" autoFocus />
+          <input value={editText} onChange={e=>setEditText(e.target.value)} maxLength={500} placeholder="Edit question…" disabled={saving}
+            className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-neutral-50" autoFocus />
           <div className="flex gap-2">
-            <button type="button" onClick={()=>onSaveEdit(q)} className="flex-1 sm:flex-initial px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Save</button>
-            <button type="button" onClick={onCancelEdit} className="flex-1 sm:flex-initial px-3 py-2 border border-neutral-300 rounded-lg text-sm">Cancel</button>
+            <button type="button" onClick={()=>onSaveEdit(q)} disabled={saving}
+              className="flex-1 sm:flex-initial px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium disabled:opacity-60">
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button type="button" onClick={onCancelEdit} disabled={saving}
+              className="flex-1 sm:flex-initial px-3 py-2 border border-neutral-300 rounded-lg text-sm disabled:opacity-60">Cancel</button>
           </div>
         </div>
       ) : (
@@ -463,22 +540,22 @@ function QuestionItem({ q, idx, status, editing, editText, setEditText, onSaveEd
               title="Drag to reorder">⋮⋮</span>
           ) : null}
           {status==='upcoming' ? (
-            <TagPicker tag={q.tag} onChange={tag => onSetTag(q, tag)} />
+            <TagPicker tag={q.tag} onChange={tag => onSetTag(q, tag)} disabled={saving} />
           ) : null}
           {status!=='upcoming' ? (
             <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[14px] shrink-0 ${TAG_COLORS[q.tag]||'bg-neutral-100 text-neutral-700'}`} title={q.tag}>
               {TAG_ICONS[q.tag] || '•'}
             </span>
           ) : null}
-          {!q.tag_auto ? <button type="button" onClick={()=>onRevertTag(q)} title="Revert to auto" className="text-[10px] text-neutral-400 hover:text-neutral-600 shrink-0 pt-0.5">↺</button> : null}
+          {!q.tag_auto ? <button type="button" onClick={()=>onRevertTag(q)} disabled={saving} title="Revert to auto" className="text-[10px] text-neutral-400 hover:text-neutral-600 shrink-0 pt-0.5 disabled:opacity-50">↺</button> : null}
           <span className="flex-1 text-[14px] leading-snug text-neutral-900 min-w-0">{q.text}</span>
           <div className="flex items-start gap-3 text-[13px] text-neutral-500 shrink-0 pl-2 pt-0.5">
-            <button type="button" onClick={()=>onEditStart(q)} className="hover:text-neutral-900" title="Edit">✏️</button>
-            {q.edit_count > 0 ? <button type="button" onClick={()=>onOpenHistory(q)} className="hover:text-neutral-900" title="History">🕓</button> : null}
-            {(status==='upcoming' || status==='used') ? <button type="button" onClick={()=>onGraveyard(q)} className="hover:text-neutral-900" title="Graveyard">💀</button> : null}
+            <button type="button" onClick={()=>onEditStart(q)} disabled={saving} className="hover:text-neutral-900 disabled:opacity-50" title="Edit">✏️</button>
+            {q.edit_count > 0 ? <button type="button" onClick={()=>onOpenHistory(q)} disabled={saving} className="hover:text-neutral-900 disabled:opacity-50" title="History">🕓</button> : null}
+            {(status==='upcoming' || status==='used') ? <button type="button" onClick={()=>onGraveyard(q)} disabled={saving} className="hover:text-neutral-900 disabled:opacity-50" title="Graveyard">💀</button> : null}
             {status==='graveyard' ? <>
-              <button type="button" onClick={()=>onRestore(q)} className="hover:text-neutral-900" title="Restore">♻️</button>
-              <button type="button" onClick={()=>onDelete(q)} className="hover:text-red-600" title="Delete permanently">✕</button>
+              <button type="button" onClick={()=>onRestore(q)} disabled={saving} className="hover:text-neutral-900 disabled:opacity-50" title="Restore">♻️</button>
+              <button type="button" onClick={()=>onDelete(q)} disabled={saving} className="hover:text-red-600 disabled:opacity-50" title="Delete permanently">✕</button>
             </> : null}
           </div>
         </div>
@@ -491,9 +568,12 @@ function QuestionItem({ q, idx, status, editing, editText, setEditText, onSaveEd
 function QuestionsTab({ gameId, archived }) {
   const [status, setStatus] = useState('upcoming')
   const [qs, setQs] = useState([])
+  const [loading, setLoading] = useState(true)
   const [newText, setNewText] = useState('')
+  const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState(null)
   const [editText, setEditText] = useState('')
+  const [savingId, setSavingId] = useState(null)
   const [historyQ, setHistoryQ] = useState(null)
   const [history, setHistory] = useState([])
   const [showImport, setShowImport] = useState(false)
@@ -501,42 +581,67 @@ function QuestionsTab({ gameId, archived }) {
   const [busy, setBusy] = useState(false)
   const [usedCount, setUsedCount] = useState(0)
 
-  const load = useCallback(() => api(`/api/games/${gameId}/questions?status=${status}`).then(d => { const a = arr(d); setQs(a); if (status === 'upcoming') { if (a.length === 0) { api(`/api/games/${gameId}/questions?status=used`).then(u => setUsedCount(arr(u).length)).catch(()=>setUsedCount(0)) } else { setUsedCount(0) } } }).catch(e => { console.error('questions load failed', e); setQs([]) }), [gameId, status])
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const d = await api(`/api/games/${gameId}/questions?status=${status}`)
+      const a = arr(d); setQs(a)
+      if (status === 'upcoming') {
+        if (a.length === 0) {
+          try {
+            const u = await api(`/api/games/${gameId}/questions?status=used`)
+            setUsedCount(arr(u).length)
+          } catch { setUsedCount(0) }
+        } else { setUsedCount(0) }
+      }
+    } catch (e) {
+      toastErr(e); setQs([])
+    } finally {
+      setLoading(false)
+    }
+  }, [gameId, status])
   useEffect(() => { load() }, [load])
 
   const addQuestion = async () => {
-    if (!newText.trim()) return
-    await api(`/api/games/${gameId}/questions`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text: newText.trim()})})
-    setNewText('')
-    load()
+    if (!newText.trim() || adding) return
+    setAdding(true)
+    try {
+      await api(`/api/games/${gameId}/questions`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text: newText.trim()})})
+      setNewText('')
+      toast.success('Question added')
+      load()
+    } catch (e) { toastErr(e) } finally { setAdding(false) }
   }
 
-  const setTag = async (q, tag) => {
-    await api(`/api/games/${gameId}/questions/${q.id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({tag, tag_auto: false})})
-    load()
+  const wrapSaving = async (id, fn) => {
+    setSavingId(id)
+    try { await fn(); await load() } catch (e) { toastErr(e) } finally { setSavingId(null) }
   }
 
-  const revertTag = async (q) => {
-    await api(`/api/games/${gameId}/questions/${q.id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({tag_auto: true})})
-    load()
-  }
+  const setTag = async (q, tag) => wrapSaving(q.id, () => api(`/api/games/${gameId}/questions/${q.id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({tag, tag_auto: false})}))
+
+  const revertTag = async (q) => wrapSaving(q.id, () => api(`/api/games/${gameId}/questions/${q.id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({tag_auto: true})}))
 
   const saveEdit = async (q) => {
-    await api(`/api/games/${gameId}/questions/${q.id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text: editText})})
-    setEditing(null)
-    load()
+    setSavingId(q.id)
+    try {
+      await api(`/api/games/${gameId}/questions/${q.id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text: editText})})
+      setEditing(null)
+      toast.success('Saved')
+      await load()
+    } catch (e) { toastErr(e) } finally { setSavingId(null) }
   }
 
   const openHistory = async (q) => {
     try {
       const h = await api(`/api/games/${gameId}/questions/${q.id}/history`)
       setHistory(arr(h)); setHistoryQ(q)
-    } catch(e) { setHistory([]); setHistoryQ(q) }
+    } catch(e) { toastErr(e); setHistory([]); setHistoryQ(q) }
   }
 
-  const graveyard = async (q) => { await api(`/api/games/${gameId}/questions/${q.id}/graveyard`, {method:'POST'}); load() }
-  const restore = async (q) => { await api(`/api/games/${gameId}/questions/${q.id}/restore`, {method:'POST'}); load() }
-  const del = async (q) => { if (!confirm('Delete permanently?')) return; await api(`/api/games/${gameId}/questions/${q.id}`, {method:'DELETE'}); load() }
+  const graveyard = async (q) => wrapSaving(q.id, () => api(`/api/games/${gameId}/questions/${q.id}/graveyard`, {method:'POST'}))
+  const restore = async (q) => wrapSaving(q.id, () => api(`/api/games/${gameId}/questions/${q.id}/restore`, {method:'POST'}))
+  const del = async (q) => { if (!confirm('Delete permanently?')) return; await wrapSaving(q.id, () => api(`/api/games/${gameId}/questions/${q.id}`, {method:'DELETE'})) }
 
   // drag reorder – native HTML5 + touch, ported from Corvessa Space
   const [dragIdx, setDragIdx] = useState(null)
@@ -551,8 +656,10 @@ function QuestionsTab({ gameId, archived }) {
     const [moved] = ids.splice(fromIdx, 1)
     const adj = toIdx > fromIdx ? toIdx - 1 : toIdx
     ids.splice(adj, 0, moved)
-    await api(`/api/games/${gameId}/questions/reorder`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({question_ids: ids})})
-    load()
+    try {
+      await api(`/api/games/${gameId}/questions/reorder`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({question_ids: ids})})
+      await load()
+    } catch (e) { toastErr(e) }
   }
 
   const onDragStart = (idx) => (e) => {
@@ -631,8 +738,12 @@ function QuestionsTab({ gameId, archived }) {
       }
     }
     const question_ids = shuffled.map(q => q.id)
-    await api(`/api/games/${gameId}/questions/reorder`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({question_ids})})
-    load()
+    setBusy(true)
+    try {
+      await api(`/api/games/${gameId}/questions/reorder`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({question_ids})})
+      toast.success('Shuffled')
+      await load()
+    } catch (e) { toastErr(e) } finally { setBusy(false) }
   }
 
   const seedQuestions = async () => {
@@ -640,21 +751,21 @@ function QuestionsTab({ gameId, archived }) {
     setBusy(true)
     try {
       const r = await api(`/api/games/${gameId}/questions/seed`, {method:'POST'})
-      alert(`Added ${r.inserted} questions.` + (r.inserted === 0 ? ' (all already present)' : ''))
+      toast.success(`Added ${r.inserted} questions` + (r.inserted === 0 ? ' (all already present)' : ''))
       load()
-    } catch(e) { alert('Seed failed: ' + e.message) }
+    } catch(e) { toastErr(e) }
     finally { setBusy(false) }
   }
 
   const doImport = async () => {
     const lines = importText.split('\n').map(s => s.trim()).filter(Boolean)
-    if (lines.length === 0) { alert('Paste at least one question (one per line).'); return }
+    if (lines.length === 0) { toast.error('Paste at least one question (one per line).'); return }
     setBusy(true)
     try {
       const r = await api(`/api/games/${gameId}/questions/import`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({questions: lines})})
-      alert(`Imported ${r.inserted} questions` + (r.skipped ? `, ${r.skipped} skipped (duplicate / too long / empty)` : ''))
+      toast.success(`Imported ${r.inserted} questions` + (r.skipped ? `, ${r.skipped} skipped` : ''))
       setImportText(''); setShowImport(false); load()
-    } catch(e) { alert('Import failed: ' + e.message) }
+    } catch(e) { toastErr(e) }
     finally { setBusy(false) }
   }
 
@@ -666,16 +777,18 @@ function QuestionsTab({ gameId, archived }) {
       const a = document.createElement('a')
       a.href = url; a.download = `connections-questions-${status}-${new Date().toISOString().slice(0,10)}.json`
       a.click(); URL.revokeObjectURL(url)
-    } catch(e) { alert('Export failed: ' + e.message) }
+      toast.success('Exported')
+    } catch(e) { toastErr(e) }
   }
 
   const recycleQuestions = async () => {
     setBusy(true)
     try {
       const r = await api(`/api/games/${gameId}/questions/recycle`, {method:'POST'})
-      if (r.recycled_count === 0) { alert('No used questions to recycle.'); return }
+      if (r.recycled_count === 0) { toast('No used questions to recycle.'); return }
+      toast.success(`Recycled ${r.recycled_count} questions`)
       load()
-    } catch(e) { alert('Recycle failed: ' + e.message) }
+    } catch(e) { toastErr(e) }
     finally { setBusy(false) }
   }
 
@@ -685,36 +798,39 @@ function QuestionsTab({ gameId, archived }) {
       <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-3 sm:p-4">
         <div className="flex items-center gap-4 border-b border-neutral-200 pb-3 mb-3">
           {['upcoming','used','graveyard'].map(s => (
-            <button type="button" key={s} onClick={()=>setStatus(s)}
-              className={`pb-1 -mb-3 border-b-2 text-sm capitalize transition-colors ${status===s ? 'border-indigo-600 font-semibold text-neutral-900' : 'border-transparent text-neutral-600 hover:text-neutral-900'}`}>{s}</button>
+            <button type="button" key={s} onClick={()=>setStatus(s)} disabled={loading}
+              className={`pb-1 -mb-3 border-b-2 text-sm capitalize transition-colors ${status===s ? 'border-indigo-600 font-semibold text-neutral-900' : 'border-transparent text-neutral-600 hover:text-neutral-900'} disabled:opacity-50`}>{s}</button>
           ))}
-          <span className="ml-auto text-xs text-neutral-500">{qs.length}</span>
+          <span className="ml-auto text-xs text-neutral-500">{loading ? '…' : qs.length}</span>
         </div>
 
         {status === 'upcoming' && !archived && (
           <>
             <div className="flex gap-2 mb-3">
               <input value={newText} onChange={e=>setNewText(e.target.value)} placeholder="Add a question…"
-                maxLength={500}
-                className="flex-1 border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                maxLength={500} disabled={adding}
+                className="flex-1 border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-neutral-50"
                 onKeyDown={e=>e.key==='Enter'&&addQuestion()} />
-              <button type="button" onClick={addQuestion} className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 whitespace-nowrap">Add</button>
+              <button type="button" onClick={addQuestion} disabled={adding || !newText.trim()}
+                className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 whitespace-nowrap disabled:opacity-60">
+                {adding ? 'Adding…' : 'Add'}
+              </button>
             </div>
             <div className="flex flex-wrap gap-2 text-xs">
               <button type="button" onClick={seedQuestions} disabled={busy} className="px-3 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50 disabled:opacity-50">📦 Load starter pack</button>
-              <button type="button" onClick={()=>setShowImport(v=>!v)} className="px-3 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50">📥 Import</button>
-              <button type="button" onClick={doExport} className="px-3 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50">📤 Export</button>
-              {qs.length > 1 && <button type="button" onClick={shuffleQuestions} className="px-3 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50 ml-auto">🔀 Shuffle</button>}
+              <button type="button" onClick={()=>setShowImport(v=>!v)} disabled={busy} className="px-3 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50 disabled:opacity-50">📥 Import</button>
+              <button type="button" onClick={doExport} disabled={busy} className="px-3 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50 disabled:opacity-50">📤 Export</button>
+              {qs.length > 1 && <button type="button" onClick={shuffleQuestions} disabled={busy} className="px-3 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50 ml-auto disabled:opacity-50">🔀 Shuffle</button>}
             </div>
             {Boolean(showImport) && (
               <div className="mt-3 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
                 <div className="text-xs font-medium text-neutral-700 mb-1.5">Paste questions, one per line</div>
                 <textarea value={importText} onChange={e=>setImportText(e.target.value)}
-                  placeholder={"What scares you?\nWhat's your fondest memory?\n…"}
-                  className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm h-32 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  placeholder={"What scares you?\nWhat's your fondest memory?\n…"} disabled={busy}
+                  className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm h-32 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-neutral-100" />
                 <div className="flex gap-2 mt-2">
                   <button type="button" onClick={doImport} disabled={busy} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 disabled:opacity-50">Import</button>
-                  <button type="button" onClick={()=>{setShowImport(false); setImportText('')}} className="px-3 py-1.5 border border-neutral-300 rounded-lg text-xs hover:bg-white">Cancel</button>
+                  <button type="button" onClick={()=>{setShowImport(false); setImportText('')}} disabled={busy} className="px-3 py-1.5 border border-neutral-300 rounded-lg text-xs hover:bg-white disabled:opacity-50">Cancel</button>
                   <span className="text-[11px] text-neutral-500 ml-auto self-center">Tags auto-classified · duplicates skipped</span>
                 </div>
               </div>
@@ -723,7 +839,7 @@ function QuestionsTab({ gameId, archived }) {
         )}
         {status !== 'upcoming' && (
           <div className="flex gap-2 text-xs">
-            <button type="button" onClick={doExport} className="px-3 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50">📤 Export {status}</button>
+            <button type="button" onClick={doExport} disabled={busy} className="px-3 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50 disabled:opacity-50">📤 Export {status}</button>
           </div>
         )}
       </div>
@@ -737,7 +853,8 @@ function QuestionsTab({ gameId, archived }) {
         onTouchMove={onListTouchMove}
         onTouchEnd={onListTouchEnd}
       >
-        {qs.map((q, idx) => (
+        {loading ? <div className="text-sm text-neutral-500 px-1">Loading…</div> : null}
+        {!loading && qs.map((q, idx) => (
           <div key={q.id}>
             {showDropLine(idx) && (
               <div className="h-0.5 mx-3 rounded-full bg-indigo-600" />
@@ -763,13 +880,14 @@ function QuestionsTab({ gameId, archived }) {
               onDragOver={onDragOver}
               onDragEnd={finishDrag}
               onGripTouch={onGripTouch}
+              saving={savingId === q.id}
             />
           </div>
         ))}
         {showDropLine(qs.length) && (
           <div className="h-0.5 mx-3 rounded-full bg-indigo-600" />
         )}
-        {qs.length===0 && (
+        {!loading && qs.length===0 && (
           <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-8 text-center">
             <div className="text-3xl mb-2">📝</div>
             <div className="text-neutral-700 font-medium mb-1">No {status} questions yet</div>
@@ -820,42 +938,56 @@ function QuestionsTab({ gameId, archived }) {
 // --- Members Tab ---
 function MembersTab({ gameId, archived }) {
   const [members, setMembers] = useState([])
+  const [loading, setLoading] = useState(true)
   const [showDeleted, setShowDeleted] = useState(false)
   const [name, setName] = useState('')
   const [discordId, setDiscordId] = useState('')
+  const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState(null)
   const [editName, setEditName] = useState('')
   const [editDiscord, setEditDiscord] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  const load = useCallback(() => api(`/api/games/${gameId}/members?include_deleted=${showDeleted}`).then(d => setMembers(arr(d))).catch(()=>setMembers([])), [gameId, showDeleted])
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const d = await api(`/api/games/${gameId}/members?include_deleted=${showDeleted}`)
+      setMembers(arr(d))
+    } catch (e) { toastErr(e); setMembers([]) } finally { setLoading(false) }
+  }, [gameId, showDeleted])
   useEffect(() => { load() }, [load])
 
   const addMember = async () => {
-    if (!name.trim()) return
+    if (!name.trim() || adding) return
+    setAdding(true)
     const body = { name: name.trim() }
     const disc = discordId.trim()
     if (disc) body.discord_id = disc
     try {
       await api(`/api/games/${gameId}/members`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
       setName(''); setDiscordId('')
+      toast.success('Member added')
       load()
-    } catch(e) { alert('Add failed: ' + e.message) }
+    } catch(e) { toastErr(e) } finally { setAdding(false) }
   }
 
   const saveEdit = async (m) => {
+    if (saving) return
+    setSaving(true)
     const body = {}
     if (editName !== m.name) body.name = editName
     const disc = editDiscord.trim()
-    // Allow clearing discord_id – send null if empty, else send value if changed
     if (disc !== (m.discord_id||'')) body.discord_id = disc || null
     try {
       await api(`/api/games/${gameId}/members/${m.id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
-      setEditing(null); load()
-    } catch(e) { alert('Save failed: ' + e.message) }
+      setEditing(null); toast.success('Saved'); load()
+    } catch(e) { toastErr(e) } finally { setSaving(false) }
   }
 
-  const delMember = async (m) => { await api(`/api/games/${gameId}/members/${m.id}`, {method:'DELETE'}); load() }
-  const restore = async (m) => { try { await api(`/api/games/${gameId}/members/${m.id}/restore`, {method:'POST'}); load() } catch(e) { alert('Restore failed: ' + e.message) } }
+  const delMember = async (m) => {
+    try { await api(`/api/games/${gameId}/members/${m.id}`, {method:'DELETE'}); toast.success('Member deleted'); load() } catch(e) { toastErr(e) }
+  }
+  const restore = async (m) => { try { await api(`/api/games/${gameId}/members/${m.id}/restore`, {method:'POST'}); toast.success('Restored'); load() } catch(e) { toastErr(e) } }
 
   const memberList = arr(members)
   const active = memberList.filter(m=>!m.deleted_at)
@@ -866,25 +998,26 @@ function MembersTab({ gameId, archived }) {
 {!archived && <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5">
         <div className="font-semibold mb-3 text-neutral-900">Add member</div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <input value={name} onChange={e=>setName(e.target.value)} placeholder="Character name" required
-            className="flex-1 border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-          <input value={discordId} onChange={e=>setDiscordId(e.target.value)} placeholder="Discord username (optional)"
-            className="flex-1 border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-          <button type="button" onClick={addMember} className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">Add</button>
+          <input value={name} onChange={e=>setName(e.target.value)} placeholder="Character name" required disabled={adding}
+            className="flex-1 border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-neutral-50" />
+          <input value={discordId} onChange={e=>setDiscordId(e.target.value)} placeholder="Discord username (optional)" disabled={adding}
+            className="flex-1 border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-neutral-50" />
+          <button type="button" onClick={addMember} disabled={adding || !name.trim()} className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-60">{adding ? 'Adding…' : 'Add'}</button>
         </div>
         <div className="text-xs text-neutral-500 mt-2">Used for @mentions in Copy-to-Discord (when no role is set). Leave blank to use character name only.</div>
       </div>}
 
       <div className="bg-white rounded-xl shadow-sm border border-neutral-200 divide-y divide-neutral-100">
-        {active.map(m => (
+        {loading ? <div className="p-4 text-neutral-500 text-sm">Loading…</div> : null}
+        {!loading && active.map(m => (
           <div key={m.id} className="p-3 sm:p-4">
             {editing === m.id ? (
               <div className="flex flex-col sm:flex-row gap-2">
-                <input value={editName} onChange={e=>setEditName(e.target.value)} required className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm" />
-                <input value={editDiscord} onChange={e=>setEditDiscord(e.target.value)} placeholder="Discord username (optional)" className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm" />
+                <input value={editName} onChange={e=>setEditName(e.target.value)} required disabled={saving} className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm disabled:bg-neutral-50" />
+                <input value={editDiscord} onChange={e=>setEditDiscord(e.target.value)} placeholder="Discord username (optional)" disabled={saving} className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm disabled:bg-neutral-50" />
                 <div className="flex gap-2">
-                  <button type="button" onClick={()=>saveEdit(m)} className="flex-1 sm:flex-initial px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Save</button>
-                  <button type="button" onClick={()=>setEditing(null)} className="flex-1 sm:flex-initial px-3 py-2 border border-neutral-300 rounded-lg text-sm">Cancel</button>
+                  <button type="button" onClick={()=>saveEdit(m)} disabled={saving} className="flex-1 sm:flex-initial px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium disabled:opacity-60">{saving ? 'Saving…' : 'Save'}</button>
+                  <button type="button" onClick={()=>setEditing(null)} disabled={saving} className="flex-1 sm:flex-initial px-3 py-2 border border-neutral-300 rounded-lg text-sm disabled:opacity-60">Cancel</button>
                 </div>
               </div>
             ) : (
@@ -901,7 +1034,7 @@ function MembersTab({ gameId, archived }) {
             )}
           </div>
         ))}
-        {active.length===0 && <div className="p-4 text-neutral-500 text-sm">No members yet.</div>}
+        {!loading && active.length===0 && <div className="p-4 text-neutral-500 text-sm">No members yet.</div>}
       </div>
 
       {deleted.length > 0 && (
@@ -925,8 +1058,12 @@ function MembersTab({ gameId, archived }) {
 // --- History Tab ---
 function HistoryTab({ gameId, game }) {
   const [rows, setRows] = useState([])
+  const [loading, setLoading] = useState(true)
   const [copiedRound, setCopiedRound] = useState(null)
-  useEffect(()=>{ api(`/api/games/${gameId}/history`).then(d => setRows(arr(d))).catch(()=>setRows([])) }, [gameId])
+  useEffect(()=>{ (async()=>{
+    setLoading(true)
+    try { const d = await api(`/api/games/${gameId}/history`); setRows(arr(d)) } catch(e){ toastErr(e); setRows([]) } finally { setLoading(false) }
+  })() }, [gameId])
   const rowList = arr(rows)
 
   const formatDiscordMention = (id, name) => {
@@ -950,13 +1087,13 @@ function HistoryTab({ gameId, game }) {
       const target = formatDiscordMention(p.target_discord_id, p.target_name)
       lines.push(`• ${asker} answers about ${target}`)
     })
-    navigator.clipboard.writeText(lines.join('\n'))
+    navigator.clipboard.writeText(lines.join('\n')).then(()=>toast.success('Copied')).catch(()=>toastErr(new Error('Copy failed')))
     setCopiedRound(r.round_num); setTimeout(()=>setCopiedRound(null), 1500)
   }
 
   return (
     <div className="space-y-3">
-      <div className="text-sm text-neutral-600">{rowList.length} played</div>
+      <div className="text-sm text-neutral-600">{loading ? 'Loading…' : `${rowList.length} played`}</div>
       {rowList.map(r => (
         <div key={r.round_num} className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4">
           <div className="flex justify-between items-start mb-2 gap-2">
@@ -975,7 +1112,7 @@ function HistoryTab({ gameId, game }) {
           {Boolean(r.played_by_username) && <div className="text-xs text-neutral-500">by {r.played_by_username}</div>}
         </div>
       ))}
-      {rowList.length===0 && <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-8 text-center text-neutral-500 text-sm">No rounds played yet.</div>}
+      {!loading && rowList.length===0 && <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-8 text-center text-neutral-500 text-sm">No rounds played yet.</div>}
     </div>
   )
 }
@@ -984,50 +1121,73 @@ function HistoryTab({ gameId, game }) {
 function AdminTab({ gameId, game, onGameUpdate, onGamesRefresh, onGameDeleted, currentUserDiscordId }) {
   const [invites, setInvites] = useState([])
   const [admins, setAdmins] = useState([])
+  const [loading, setLoading] = useState(true)
   const [inviteUrl, setInviteUrl] = useState('')
   const [rename, setRename] = useState(game.name)
   const [roleId, setRoleId] = useState(game.discord_role_id || '')
+  const [savingRename, setSavingRename] = useState(false)
+  const [savingRole, setSavingRole] = useState(false)
+  const [busy, setBusy] = useState(false)
 
-  const loadInvites = useCallback(() => api(`/api/games/${gameId}/invites`).then(d => setInvites(arr(d))).catch(()=>setInvites([])), [gameId])
-  const loadAdmins = useCallback(() => api(`/api/games/${gameId}/admins`).then(d => setAdmins(arr(d))).catch(()=>setAdmins([])), [gameId])
-  useEffect(()=>{ loadInvites(); loadAdmins() }, [loadInvites, loadAdmins])
+  const loadInvites = useCallback(async () => {
+    try { const d = await api(`/api/games/${gameId}/invites`); setInvites(arr(d)) } catch(e){ toastErr(e); setInvites([]) }
+  }, [gameId])
+  const loadAdmins = useCallback(async () => {
+    try { const d = await api(`/api/games/${gameId}/admins`); setAdmins(arr(d)) } catch(e){ toastErr(e); setAdmins([]) }
+  }, [gameId])
+  useEffect(()=>{ (async()=>{ setLoading(true); await Promise.all([loadInvites(), loadAdmins()]); setLoading(false) })() }, [loadInvites, loadAdmins])
   useEffect(()=>{ setRoleId(game.discord_role_id || '') }, [game.discord_role_id])
 
   const createInvite = async () => {
-    const res = await api(`/api/games/${gameId}/invites`, {method:'POST'})
-    setInviteUrl(window.location.origin + '/?invite=' + res.invite_token)
-    loadInvites()
+    if (busy) return; setBusy(true)
+    try {
+      const res = await api(`/api/games/${gameId}/invites`, {method:'POST'})
+      setInviteUrl(window.location.origin + '/?invite=' + res.invite_token)
+      toast.success('Invite created')
+      loadInvites()
+    } catch(e){ toastErr(e) } finally { setBusy(false) }
   }
-  const revokeInvite = async (id) => { await api(`/api/games/${gameId}/invites/${id}`, {method:'DELETE'}); loadInvites() }
+  const revokeInvite = async (id) => {
+    try { await api(`/api/games/${gameId}/invites/${id}`, {method:'DELETE'}); toast.success('Revoked'); loadInvites() } catch(e){ toastErr(e) }
+  }
   const revokeAdmin = async (discord_id) => {
     if (!confirm('Revoke admin access?')) return
-    await api(`/api/games/${gameId}/admins/${discord_id}`, {method:'DELETE'}); loadAdmins()
+    try { await api(`/api/games/${gameId}/admins/${discord_id}`, {method:'DELETE'}); toast.success('Revoked'); loadAdmins() } catch(e){ toastErr(e) }
   }
   const doRename = async () => {
-    if (!rename.trim() || rename === game.name) return
-    await api(`/api/games/${gameId}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: rename.trim()})})
-    onGameUpdate({name: rename.trim()}); if (onGamesRefresh) onGamesRefresh(); alert('Renamed.')
+    if (!rename.trim() || rename === game.name || savingRename) return
+    setSavingRename(true)
+    try {
+      await api(`/api/games/${gameId}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: rename.trim()})})
+      onGameUpdate({name: rename.trim()}); if (onGamesRefresh) onGamesRefresh(); toast.success('Renamed')
+    } catch(e){ toastErr(e) } finally { setSavingRename(false) }
   }
   const doSaveRole = async () => {
+    if (savingRole) return
+    setSavingRole(true)
     const v = roleId.trim()
     try {
       await api(`/api/games/${gameId}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({discord_role_id: v || null})})
       onGameUpdate({discord_role_id: v || null})
-      alert('Role saved.')
-    } catch(e) { alert('Save failed: ' + e.message) }
+      toast.success('Role saved')
+    } catch(e) { toastErr(e) } finally { setSavingRole(false) }
   }
   const doArchive = async (archived) => {
-    await api(`/api/games/${gameId}/${archived ? 'archive' : 'unarchive'}`, {method:'POST'})
-    onGameUpdate({archived_at: archived ? new Date().toISOString() : null})
-    if (onGamesRefresh) onGamesRefresh()
-    alert(archived ? 'Archived.' : 'Unarchived.')
+    try {
+      await api(`/api/games/${gameId}/${archived ? 'archive' : 'unarchive'}`, {method:'POST'})
+      onGameUpdate({archived_at: archived ? new Date().toISOString() : null})
+      if (onGamesRefresh) onGamesRefresh()
+      toast.success(archived ? 'Archived' : 'Unarchived')
+    } catch(e){ toastErr(e) }
   }
   const doDelete = async () => {
     if (!confirm(`Delete ${game.name} permanently? This cannot be undone. All questions, members, and history will be lost.`)) return
-    await api(`/api/games/${gameId}`, {method:'DELETE'})
-    alert('Game deleted.')
-    if (onGamesRefresh) onGamesRefresh()
-    if (onGameDeleted) onGameDeleted()
+    try {
+      await api(`/api/games/${gameId}`, {method:'DELETE'})
+      toast.success('Game deleted')
+      if (onGamesRefresh) onGamesRefresh()
+      if (onGameDeleted) onGameDeleted()
+    } catch(e){ toastErr(e) }
   }
 
   return (
@@ -1035,12 +1195,20 @@ function AdminTab({ gameId, game, onGameUpdate, onGamesRefresh, onGameDeleted, c
       <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5">
         <div className="font-semibold mb-3 text-neutral-900">Game settings</div>
         <div className="flex flex-col sm:flex-row gap-2 mb-3">
-          <input value={rename} onChange={e=>setRename(e.target.value)} className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-          <button type="button" onClick={doRename} className="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Rename</button>
+          <input value={rename} onChange={e=>setRename(e.target.value)} disabled={savingRename}
+            className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-neutral-50" />
+          <button type="button" onClick={doRename} disabled={savingRename || !rename.trim() || rename===game.name}
+            className="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50 disabled:opacity-60">
+            {savingRename ? 'Saving…' : 'Rename'}
+          </button>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 mb-3">
-          <input value={roleId} onChange={e=>setRoleId(e.target.value)} placeholder="Discord role ID (optional)" className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-          <button type="button" onClick={doSaveRole} className="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Save role</button>
+          <input value={roleId} onChange={e=>setRoleId(e.target.value)} placeholder="Discord role ID (optional)" disabled={savingRole}
+            className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-neutral-50" />
+          <button type="button" onClick={doSaveRole} disabled={savingRole}
+            className="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50 disabled:opacity-60">
+            {savingRole ? 'Saving…' : 'Save role'}
+          </button>
         </div>
         <div className="text-xs text-neutral-500 mb-3">When set, Copy-to-Discord uses plain character names and prepends a role ping. Leave blank to use individual @mentions.</div>
         <div className="flex flex-wrap gap-2">
@@ -1056,32 +1224,37 @@ function AdminTab({ gameId, game, onGameUpdate, onGamesRefresh, onGameDeleted, c
 
       <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5">
         <div className="font-semibold mb-3 text-neutral-900">Invite links</div>
-        <button type="button" onClick={createInvite} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 mb-3">Generate invite</button>
+        <button type="button" onClick={createInvite} disabled={busy}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 mb-3 disabled:opacity-60">
+          {busy ? 'Generating…' : 'Generate invite'}
+        </button>
         {Boolean(inviteUrl) && (
           <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs">
             <div className="font-mono break-all mb-1">{inviteUrl}</div>
             <div className="flex gap-3">
-              <button type="button" onClick={()=>{navigator.clipboard.writeText(inviteUrl); alert('Copied')}} className="underline">copy</button>
+              <button type="button" onClick={()=>{navigator.clipboard.writeText(inviteUrl).then(()=>toast.success('Copied')).catch(()=>toastErr(new Error('Copy failed')))}} className="underline">copy</button>
               <button type="button" onClick={()=>setInviteUrl('')} className="underline">hide</button>
               <span className="text-neutral-600 ml-auto">single-use · 1 day</span>
             </div>
           </div>
         )}
         <ul className="space-y-1 text-xs divide-y divide-neutral-100">
-          {arr(invites).map(inv => (
+          {loading ? <li className="text-neutral-500 py-2">Loading…</li> : null}
+          {!loading && arr(invites).map(inv => (
             <li key={inv.id} className="flex justify-between py-2">
               <span className="text-neutral-600">{inv.token_prefix}… · expires {inv.expires_at ? new Date(inv.expires_at).toLocaleDateString() : ''}</span>
               <button type="button" onClick={()=>revokeInvite(inv.id)} className="text-red-600 hover:underline">revoke</button>
             </li>
           ))}
-          {arr(invites).length===0 && <li className="text-neutral-500 py-2">No pending invites.</li>}
+          {!loading && arr(invites).length===0 && <li className="text-neutral-500 py-2">No pending invites.</li>}
         </ul>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5">
         <div className="font-semibold mb-3 text-neutral-900">Admins</div>
         <ul className="space-y-2 text-sm divide-y divide-neutral-100">
-          {arr(admins).map(a => (
+          {loading ? <li className="text-neutral-500 py-2">Loading…</li> : null}
+          {!loading && arr(admins).map(a => (
             <li key={a.discord_id} className="flex justify-between py-2">
               <span>{a.global_name || a.username}</span>
               {Boolean(currentUserDiscordId && a.discord_id !== currentUserDiscordId) && (
