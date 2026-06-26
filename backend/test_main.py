@@ -171,7 +171,7 @@ class E2ETestAuthMiddleware(BaseHTTPMiddleware):
         if csrf_cookie != csrf_token:
             response.set_cookie(
                 CSRF_COOKIE, csrf_token,
-                httponly=False, secure=False, samesite="lax", path="/",
+                httponly=False, secure=False, samesite="strict", path="/",
             )
         return response
 
