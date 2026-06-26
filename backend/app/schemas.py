@@ -271,6 +271,7 @@ class JoinGameResponse(BaseModel):
     game_id: int
     name: str
     archived_at: Optional[datetime] = None
+    discord_role_id: Optional[str] = None
     model_config = ConfigDict(extra='forbid')
 
 class InviteCreateResponse(BaseModel):

@@ -204,7 +204,7 @@ export default function App() {
         })
         // Refresh game list, then navigate to joined game
         await loadGames()
-        setGame({ id: res.game_id, name: res.name || '', archived_at: res.archived_at || null })
+        setGame({ id: res.game_id, name: res.name || '', archived_at: res.archived_at || null, discord_role_id: res.discord_role_id || null })
         toast.success('Joined game!')
       } catch (e) {
         toastErr(e)
@@ -326,7 +326,7 @@ function GameList({ user, games, gamesLoading, setGame, onRefresh, onLogout }) {
     try {
       const g = await api('/api/games', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: name.trim()})})
       setName(''); await onRefresh()
-      setGame({id: g.id, name: g.name, archived_at: g.archived_at})
+      setGame({id: g.id, name: g.name, archived_at: g.archived_at, discord_role_id: g.discord_role_id || null})
       toast.success('Game created')
     } catch (e) { toastErr(e) } finally { setCreating(false) }
   }
@@ -336,12 +336,12 @@ function GameList({ user, games, gamesLoading, setGame, onRefresh, onLogout }) {
     setOpeningId(gameId)
     try {
       const g = await api(`/api/games/${gameId}`)
-      setGame({ id: g.id, name: g.name, archived_at: g.archived_at })
+      setGame({ id: g.id, name: g.name, archived_at: g.archived_at, discord_role_id: g.discord_role_id || null })
     } catch (e) {
       toastErr(e)
       // Fall back to list data if fetch fails
       const fallback = arr(games).find(x => x.id === gameId)
-      if (fallback) setGame({ id: fallback.id, name: fallback.name, archived_at: fallback.archived_at })
+      if (fallback) setGame({ id: fallback.id, name: fallback.name, archived_at: fallback.archived_at, discord_role_id: fallback.discord_role_id || null })
     } finally {
       setOpeningId(null)
     }

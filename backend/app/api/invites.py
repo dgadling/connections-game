@@ -32,7 +32,8 @@ def join_game(payload: schemas.JoinRequest, request: Request, db: Session = Depe
     return schemas.JoinGameResponse(
         game_id=game_id,
         name=game.name if game else "",
-        archived_at=game.archived_at if game else None
+        archived_at=game.archived_at if game else None,
+        discord_role_id=game.discord_role_id if game else None
     )
 
 
