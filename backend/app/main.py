@@ -1,13 +1,14 @@
 from __future__ import annotations
 import os
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 import httpx
+from .timeutil import utcnow
 
 from .db import get_db
 from . import models
@@ -79,8 +80,8 @@ async def auth_discord_start(request: Request, db: Session = Depends(get_db), re
     oauth_state = models.OAuthState(
         state_token=state,
         redirect_after=redirect_after,
-        created_at=datetime.now(timezone.utc).replace(tzinfo=None),
-        expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=10),
+        created_at=utcnow(),
+        expires_at=utcnow() + timedelta(minutes=10),
         used_silent_auth=use_prompt_none,
     )
     db.add(oauth_state)
@@ -108,7 +109,7 @@ async def auth_discord_callback(
             raise HTTPException(400, f"OAuth error: {error} (missing state)")
         # Verify state - DB is authoritative
         oauth_state = db.query(models.OAuthState).filter(models.OAuthState.state_token == state).first()
-        if not oauth_state or oauth_state.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+        if not oauth_state or oauth_state.expires_at < utcnow():
             raise HTTPException(400, "OAuth state expired")
         # Allowed retry errors: consent_required, login_required, interaction_required
         retry_errors = {"consent_required", "login_required", "interaction_required"}
@@ -145,7 +146,7 @@ async def auth_discord_callback(
     if not cookie_state or cookie_state != state:
         logger.warning(f"OAuth state cookie mismatch: cookie={cookie_state!r} param={state!r} - continuing with DB validation")
     oauth_state = db.query(models.OAuthState).filter(models.OAuthState.state_token == state).first()
-    if not oauth_state or oauth_state.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+    if not oauth_state or oauth_state.expires_at < utcnow():
         raise HTTPException(400, "OAuth state expired")
     # consume state
     redirect_after = oauth_state.redirect_after or "/"
@@ -186,7 +187,7 @@ async def auth_discord_callback(
     avatar_hash = du.get("avatar")
     # Upsert discord_user
     user = db.query(models.DiscordUser).filter(models.DiscordUser.discord_id == discord_id).first()
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = utcnow()
     if user:
         user.username = username
         user.global_name = global_name

@@ -1,5 +1,6 @@
 """OAuth token storage + refresh + logout tests"""
-from datetime import datetime, timedelta
+from app.timeutil import utcnow
+from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 
@@ -77,8 +78,8 @@ def test_oauth_callback_stores_encrypted_tokens_and_sets_hint_cookie(db_session)
     oauth_state = models.OAuthState(
         state_token=state_token,
         redirect_after="/",
-        created_at=datetime.utcnow(),
-        expires_at=datetime.utcnow() + timedelta(minutes=10),
+        created_at=utcnow(),
+        expires_at=utcnow() + timedelta(minutes=10),
         used_silent_auth=False,
     )
     db_session.add(oauth_state)
@@ -122,8 +123,8 @@ def test_auth_refresh_creates_new_session(db_session):
         discord_id="123456789012345678",
         access_token_encrypted=encrypt_token("old_access"),
         refresh_token_encrypted=encrypt_token("old_refresh"),
-        expires_at=datetime.utcnow() + timedelta(days=1),
-        updated_at=datetime.utcnow(),
+        expires_at=utcnow() + timedelta(days=1),
+        updated_at=utcnow(),
     )
     db_session.add(token_row)
     db_session.commit()
@@ -183,8 +184,8 @@ def test_auth_refresh_invalid_token_deletes_row_returns_401(db_session):
         discord_id="123456789012345678",
         access_token_encrypted=encrypt_token("old_access"),
         refresh_token_encrypted=encrypt_token("bad_refresh"),
-        expires_at=datetime.utcnow() + timedelta(days=1),
-        updated_at=datetime.utcnow(),
+        expires_at=utcnow() + timedelta(days=1),
+        updated_at=utcnow(),
     )
     db_session.add(token_row)
     db_session.commit()
@@ -236,8 +237,8 @@ def test_auth_refresh_rejects_without_discord_id_hint(db_session):
         discord_id="123456789012345678",
         access_token_encrypted=encrypt_token("old_access"),
         refresh_token_encrypted=encrypt_token("old_refresh"),
-        expires_at=datetime.utcnow() + timedelta(days=1),
-        updated_at=datetime.utcnow(),
+        expires_at=utcnow() + timedelta(days=1),
+        updated_at=utcnow(),
     )
     db_session.add(token_row)
     db_session.commit()
@@ -310,8 +311,8 @@ def test_logout_deletes_tokens_and_clears_hint_cookie(db_session):
         discord_id=user.discord_id,
         access_token_encrypted=encrypt_token("acc"),
         refresh_token_encrypted=encrypt_token("ref"),
-        expires_at=datetime.utcnow() + timedelta(days=1),
-        updated_at=datetime.utcnow(),
+        expires_at=utcnow() + timedelta(days=1),
+        updated_at=utcnow(),
     )
     db_session.add(token_row)
     db_session.commit()

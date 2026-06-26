@@ -124,15 +124,18 @@ test('#1 regression – backend MUST include Z suffix', async () => {
   try {
     const backendSrc = await fs.readFile(backendPath, 'utf8')
     // Find question_history function
+    // New convention: timestamps use serialize_datetime() which adds Z
+    const usesSerialize = backendSrc.includes('serialize_datetime')
+    const hasZLiteral = backendSrc.includes('edited_at') && backendSrc.includes('"Z"')
     assert.ok(
-      backendSrc.includes('edited_at') && backendSrc.includes('"Z"'),
-      'backend must include Z suffix in edited_at serialization – check backend/app/api/games.py question_history()'
+      usesSerialize || hasZLiteral,
+      'backend must include Z suffix in edited_at serialization – check backend/app/api/games.py question_history() – should use serialize_datetime()'
     )
-    // Specifically check the edited_at line has + "Z"
-    const editedAtLines = backendSrc.split('\n').filter(l => l.includes('edited_at') && l.includes('isoformat'))
-    assert.ok(editedAtLines.length > 0, 'found edited_at isoformat line')
-    const hasZ = editedAtLines.some(l => l.includes('"Z"') || l.includes("'Z'"))
-    assert.ok(hasZ, `edited_at serialization must include Z suffix. Found lines: ${editedAtLines.join(' | ')}`)
+    // Specifically check the edited_at line
+    const editedAtLines = backendSrc.split('\n').filter(l => l.includes('edited_at'))
+    assert.ok(editedAtLines.length > 0, 'found edited_at line')
+    const hasZ = editedAtLines.some(l => l.includes('"Z"') || l.includes("'Z'") || l.includes('serialize_datetime'))
+    assert.ok(hasZ, `edited_at serialization must include Z suffix (via serialize_datetime). Found lines: ${editedAtLines.join(' | ')}`)
   } catch (e) {
     // If we can't read backend source (different working dir), skip – the other tests still validate behavior
     if (e.code !== 'ENOENT') throw e

@@ -1,13 +1,10 @@
 from __future__ import annotations
-from datetime import datetime, timezone
 from sqlalchemy import (
     Column, Integer, String, Text, Boolean, TIMESTAMP, ForeignKey,
     UniqueConstraint, CheckConstraint, Index, text as sa_text
 )
 from .db import Base
-
-def now():
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+from .timeutil import utcnow as now
 
 class DiscordUser(Base):
     __tablename__ = "discord_users"

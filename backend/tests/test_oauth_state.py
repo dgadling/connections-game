@@ -1,5 +1,6 @@
 """OAuth state validation tests - TDD for mobile Safari cookie bug"""
-from datetime import datetime, timedelta
+from app.timeutil import utcnow
+from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 
@@ -39,8 +40,8 @@ def _create_oauth_state(db, state_token="test_state_abc123", expired=False):
     oauth_state = models.OAuthState(
         state_token=state_token,
         redirect_after="/",
-        created_at=datetime.utcnow(),
-        expires_at=datetime.utcnow() + timedelta(minutes=-1 if expired else 10),
+        created_at=utcnow(),
+        expires_at=utcnow() + timedelta(minutes=-1 if expired else 10),
     )
     db.add(oauth_state)
     db.commit()
@@ -238,8 +239,8 @@ def _create_oauth_state_with_silent(db_session, state_token, used_silent_auth=Tr
     oauth_state = models.OAuthState(
         state_token=state_token,
         redirect_after="/",
-        created_at=datetime.utcnow(),
-        expires_at=datetime.utcnow() + timedelta(minutes=10),
+        created_at=utcnow(),
+        expires_at=utcnow() + timedelta(minutes=10),
         used_silent_auth=used_silent_auth,
     )
     db_session.add(oauth_state)

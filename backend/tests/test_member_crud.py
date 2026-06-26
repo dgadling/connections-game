@@ -1,3 +1,6 @@
+from app.timeutil import utcnow
+
+
 def test_member_create_returns_dict(client, game):
     r = client.post(f"/api/games/{game.id}/members", json={"name": "Charlie", "discord_id": "charlie_test"})
     assert r.status_code == 200
@@ -18,9 +21,8 @@ def test_member_patch_returns_dict(client, game, members):
     assert data["id"] == m.id
 
 def test_member_restore_returns_dict(client, game, members, db_session):
-    from datetime import datetime
     m = members[0]
-    m.deleted_at = datetime.utcnow()
+    m.deleted_at = utcnow()
     db_session.commit()
     r = client.post(f"/api/games/{game.id}/members/{m.id}/restore")
     assert r.status_code == 200

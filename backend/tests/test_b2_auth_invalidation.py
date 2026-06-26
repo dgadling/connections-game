@@ -1,5 +1,6 @@
 """b2: OAuth callback preserves existing auth_sessions (multi-device support)"""
-from datetime import datetime, timedelta
+from app.timeutil import utcnow
+from datetime import timedelta
 from app import models
 from app.auth import hash_token
 
@@ -12,10 +13,10 @@ def test_oauth_preserves_existing_sessions(db_session, test_user):
         sess = models.AuthSession(
             session_token_hash=hash_token(t),
             discord_id=test_user.discord_id,
-            created_at=datetime.utcnow() - timedelta(days=1),
-            expires_at=datetime.utcnow() + timedelta(days=10),
-            absolute_expires_at=datetime.utcnow() + timedelta(days=80),
-            last_used_at=datetime.utcnow(),
+            created_at=utcnow() - timedelta(days=1),
+            expires_at=utcnow() + timedelta(days=10),
+            absolute_expires_at=utcnow() + timedelta(days=80),
+            last_used_at=utcnow(),
         )
         db_session.add(sess)
     db_session.commit()
@@ -32,10 +33,10 @@ def test_oauth_preserves_existing_sessions(db_session, test_user):
     new_sess = models.AuthSession(
         session_token_hash=hash_token("new_token"),
         discord_id=test_user.discord_id,
-        created_at=datetime.utcnow(),
-        expires_at=datetime.utcnow() + timedelta(days=30),
-        absolute_expires_at=datetime.utcnow() + timedelta(days=90),
-        last_used_at=datetime.utcnow(),
+        created_at=utcnow(),
+        expires_at=utcnow() + timedelta(days=30),
+        absolute_expires_at=utcnow() + timedelta(days=90),
+        last_used_at=utcnow(),
     )
     db_session.add(new_sess)
     db_session.commit()
@@ -60,10 +61,10 @@ def test_sessions_are_scoped_per_user(db_session, test_user):
     sess1 = models.AuthSession(
         session_token_hash=hash_token("user1_token"),
         discord_id=test_user.discord_id,
-        created_at=datetime.utcnow(),
-        expires_at=datetime.utcnow() + timedelta(days=10),
-        absolute_expires_at=datetime.utcnow() + timedelta(days=80),
-        last_used_at=datetime.utcnow(),
+        created_at=utcnow(),
+        expires_at=utcnow() + timedelta(days=10),
+        absolute_expires_at=utcnow() + timedelta(days=80),
+        last_used_at=utcnow(),
     )
     db_session.add(sess1)
 
@@ -79,10 +80,10 @@ def test_sessions_are_scoped_per_user(db_session, test_user):
     sess2 = models.AuthSession(
         session_token_hash=hash_token("other_token"),
         discord_id=other_user.discord_id,
-        created_at=datetime.utcnow(),
-        expires_at=datetime.utcnow() + timedelta(days=10),
-        absolute_expires_at=datetime.utcnow() + timedelta(days=80),
-        last_used_at=datetime.utcnow(),
+        created_at=utcnow(),
+        expires_at=utcnow() + timedelta(days=10),
+        absolute_expires_at=utcnow() + timedelta(days=80),
+        last_used_at=utcnow(),
     )
     db_session.add(sess2)
     db_session.commit()
@@ -91,10 +92,10 @@ def test_sessions_are_scoped_per_user(db_session, test_user):
     new_sess = models.AuthSession(
         session_token_hash=hash_token("user1_token_2"),
         discord_id=test_user.discord_id,
-        created_at=datetime.utcnow(),
-        expires_at=datetime.utcnow() + timedelta(days=30),
-        absolute_expires_at=datetime.utcnow() + timedelta(days=90),
-        last_used_at=datetime.utcnow(),
+        created_at=utcnow(),
+        expires_at=utcnow() + timedelta(days=30),
+        absolute_expires_at=utcnow() + timedelta(days=90),
+        last_used_at=utcnow(),
     )
     db_session.add(new_sess)
     db_session.commit()

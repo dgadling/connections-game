@@ -8,6 +8,7 @@ import os
 os.environ["SUPERUSER_DISCORD_ID"] = "999999999999999999"
 
 import pytest
+from app.timeutil import utcnow
 
 from app.main import app
 from app import models
@@ -111,8 +112,7 @@ def test_archive_as_superuser(db_session, super_user, admin_a, game_a):
 
 def test_unarchive_requires_admin(db_session, admin_a, outsider, game_a):
     # archive first as admin
-    from datetime import datetime
-    game_a.archived_at = datetime.utcnow()
+    game_a.archived_at = utcnow()
     db_session.commit()
 
     client = make_client(db_session, outsider)
@@ -124,8 +124,7 @@ def test_unarchive_requires_admin(db_session, admin_a, outsider, game_a):
 
 
 def test_unarchive_as_member(db_session, admin_a, game_a):
-    from datetime import datetime
-    game_a.archived_at = datetime.utcnow()
+    game_a.archived_at = utcnow()
     db_session.commit()
 
     client = make_client(db_session, admin_a)
@@ -140,8 +139,7 @@ def test_unarchive_as_member(db_session, admin_a, game_a):
 
 
 def test_unarchive_as_superuser(db_session, super_user, game_a):
-    from datetime import datetime
-    game_a.archived_at = datetime.utcnow()
+    game_a.archived_at = utcnow()
     db_session.commit()
 
     client = make_client(db_session, super_user)
@@ -153,8 +151,7 @@ def test_unarchive_as_superuser(db_session, super_user, game_a):
 
 
 def test_archived_game_blocks_mutations(db_session, admin_a, game_a):
-    from datetime import datetime
-    game_a.archived_at = datetime.utcnow()
+    game_a.archived_at = utcnow()
     db_session.commit()
 
     client = make_client(db_session, admin_a)
@@ -179,8 +176,7 @@ def test_archived_game_blocks_mutations(db_session, admin_a, game_a):
 
 
 def test_archived_game_allows_reads(db_session, admin_a, game_a):
-    from datetime import datetime
-    game_a.archived_at = datetime.utcnow()
+    game_a.archived_at = utcnow()
     db_session.commit()
 
     client = make_client(db_session, admin_a)
@@ -200,8 +196,7 @@ def test_archived_game_allows_reads(db_session, admin_a, game_a):
 
 
 def test_archived_game_allows_unarchive(db_session, admin_a, game_a):
-    from datetime import datetime
-    game_a.archived_at = datetime.utcnow()
+    game_a.archived_at = utcnow()
     db_session.commit()
 
     client = make_client(db_session, admin_a)
@@ -213,7 +208,6 @@ def test_archived_game_allows_unarchive(db_session, admin_a, game_a):
 
 
 def test_list_games_includes_archived(db_session, admin_a):
-    from datetime import datetime
     # create active game
     g_active = models.Game(name="Active", owner_discord_id=admin_a.discord_id)
     db_session.add(g_active)
@@ -221,7 +215,7 @@ def test_list_games_includes_archived(db_session, admin_a):
     db_session.add(models.GameMembership(game_id=g_active.id, discord_id=admin_a.discord_id))
     db_session.add(models.ConnState(game_id=g_active.id, current_round=1))
     # create archived game
-    g_arch = models.Game(name="Archived", owner_discord_id=admin_a.discord_id, archived_at=datetime.utcnow())
+    g_arch = models.Game(name="Archived", owner_discord_id=admin_a.discord_id, archived_at=utcnow())
     db_session.add(g_arch)
     db_session.flush()
     db_session.add(models.GameMembership(game_id=g_arch.id, discord_id=admin_a.discord_id))
@@ -242,8 +236,7 @@ def test_list_games_includes_archived(db_session, admin_a):
 
 
 def test_delete_archived_game_as_admin(db_session, admin_a, game_a):
-    from datetime import datetime
-    game_a.archived_at = datetime.utcnow()
+    game_a.archived_at = utcnow()
     db_session.commit()
 
     client = make_client(db_session, admin_a)
@@ -269,8 +262,7 @@ def test_delete_unarchived_game_blocked(db_session, admin_a, game_a):
 
 
 def test_delete_as_non_member(db_session, admin_a, outsider, game_a):
-    from datetime import datetime
-    game_a.archived_at = datetime.utcnow()
+    game_a.archived_at = utcnow()
     db_session.commit()
 
     client = make_client(db_session, outsider)
@@ -282,7 +274,6 @@ def test_delete_as_non_member(db_session, admin_a, outsider, game_a):
 
 
 def test_delete_archived_cascades(db_session, admin_a, game_a):
-    from datetime import datetime
     # seed related rows
     m1 = models.GameMember(game_id=game_a.id, name="Alice", discord_id="alice_test")
     m2 = models.GameMember(game_id=game_a.id, name="Bob", discord_id="bob_test")
@@ -297,7 +288,7 @@ def test_delete_archived_cascades(db_session, admin_a, game_a):
     play = models.ConnPlay(game_id=game_a.id, round_num=1, question_id=q.id, played_by=admin_a.discord_id)
     db_session.add(play)
     # archive game
-    game_a.archived_at = datetime.utcnow()
+    game_a.archived_at = utcnow()
     db_session.commit()
 
     gid = game_a.id

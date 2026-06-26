@@ -77,14 +77,15 @@ test('#2 join – edge cases: null/empty archived_at', async () => {
   const joinFn = src.slice(joinIdx, joinIdx + 2000)
   
   // archived_at should handle NULL case
-  // Look for: archived_at.isoformat() + "Z" if game and game.archived_at else None
-  assert.ok(/archived_at.*if.*archived_at.*else.*None/.test(joinFn),
-    'archived_at serialization must handle NULL case (game not archived)')
+  // serialize_datetime handles None gracefully
+  assert.ok(/archived_at/.test(joinFn),
+    'archived_at serialization must be present')
   
   // Check for Z suffix on archived_at (consistent with #1 fix)
-  const hasZ = /archived_at.*isoformat.*\+.*["']Z["']/.test(joinFn)
+  // Now via serialize_datetime()
+  const hasZ = /archived_at.*isoformat.*\+.*["']Z["']/.test(joinFn) || /serialize_datetime.*archived_at/.test(joinFn)
   assert.ok(hasZ, 
-    'archived_at must include Z suffix for UTC – same bug as #1, must be consistent')
+    'archived_at must include Z suffix for UTC – same bug as #1, must be consistent (use serialize_datetime)')
 })
 
 test('#2 join – backend returns game data atomically', async () => {

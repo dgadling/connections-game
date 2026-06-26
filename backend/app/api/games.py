@@ -2,7 +2,7 @@ from __future__ import annotations
 import secrets
 import hashlib
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from .. import models, schemas
@@ -10,6 +10,7 @@ from ..db import get_db
 from ..auth import require_user, require_membership
 from ..tagging import classify_sentiment
 from ..pairing import generate_groups
+from ..timeutil import utcnow, serialize_datetime, utc_timestamp
 
 router = APIRouter()
 
@@ -30,7 +31,7 @@ def validate_discord_id(discord_id: str) -> str:
         try:
             sid = int(normalized)
             ts = ((sid >> 22) + 1420070400000) / 1000
-            now = datetime.now(timezone.utc).replace(tzinfo=None).timestamp()
+            now = utc_timestamp()
             if ts < 1420070400 or ts > now + 86400:
                 raise HTTPException(400, "That doesn't look like a Discord ID — see https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID")
         except ValueError as e:
@@ -139,8 +140,8 @@ def list_members(game_id: int, include_deleted: bool = False, db: Session = Depe
             "name": m.name,
             "discord_id": m.discord_id,
             "sort_order": m.sort_order,
-            "created_at": m.created_at.isoformat() if m.created_at else None,
-            "deleted_at": m.deleted_at.isoformat() if m.deleted_at else None,
+            "created_at": serialize_datetime(m.created_at),
+            "deleted_at": serialize_datetime(m.deleted_at),
         }
         for m in rows
     ]
@@ -188,7 +189,7 @@ def delete_member(game_id: int, member_id: int, db: Session = Depends(get_db), u
     m = db.query(models.GameMember).filter(models.GameMember.id == member_id, models.GameMember.game_id == game_id).first()
     if not m:
         raise HTTPException(404)
-    m.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    m.deleted_at = utcnow()
     db.commit()
     regenerate_pairings(db, game_id)
     return {"ok": True}
@@ -238,8 +239,8 @@ def list_questions(game_id: int, status: str = "upcoming", db: Session = Depends
             "status": q.status,
             "sort_order": q.sort_order,
             "edit_count": edit_count,
-            "created_at": q.created_at.isoformat() if q.created_at else None,
-            "updated_at": q.updated_at.isoformat() if q.updated_at else None,
+            "created_at": serialize_datetime(q.created_at),
+            "updated_at": serialize_datetime(q.updated_at),
         }
         for q, edit_count in rows
     ]
@@ -284,12 +285,12 @@ def patch_question(game_id: int, qid: int, payload: schemas.QuestionPatch, db: S
         new_tag_auto = True
         new_tag = classify_sentiment(new_text)
     if new_text != q.text or new_tag != q.tag:
-        edit = models.ConnQuestionEdit(question_id=q.id, old_text=q.text, old_tag=q.tag, edited_by=user.discord_id, edited_at=datetime.now(timezone.utc).replace(tzinfo=None))
+        edit = models.ConnQuestionEdit(question_id=q.id, old_text=q.text, old_tag=q.tag, edited_by=user.discord_id, edited_at=utcnow())
         db.add(edit)
     q.text = new_text
     q.tag = new_tag
     q.tag_auto = new_tag_auto
-    q.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    q.updated_at = utcnow()
     db.commit()
     return {
         "id": q.id,
@@ -314,7 +315,7 @@ def question_history(game_id: int, qid: int, db: Session = Depends(get_db), user
             "old_tag": r.old_tag,
             "edited_by": r.edited_by,
             "edited_by_name": (du.global_name or du.username) if du else r.edited_by,
-            "edited_at": (r.edited_at.isoformat() + "Z") if r.edited_at else None,
+            "edited_at": serialize_datetime(r.edited_at),
         }
         for r, du in rows
     ]
@@ -612,7 +613,7 @@ def complete_round(game_id: int, db: Session = Depends(get_db), user: models.Dis
     # next question
     nq = db.query(models.ConnQuestion).filter(models.ConnQuestion.game_id == game_id, models.ConnQuestion.status == "upcoming").order_by(models.ConnQuestion.sort_order).first()
     state.current_question_id = nq.id if nq else None
-    state.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    state.updated_at = utcnow()
     db.commit()
     return {"ok": True, "next_round": state.current_round}
 
@@ -661,19 +662,18 @@ def join_game(payload: schemas.JoinRequest, request: Request, db: Session = Depe
     # rate limiting enforced in middleware
     token_hash = hashlib.sha256(payload.invite_token.encode()).hexdigest()
     invite = db.query(models.GameInvite).filter(models.GameInvite.token_hash == token_hash).first()
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = utcnow()
     if not invite or invite.expires_at < now:
         raise HTTPException(403, "invalid or expired invite")
     game_id = invite.game_id
     require_game_writable(game_id, db)
-    # grant membership if not already
     existing = db.query(models.GameMembership).filter(models.GameMembership.game_id == game_id, models.GameMembership.discord_id == user.discord_id).first()
     if not existing:
         db.add(models.GameMembership(game_id=game_id, discord_id=user.discord_id))
     db.delete(invite)
     db.commit()
     game = db.query(models.Game).filter(models.Game.id == game_id).first()
-    return {"game_id": game_id, "name": game.name if game else "", "archived_at": game.archived_at.isoformat() + "Z" if game and game.archived_at else None}
+    return {"game_id": game_id, "name": game.name if game else "", "archived_at": serialize_datetime(game.archived_at) if game else None}
 
 @router.post("/api/games/{game_id}/invites")
 def create_invite(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
@@ -681,7 +681,7 @@ def create_invite(game_id: int, db: Session = Depends(get_db), user: models.Disc
     require_game_writable(game_id, db)
     token = secrets.token_urlsafe(12)
     token_hash = hashlib.sha256(token.encode()).hexdigest()
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = utcnow()
     invite = models.GameInvite(
         token_hash=token_hash,
         game_id=game_id,
@@ -692,12 +692,12 @@ def create_invite(game_id: int, db: Session = Depends(get_db), user: models.Disc
     db.add(invite)
     db.commit()
     db.refresh(invite)
-    return {"id": invite.id, "invite_token": token, "expires_at": invite.expires_at.isoformat()}
+    return {"id": invite.id, "invite_token": token, "expires_at": serialize_datetime(invite.expires_at)}
 
 @router.get("/api/games/{game_id}/invites")
 def list_invites(game_id: int, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
     require_game_admin(game_id, user.discord_id, db)
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = utcnow()
     # delete expired rows for this game
     db.query(models.GameInvite).filter(
         models.GameInvite.game_id == game_id,
@@ -710,8 +710,8 @@ def list_invites(game_id: int, db: Session = Depends(get_db), user: models.Disco
         out.append({
             "id": r.id,
             "token_prefix": r.token_hash[:6],
-            "created_at": r.created_at,
-            "expires_at": r.expires_at,
+            "created_at": serialize_datetime(r.created_at),
+            "expires_at": serialize_datetime(r.expires_at),
         })
     return out
 
@@ -732,7 +732,7 @@ def archive_game(game_id: int, db: Session = Depends(get_db), user: models.Disco
     game = db.query(models.Game).filter(models.Game.id == game_id).first()
     if not game:
         raise HTTPException(404)
-    game.archived_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    game.archived_at = utcnow()
     db.commit()
     return {"ok": True}
 
@@ -767,7 +767,7 @@ def list_admins(game_id: int, db: Session = Depends(get_db), user: models.Discor
     rows = db.query(models.GameMembership, models.DiscordUser).join(
         models.DiscordUser, models.GameMembership.discord_id == models.DiscordUser.discord_id
     ).filter(models.GameMembership.game_id == game_id).all()
-    return [{"discord_id": m.GameMembership.discord_id, "joined_at": m.GameMembership.joined_at, "username": m.DiscordUser.username, "global_name": m.DiscordUser.global_name} for m in rows]
+    return [{"discord_id": m.GameMembership.discord_id, "joined_at": serialize_datetime(m.GameMembership.joined_at), "username": m.DiscordUser.username, "global_name": m.DiscordUser.global_name} for m in rows]
 
 @router.delete("/api/games/{game_id}/admins/{discord_id}")
 def revoke_admin(game_id: int, discord_id: str, db: Session = Depends(get_db), user: models.DiscordUser = Depends(require_user)):
@@ -812,7 +812,7 @@ def game_history(game_id: int, db: Session = Depends(get_db), user: models.Disco
             played_by_username = du.global_name or du.username
         out.append({
             "round_num": play.round_num,
-            "played_at": play.played_at.isoformat() if play.played_at else None,
+            "played_at": serialize_datetime(play.played_at),
             "played_by": play.played_by,
             "played_by_username": played_by_username,
             "question_id": play.question_id,

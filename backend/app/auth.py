@@ -2,11 +2,12 @@ from __future__ import annotations
 import os
 import secrets
 import hashlib
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from fastapi import Request, HTTPException, Depends
 from sqlalchemy.orm import Session
 from .db import get_db
 from . import models
+from .timeutil import utcnow
 
 SESSION_COOKIE = "connections_session"
 CSRF_COOKIE = "csrf_token"
@@ -48,7 +49,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> models.
     sess = db.query(models.AuthSession).filter(models.AuthSession.session_token_hash == token_hash).first()
     if not sess:
         return None
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = utcnow()
     if sess.expires_at < now or sess.absolute_expires_at < now:
         db.delete(sess)
         db.commit()
@@ -91,7 +92,7 @@ def create_session(db: Session, discord_id: str) -> str:
     """
     token = secrets.token_urlsafe(32)
     token_hash = hash_token(token)
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = utcnow()
     sess = models.AuthSession(
         session_token_hash=token_hash,
         discord_id=discord_id,
@@ -186,7 +187,7 @@ async def refresh_discord_token(db: Session, discord_id: str) -> str | None:
             return None
 
     # update DB
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = utcnow()
     token_row.access_token_encrypted = encrypt_token(new_access_token)
     token_row.refresh_token_encrypted = encrypt_token(new_refresh_token)
     token_row.expires_at = now + timedelta(seconds=expires_in)

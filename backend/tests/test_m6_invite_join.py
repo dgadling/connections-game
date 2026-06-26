@@ -1,6 +1,7 @@
 """m6: invite join - POST /games/join consumes invite_token, creates admin membership"""
+from app.timeutil import utcnow
 import hashlib
-from datetime import datetime, timedelta
+from datetime import timedelta
 from app import models
 
 
@@ -22,8 +23,8 @@ def test_invite_join_creates_admin_membership(client, game, db_session, test_use
         token_hash=token_hash,
         game_id=game.id,
         created_by=test_user.discord_id,
-        created_at=datetime.utcnow(),
-        expires_at=datetime.utcnow() + timedelta(days=1),
+        created_at=utcnow(),
+        expires_at=utcnow() + timedelta(days=1),
     )
     db_session.add(invite)
     db_session.commit()
@@ -85,8 +86,8 @@ def test_invite_cannot_be_reused(client, game, db_session, test_user):
         token_hash=token_hash,
         game_id=game.id,
         created_by=test_user.discord_id,
-        created_at=datetime.utcnow(),
-        expires_at=datetime.utcnow() + timedelta(days=1),
+        created_at=utcnow(),
+        expires_at=utcnow() + timedelta(days=1),
     )
     db_session.add(invite)
     db_session.commit()
