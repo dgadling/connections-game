@@ -26,7 +26,18 @@ limiter = RateLimiter()
 def get_client_ip(request: Request) -> str:
     xff = request.headers.get("x-forwarded-for")
     if xff:
-        return xff.split(",")[0].strip()
+        # X-Forwarded-For: client, proxy1, proxy2, ...
+        # Leftmost is easily spoofed. On GCP/Cloud Run the
+        # right-most IP is the load balancer, and the one
+        # immediately to its left is the client IP appended
+        # by Google Front End (trusted).
+        # Parse right-to-left to avoid spoofing.
+        ips = [ip.strip() for ip in xff.split(",") if ip.strip()]
+        if len(ips) >= 2:
+            # second from right: GCP-detected client IP
+            return ips[-2]
+        if ips:
+            return ips[0]
     return request.client.host if request.client else "unknown"
 
 class CSRFMiddleware(BaseHTTPMiddleware):
