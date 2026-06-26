@@ -8,7 +8,6 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const appPath = path.join(__dirname, 'App.jsx')
 
 test('#3 member UI – no "Discord @username" strings', async () => {
   const membersTabPath = path.join(__dirname, 'tabs/MembersTab.jsx')
