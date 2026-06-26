@@ -15,6 +15,8 @@ from .auth import (
     require_user,
     create_session, hash_token,
     generate_csrf_token, CSRF_COOKIE, SESSION_COOKIE,
+    SESSION_COOKIE_ATTRS, CSRF_COOKIE_ATTRS,
+    OAUTH_STATE_COOKIE, OAUTH_STATE_COOKIE_ATTRS,
     discord_oauth_url,
     DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, REDIRECT_URI,
 )
@@ -25,6 +27,27 @@ from .middleware import CSRFMiddleware
 # Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Connections Game")
+
+# Security: assert auth cookies are Secure in production (Cloud Run)
+# SameSite=None (OAuth state) without Secure=True is a CSRF vector (#15)
+@app.on_event("startup")
+async def assert_secure_cookies_in_prod():
+    if os.environ.get("K_SERVICE"):  # Cloud Run
+        for name, attrs in [
+            ("SESSION_COOKIE", SESSION_COOKIE_ATTRS),
+            ("CSRF_COOKIE", CSRF_COOKIE_ATTRS),
+            ("OAUTH_STATE_COOKIE", OAUTH_STATE_COOKIE_ATTRS),
+        ]:
+            if not attrs.get("secure"):
+                raise RuntimeError(
+                    f"SECURITY: {name} must have secure=True in production - "
+                    f"SameSite=None without Secure is a CSRF risk (#15)"
+                )
+            # OAuth state cookie specifically requires Secure with SameSite=None
+            if attrs.get("samesite", "").lower() == "none" and not attrs.get("secure"):
+                raise RuntimeError(
+                    f"SECURITY: {name} uses SameSite=None without Secure=True - blocked (#15)"
+                )
 
 # CSRF + rate limiting middleware
 app.add_middleware(CSRFMiddleware)
@@ -38,7 +61,7 @@ async def csrf_cookie_middleware(request: Request, call_next):
     if session_token:
         response.set_cookie(
             CSRF_COOKIE, generate_csrf_token(session_token),
-            max_age=30*86400, httponly=False, secure=True, samesite="strict", path="/"
+            max_age=30*86400, path="/", **CSRF_COOKIE_ATTRS
         )
     return response
 
@@ -68,7 +91,7 @@ async def auth_discord_start(request: Request, db: Session = Depends(get_db), re
         return RedirectResponse(url=auth_url, status_code=302)
     # POST requests (frontend) -> JSON with auth_url
     resp = JSONResponse({"auth_url": auth_url})
-    resp.set_cookie("oauth_state", state, max_age=600, httponly=True, secure=True, samesite="none", path="/")
+    resp.set_cookie(OAUTH_STATE_COOKIE, state, max_age=600, path="/", **OAUTH_STATE_COOKIE_ATTRS)
     return resp
 
 @app.get("/auth/discord/callback")
@@ -206,9 +229,9 @@ async def auth_discord_callback(
     csrf_token = generate_csrf_token(session_token)
     # Redirect with cookies
     resp = RedirectResponse(url=redirect_after, status_code=302)
-    resp.set_cookie(SESSION_COOKIE, session_token, max_age=30*86400, httponly=True, secure=True, samesite="lax", path="/")
-    resp.set_cookie(CSRF_COOKIE, csrf_token, max_age=30*86400, httponly=False, secure=True, samesite="strict", path="/")
-    resp.delete_cookie("oauth_state", path="/")
+    resp.set_cookie(SESSION_COOKIE, session_token, max_age=30*86400, path="/", **SESSION_COOKIE_ATTRS)
+    resp.set_cookie(CSRF_COOKIE, csrf_token, max_age=30*86400, path="/", **CSRF_COOKIE_ATTRS)
+    resp.delete_cookie(OAUTH_STATE_COOKIE, path="/")
     # discord_id_hint cookie for silent auto-login via refresh_token
     resp.set_cookie("discord_id_hint", discord_id, max_age=365*86400, httponly=True, secure=True, samesite="strict", path="/")
     return resp
@@ -277,8 +300,8 @@ async def auth_refresh(request: Request, db: Session = Depends(get_db)):
         "global_name": user.global_name,
         "avatar_hash": user.avatar_hash,
     })
-    resp.set_cookie(SESSION_COOKIE, session_token, max_age=30*86400, httponly=True, secure=True, samesite="lax", path="/")
-    resp.set_cookie(CSRF_COOKIE, csrf_token, max_age=30*86400, httponly=False, secure=True, samesite="strict", path="/")
+    resp.set_cookie(SESSION_COOKIE, session_token, max_age=30*86400, path="/", **SESSION_COOKIE_ATTRS)
+    resp.set_cookie(CSRF_COOKIE, csrf_token, max_age=30*86400, path="/", **CSRF_COOKIE_ATTRS)
     # refresh hint cookie
     resp.set_cookie("discord_id_hint", discord_id, max_age=365*86400, httponly=True, secure=True, samesite="strict", path="/")
     return resp

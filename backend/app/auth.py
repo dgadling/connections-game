@@ -13,6 +13,15 @@ CSRF_COOKIE = "csrf_token"
 SESSION_SLIDING_DAYS = 30
 SESSION_ABSOLUTE_DAYS = 90
 
+# Cookie security attributes - keep in sync with app/main.py
+# OAuth state cookie uses SameSite=None to allow cross-site redirects
+# from Discord (mobile Safari drops Lax cookies). SameSite=None REQUIRES Secure=True,
+# otherwise it's a CSRF vector - startup assert enforces this in prod.
+SESSION_COOKIE_ATTRS = {"httponly": True, "secure": True, "samesite": "lax"}
+CSRF_COOKIE_ATTRS = {"httponly": False, "secure": True, "samesite": "strict"}
+OAUTH_STATE_COOKIE = "oauth_state"
+OAUTH_STATE_COOKIE_ATTRS = {"httponly": True, "secure": True, "samesite": "none"}
+
 # Global superuser - has owner access to all games
 # Read at module load, but is_superuser() also checks os.environ for test overrides
 SUPERUSER_DISCORD_ID = os.environ.get("SUPERUSER_DISCORD_ID", "")
