@@ -585,7 +585,7 @@ def complete_round(game_id: int, db: Session = Depends(get_db), user: models.Dis
     play = models.ConnPlay(game_id=game_id, round_num=round_num, question_id=state.current_question_id, played_by=user.discord_id)
     db.add(play)
     try:
-        db.commit()
+        db.flush()
     except Exception as e:
         db.rollback()
         raise HTTPException(409, "round already completed") from e
