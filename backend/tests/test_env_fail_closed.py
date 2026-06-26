@@ -117,3 +117,39 @@ except KeyError as e:
     assert result.returncode == 0, f"stdout={result.stdout} stderr={result.stderr}"
     assert "PASS" in result.stdout
 
+
+
+def test_session_secret_required():
+    """SESSION_SECRET missing → import app.auth raises KeyError"""
+    code = """
+import os
+os.environ.pop('SESSION_SECRET', None)
+os.environ.setdefault('DISCORD_CLIENT_ID', 'x')
+os.environ.setdefault('DISCORD_CLIENT_SECRET', 'x')
+os.environ.setdefault('DISCORD_REDIRECT_URI', 'http://x/')
+os.environ.setdefault('DISCORD_OAUTH_FERNET_KEY', 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=')
+try:
+    import sys
+    for k in list(sys.modules.keys()):
+        if k.startswith('app.'):
+            del sys.modules[k]
+    import app.auth
+    print('FAIL')
+    exit(1)
+except KeyError as e:
+    if 'SESSION_SECRET' in str(e):
+        print('PASS')
+        exit(0)
+    print(f'FAIL: {e}')
+    exit(1)
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=BACKEND_DIR,
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    assert result.returncode == 0, f"stdout={result.stdout} stderr={result.stderr}"
+    assert "PASS" in result.stdout
+

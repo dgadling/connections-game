@@ -103,6 +103,7 @@ def create_session(db: Session, discord_id: str) -> str:
 DISCORD_CLIENT_ID = os.environ["DISCORD_CLIENT_ID"]
 DISCORD_CLIENT_SECRET = os.environ["DISCORD_CLIENT_SECRET"]
 REDIRECT_URI = os.environ["DISCORD_REDIRECT_URI"]
+SESSION_SECRET = os.environ["SESSION_SECRET"]
 
 
 def generate_csrf_token(session_token: str) -> str:
@@ -113,11 +114,11 @@ def generate_csrf_token(session_token: str) -> str:
     forge a CSRF token (classic double-submit weakness).
     """
     import hmac
-    # Use DISCORD_CLIENT_SECRET as CSRF HMAC key - fail hard if missing,
+    # Use SESSION_SECRET as CSRF HMAC key - fail hard if missing,
     # consistent with DISCORD_OAUTH_FERNET_KEY handling.
-    secret = DISCORD_CLIENT_SECRET.encode()
+    secret = SESSION_SECRET.encode()
     if not secret:
-        raise RuntimeError("DISCORD_CLIENT_SECRET must be set (used for CSRF HMAC)")
+        raise RuntimeError("SESSION_SECRET must be set (used for CSRF HMAC)")
     return hmac.new(secret, session_token.encode(), hashlib.sha256).hexdigest()
 
 def discord_oauth_url(state: str, prompt_none: bool = True) -> str:
