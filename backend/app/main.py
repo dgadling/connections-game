@@ -209,7 +209,7 @@ async def auth_discord_callback(
     resp.set_cookie(CSRF_COOKIE, csrf_token, max_age=365*86400, httponly=False, secure=True, samesite="strict", path="/")
     resp.delete_cookie("oauth_state", path="/")
     # discord_id_hint cookie for silent auto-login via refresh_token
-    resp.set_cookie("discord_id_hint", discord_id, max_age=365*86400, httponly=False, secure=True, samesite="lax", path="/")
+    resp.set_cookie("discord_id_hint", discord_id, max_age=365*86400, httponly=True, secure=True, samesite="strict", path="/")
     return resp
 
 @app.post("/auth/logout")
@@ -279,7 +279,7 @@ async def auth_refresh(request: Request, db: Session = Depends(get_db)):
     resp.set_cookie(SESSION_COOKIE, session_token, max_age=30*86400, httponly=True, secure=True, samesite="lax", path="/")
     resp.set_cookie(CSRF_COOKIE, csrf_token, max_age=365*86400, httponly=False, secure=True, samesite="strict", path="/")
     # refresh hint cookie
-    resp.set_cookie("discord_id_hint", discord_id, max_age=365*86400, httponly=False, secure=True, samesite="lax", path="/")
+    resp.set_cookie("discord_id_hint", discord_id, max_age=365*86400, httponly=True, secure=True, samesite="strict", path="/")
     return resp
 
 # Health check
