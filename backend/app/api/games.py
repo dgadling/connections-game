@@ -37,9 +37,8 @@ def validate_discord_id(discord_id: str) -> str:
             raise HTTPException(400, "Invalid Discord ID") from e
         return normalized
     # Username/handle path
-    # Discord usernames: 2-32 chars, a-z0-9_., no leading/trailing ./_,
-    # no consecutive dots (mention won't resolve otherwise)
-    if re.match(r'^(?![_.])(?!.*[_.]$)(?!.*\.\.)[\w.]{2,32}$', normalized):
+    # Discord usernames: 2-32 chars, a-z0-9_., no consecutive dots
+    if re.match(r'^(?!.*\.\.)[\w.]{2,32}$', normalized):
         return normalized
     raise HTTPException(400, "Discord ID must be a numeric snowflake (17-20 digits) or a username (2-32 chars, letters/numbers/_/.)")
 

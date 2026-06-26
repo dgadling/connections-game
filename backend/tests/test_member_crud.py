@@ -58,10 +58,15 @@ def test_member_discord_username_accepted(client, game):
     r = client.post(f"/api/games/{game.id}/members", json={"name": "Bad3", "discord_id": "x" * 33})  # too long
     assert r.status_code == 400
 
-    # Issue #16: leading/trailing ./_ and consecutive dots must be rejected
-    for bad_id in [".abc", "_abc", "abc.", "abc_", "a..b", ".a.", "_a_"]:
+    # Issue #16: consecutive dots must be rejected (Discord allows leading/trailing ./_)
+    for bad_id in ["a..b", "test..user", "..abc", "abc.."]:
         r = client.post(f"/api/games/{game.id}/members", json={"name": "Bad", "discord_id": bad_id})
         assert r.status_code == 400, f"{bad_id} should be rejected"
+
+    # Leading/trailing ./_ are allowed per Discord (fixed 2026-06-25)
+    for good_id in [".abc", "_abc", "abc.", "abc_", ".a.", "_a_"]:
+        r = client.post(f"/api/games/{game.id}/members", json={"name": "Good", "discord_id": good_id})
+        assert r.status_code == 200, f"{good_id} should be accepted"
 
 
 def test_member_discord_id_optional(client, game):
