@@ -102,9 +102,6 @@ def delete_game(game_id: int, db: Session = Depends(get_db), user: models.Discor
         raise HTTPException(404)
     if game.archived_at is None:
         raise HTTPException(400, "game must be archived before deletion")
-    # ConnPairing.asker_member_id / target_member_id are RESTRICT; delete pairings first
-    # to avoid FK violation when GameMember rows cascade-delete from Game
-    db.query(models.ConnPairing).filter(models.ConnPairing.game_id == game_id).delete()
     db.delete(game)
     db.commit()
     return schemas.OkResponse()

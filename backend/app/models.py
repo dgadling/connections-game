@@ -116,8 +116,8 @@ class ConnPairing(Base):
     id = Column(Integer, primary_key=True)
     game_id = Column(Integer, ForeignKey("games.id", ondelete="CASCADE"), nullable=False)
     round_num = Column(Integer, nullable=False)
-    asker_member_id = Column(Integer, ForeignKey("game_members.id", ondelete="RESTRICT"), nullable=False)
-    target_member_id = Column(Integer, ForeignKey("game_members.id", ondelete="RESTRICT"), nullable=False)
+    asker_member_id = Column(Integer, ForeignKey("game_members.id", ondelete="CASCADE"), nullable=False)
+    target_member_id = Column(Integer, ForeignKey("game_members.id", ondelete="CASCADE"), nullable=False)
     __table_args__ = (
         CheckConstraint("asker_member_id != target_member_id", name="ck_no_self_pair"),
         UniqueConstraint("game_id", "round_num", "asker_member_id", name="uq_pairing_asker"),
