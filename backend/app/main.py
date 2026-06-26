@@ -22,6 +22,10 @@ from .auth import (
     DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, REDIRECT_URI,
 )
 from .api.games import router as games_router
+from .api.members import router as members_router
+from .api.questions import router as questions_router
+from .api.rounds import router as rounds_router
+from .api.invites import router as invites_router
 from .middleware import CSRFMiddleware
 
 # Create tables on startup (Alembic will handle migrations in prod)
@@ -337,7 +341,12 @@ def privacy():
 """)
 
 # API routes
+# invites_router first so /api/games/join doesn't get shadowed by /api/games/{game_id}
+app.include_router(invites_router)
 app.include_router(games_router)
+app.include_router(members_router)
+app.include_router(questions_router)
+app.include_router(rounds_router)
 
 # Serve React frontend (if built)
 frontend_dist = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist")
