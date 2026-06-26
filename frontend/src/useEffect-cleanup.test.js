@@ -32,10 +32,12 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const appPath = path.join(__dirname, 'App.jsx')
-const src = fs.readFileSync(appPath, 'utf8')
 
-test('App.jsx – no bare-identifier useEffect calls (prevents Promise-cleanup crash)', () => {
+function readSrc(rel) {
+  return fs.readFileSync(path.join(__dirname, rel), 'utf8')
+}
+
+function scanUseEffectBare(src, label) {
   // Find useEffect( followed by optional whitespace, followed by a letter/underscore
   // (start of identifier) – NOT followed by '(' (arrow function) or 'function' / 'async'
   // This catches: useEffect(load, …)  useEffect(loadGames, …)
@@ -58,21 +60,43 @@ test('App.jsx – no bare-identifier useEffect calls (prevents Promise-cleanup c
     // Get line number for error message
     const line = src.slice(0, m.index).split('\n').length
     const snippet = src.slice(m.index, m.index + 30).replace(/\n/g, ' ')
-    matches.push(`line ${line}: ${snippet}…`)
+    matches.push(`${label} line ${line}: ${snippet}…`)
+  }
+  return matches
+}
+
+test('no bare-identifier useEffect calls (prevents Promise-cleanup crash)', () => {
+  // Scan all React component files
+  const files = [
+    'App.jsx',
+    'tabs/RoundTab.jsx',
+    'tabs/QuestionsTab.jsx',
+    'tabs/MembersTab.jsx',
+    'tabs/HistoryTab.jsx',
+    'tabs/AdminTab.jsx',
+    'components/GameList.jsx',
+    'components/QuestionItem.jsx',
+  ]
+  let allMatches = []
+  for (const f of files) {
+    const fullPath = path.join(__dirname, f)
+    if (!fs.existsSync(fullPath)) continue
+    const src = readSrc(f)
+    allMatches = allMatches.concat(scanUseEffectBare(src, f))
   }
 
   assert.equal(
-    matches.length,
+    allMatches.length,
     0,
-    `Found ${matches.length} bare-identifier useEffect call(s) in App.jsx – ` +
+    `Found ${allMatches.length} bare-identifier useEffect call(s) – ` +
     `these can return Promises that React stores as cleanup functions, ` +
     `causing "TypeError: n is not a function" on unmount (ErrorBoundary won't catch).\n` +
     `Fix by wrapping: useEffect(() => { load() }, deps) instead of useEffect(load, deps)\n` +
-    `Offenders:\n  - ` + matches.join('\n  - ')
+    `Offenders:\n  - ` + allMatches.join('\n  - ')
   )
 })
 
-test('App.jsx – QuestionsTab and MembersTab useEffect calls are wrapped (specific regression check)', () => {
+test('QuestionsTab and MembersTab useEffect calls are wrapped (specific regression check)', () => {
   // Extra specific check – ensure the two components that had the bug
   // still have the fix applied. Look for the load function definitions
   // near useEffect calls.
@@ -83,16 +107,25 @@ test('App.jsx – QuestionsTab and MembersTab useEffect calls are wrapped (speci
   // Both should be called via useEffect(() => { load() }, […])
   // NOT via useEffect(load, […])
 
-  // Simple check – count occurrences of the buggy pattern in the whole file
-  // (already done above), plus verify the fixed pattern exists at least twice
-  // (once for QuestionsTab, once for MembersTab)
+  const questionsSrc = readSrc('tabs/QuestionsTab.jsx')
+  const membersSrc = readSrc('tabs/MembersTab.jsx')
+
+  // Simple check – count occurrences of the fixed pattern
   const wrappedLoadPattern = /useEffect\s*\(\s*\(\s*\)\s*=>\s*\{\s*load\(\)\s*\}\s*,\s*\[/g
-  const wrappedMatches = src.match(wrappedLoadPattern) || []
+  
+  const qMatches = (questionsSrc.match(wrappedLoadPattern) || []).length
+  const mMatches = (membersSrc.match(wrappedLoadPattern) || []).length
   
   assert.ok(
-    wrappedMatches.length >= 2,
-    `Expected at least 2 instances of useEffect(() => { load() }, […]) ` +
-    `in App.jsx (QuestionsTab + MembersTab), found ${wrappedMatches.length}. ` +
+    qMatches >= 1,
+    `Expected at least 1 instance of useEffect(() => { load() }, […]) ` +
+    `in QuestionsTab.jsx, found ${qMatches}. ` +
+    `The useEffect cleanup crash fix may have regressed.`
+  )
+  assert.ok(
+    mMatches >= 1,
+    `Expected at least 1 instance of useEffect(() => { load() }, […]) ` +
+    `in MembersTab.jsx, found ${mMatches}. ` +
     `The useEffect cleanup crash fix may have regressed.`
   )
 })
@@ -110,20 +143,29 @@ test('App() – no hooks after conditional early return (React #310)', () => {
   // This test scans the App() function body and ensures ALL hook calls occur
   // BEFORE the first conditional early return.
 
+  const src = readSrc('App.jsx')
   // Extract App() function body (export default function App() { ... })
   const appStart = src.indexOf('export default function App()')
   assert.ok(appStart >= 0, 'Could not find App() function')
   const braceOpen = src.indexOf('{', appStart)
   assert.ok(braceOpen >= 0)
 
-  // Find matching closing brace for App() – it's the first top-level function, next is "function GameList"
-  const gameListStart = src.indexOf('\nfunction GameList', braceOpen)
-  assert.ok(gameListStart >= 0, 'Could not find GameList – App() body end detection failed')
-  const appBody = src.slice(braceOpen, gameListStart)
+  // App.jsx is now small – find end by counting braces, or look for export
+  // Simpler: find the final closing brace at top level before EOF
+  let depth = 0
+  let endPos = braceOpen
+  for (let i = braceOpen; i < src.length; i++) {
+    if (src[i] === '{') depth++
+    else if (src[i] === '}') {
+      depth--
+      if (depth === 0) { endPos = i; break }
+    }
+  }
+  const appBody = src.slice(braceOpen, endPos + 1)
 
   const lines = appBody.split('\n')
   let firstEarlyReturnLine = -1
-  let depth = 0
+  depth = 0
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]

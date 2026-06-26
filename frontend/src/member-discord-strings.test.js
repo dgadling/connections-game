@@ -11,7 +11,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const appPath = path.join(__dirname, 'App.jsx')
 
 test('#3 member UI – no "Discord @username" strings', async () => {
-  const src = await fs.readFile(appPath, 'utf8')
+  const membersTabPath = path.join(__dirname, 'tabs/MembersTab.jsx')
+  const src = await fs.readFile(membersTabPath, 'utf8')
   
   // BANNED strings (the bug)
   const banned = [
@@ -28,7 +29,8 @@ test('#3 member UI – no "Discord @username" strings', async () => {
 })
 
 test('#3 member UI – correct placeholder text present', async () => {
-  const src = await fs.readFile(appPath, 'utf8')
+  const membersTabPath = path.join(__dirname, 'tabs/MembersTab.jsx')
+  const src = await fs.readFile(membersTabPath, 'utf8')
   
   // Issue #17: Discord ID is now optional
   // REQUIRED strings (updated for #17)
@@ -44,7 +46,8 @@ test('#3 member UI – correct placeholder text present', async () => {
 })
 
 test('#3 member UI – alert messages cleaned', async () => {
-  const src = await fs.readFile(appPath, 'utf8')
+  const membersTabPath = path.join(__dirname, 'tabs/MembersTab.jsx')
+  const src = await fs.readFile(membersTabPath, 'utf8')
   
   // Issue #17: discord_id is optional, so "is required" alerts should NOT exist
   assert.ok(!src.includes('Discord @username is required'),
@@ -55,16 +58,11 @@ test('#3 member UI – alert messages cleaned', async () => {
 })
 
 test('#3 member UI – all Discord ID input fields use correct placeholder', async () => {
-  const src = await fs.readFile(appPath, 'utf8')
-  
-  // Find all placeholder="Discord ... occurrences in MembersTab area
-  const memberTabIdx = src.indexOf('function MembersTab')
-  assert.ok(memberTabIdx > 0, 'MembersTab function exists')
-  
-  const memberTabSrc = src.slice(memberTabIdx, memberTabIdx + 5000)
+  const membersTabPath = path.join(__dirname, 'tabs/MembersTab.jsx')
+  const src = await fs.readFile(membersTabPath, 'utf8')
   
   // No @ in any Discord placeholder within MembersTab
-  const discordPlaceholders = [...memberTabSrc.matchAll(/placeholder="([^"]*Discord[^"]*)"/g)]
+  const discordPlaceholders = [...src.matchAll(/placeholder="([^"]*Discord[^"]*)"/g)]
   
   for (const m of discordPlaceholders) {
     const placeholder = m[1]
@@ -84,11 +82,19 @@ test('#3 member UI – all Discord ID input fields use correct placeholder', asy
 test('#3 regression – full codebase scan for banned Discord terminology', async () => {
   // Scan entire frontend/src for banned strings
   const srcDir = __dirname
-  const files = await fs.readdir(srcDir)
-  const jsFiles = files.filter(f => 
-    (f.endsWith('.jsx') || f.endsWith('.js')) &&
-    !f.endsWith('.test.js')  // skip test files – they contain banned strings in assertions
-  )
+  
+  async function walk(dir, files = []) {
+    const entries = await fs.readdir(dir, { withFileTypes: true })
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) await walk(full, files)
+      else if ((entry.name.endsWith('.jsx') || entry.name.endsWith('.js')) && !entry.name.endsWith('.test.js')) {
+        files.push(full)
+      }
+    }
+    return files
+  }
+  const jsFiles = await walk(srcDir)
   
   const bannedPatterns = [
     { pattern: /Discord @username/g, desc: 'Discord @username (should be "Discord username")' },
@@ -98,11 +104,12 @@ test('#3 regression – full codebase scan for banned Discord terminology', asyn
   
   const violations = []
   for (const file of jsFiles) {
-    const content = await fs.readFile(path.join(srcDir, file), 'utf8')
+    const content = await fs.readFile(file, 'utf8')
     for (const { pattern, desc } of bannedPatterns) {
       const matches = content.match(pattern)
       if (matches) {
-        violations.push(`${file}: "${desc}" found ${matches.length} time(s)`)
+        const rel = path.relative(srcDir, file)
+        violations.push(`${rel}: "${desc}" found ${matches.length} time(s)`)
       }
     }
   }
