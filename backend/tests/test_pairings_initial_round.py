@@ -1,4 +1,6 @@
-"""Bug 1: Round 1 pairings missing after adding members"""
+# Tests for Round 1 pairings after adding members (formerly Bug 1)
+# Originally: test_round1_pairings_bug1.py
+"""Round 1 pairings missing after adding members"""
 from app import models
 from app.api.games import get_round
 import app.api.games as games_module

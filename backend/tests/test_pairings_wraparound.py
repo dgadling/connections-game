@@ -1,4 +1,6 @@
-"""Bug 2: Pairings exhaust after N-1 rounds"""
+# Tests for pairing wraparound after N-1 rounds (formerly Bug 2)
+# Originally: test_pairings_wrap_bug2.py
+"""Pairings exhaust after N-1 rounds - verify wraparound works"""
 from app import models
 from app.api.games import get_round, complete_round
 import app.api.games as games_module

@@ -1,4 +1,6 @@
-"""m6: invite join - POST /games/join consumes invite_token, creates admin membership"""
+# Tests for REVIEW.md M6 - invite join flow
+# Originally: test_m6_invite_join.py
+"""invite join - POST /games/join consumes invite_token, creates admin membership"""
 from app.timeutil import utcnow
 import hashlib
 from datetime import timedelta

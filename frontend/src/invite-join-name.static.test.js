@@ -54,7 +54,7 @@ test('#2 join – frontend handles join response correctly', async () => {
 
 test('#2 join – response schema regression lock', async () => {
   // Verify backend test exists and checks name field
-  const testPath = path.join(__dirname, '../../backend/tests/test_m6_invite_join.py')
+  const testPath = path.join(__dirname, '../../backend/tests/test_game_invite_join.py')
   try {
     const testSrc = await fs.readFile(testPath, 'utf8')
     assert.ok(testSrc.includes('"name" in data') || testSrc.includes("'name' in data"),
@@ -63,7 +63,7 @@ test('#2 join – response schema regression lock', async () => {
       'backend test must assert returned name equals game.name')
   } catch (e) {
     if (e.code === 'ENOENT') {
-      assert.fail('test_m6_invite_join.py not found')
+      assert.fail('test_game_invite_join.py not found')
     }
     throw e
   }

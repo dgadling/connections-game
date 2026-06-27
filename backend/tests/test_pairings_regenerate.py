@@ -1,4 +1,6 @@
-"""b4: regenerate_pairings preserves current_round pairings on roster change"""
+# Tests for REVIEW.md B4 - regenerate_pairings preserves current_round
+# Originally: test_b4_pairings_preserve.py
+"""regenerate_pairings preserves current_round pairings on roster change"""
 from app import models
 from app.api.games import regenerate_pairings
 

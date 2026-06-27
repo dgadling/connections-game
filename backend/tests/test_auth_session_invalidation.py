@@ -1,4 +1,6 @@
-"""b2: OAuth callback preserves existing auth_sessions (multi-device support)"""
+# Tests for REVIEW.md B2 / GH #15 - OAuth session invalidation
+# Originally: test_b2_auth_invalidation.py
+"""OAuth callback preserves existing auth_sessions (multi-device support)"""
 from app.timeutil import utcnow
 from datetime import timedelta
 from app import models

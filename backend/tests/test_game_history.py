@@ -1,4 +1,6 @@
-"""m3/m4: history enrichment - pairings[], asker/target names + discord_ids, played_by_username, question_tag"""
+# Tests for REVIEW.md M3/M4 - game history enrichment
+# Originally: test_m34_history.py
+"""history enrichment - pairings[], asker/target names + discord_ids, played_by_username, question_tag"""
 from app import models
 
 

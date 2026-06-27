@@ -1,4 +1,6 @@
-"""m2: question reorder - POST /questions/reorder updates sort_order"""
+# Tests for REVIEW.md M2 / GH issue - question reorder
+# Originally: test_m2_reorder.py
+"""question reorder - POST /questions/reorder updates sort_order"""
 from app import models
 
 
