@@ -14,7 +14,8 @@ Discord-OAuth web app for running "Connections" icebreaker rounds (pair people, 
    ```bash
    cd backend
    python -m venv .venv
-   .venv/bin/pip install -r requirements-test.txt  # includes app deps + pytest
+   .venv/bin/pip install -r requirements.txt
+   .venv/bin/pip install -r requirements-test.txt
    cd ../frontend
    npm install
    ```

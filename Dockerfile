@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends sqlite3 ca-cert
  && tar -xzf /tmp/litestream.tar.gz -C /usr/local/bin litestream \
  && rm /tmp/litestream.tar.gz \
  && litestream version
-COPY requirements.txt ./
+COPY backend/requirements.txt ./
 RUN pip install -r requirements.txt
 COPY backend/ ./backend/
 # copy frontend dist into backend for FastAPI static mount
