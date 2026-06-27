@@ -49,7 +49,9 @@ jobs:
         run: npm install
       - name: ESLint
         run: npm run lint
-      - name: Test
+      - name: Test (component)
         run: npm test
+      - name: Test (static)
+        run: npm run test:static
       - name: Build
         run: npm run build
