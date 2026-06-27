@@ -19,7 +19,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'cd ../backend && rm -f e2e_test.db* && CONNECTIONS_DB=./e2e_test.db TEST_BYPASS_AUTH=1 ./.venv/bin/uvicorn test_main:app --port 8001',
+    command: 'cd ../backend && rm -f e2e_test.db* && CONNECTIONS_DB=./e2e_test.db TEST_BYPASS_AUTH=1 ./.venv/bin/uvicorn e2e_main:app --port 8001',
     url: 'http://localhost:8001/healthz',
     reuseExistingServer: !process.env.CI,
     stdout: 'pipe',

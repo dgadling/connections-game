@@ -20,13 +20,13 @@ import os
 # Safety checks - refuse to run in production environments
 if os.environ.get("K_SERVICE"):
     raise RuntimeError(
-        "FATAL: test_main.py with auth bypass CANNOT run on Cloud Run. "
+        "FATAL: e2e_main.py with auth bypass CANNOT run on Cloud Run. "
         "K_SERVICE is set - aborting."
     )
 
 if os.environ.get("TEST_BYPASS_AUTH") != "1":
     raise RuntimeError(
-        "test_main.py requires TEST_BYPASS_AUTH=1 in environment. "
+        "e2e_main.py requires TEST_BYPASS_AUTH=1 in environment. "
         "Refusing to start without explicit opt-in."
     )
 
