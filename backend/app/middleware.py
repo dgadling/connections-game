@@ -100,3 +100,35 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                     return JSONResponse({"detail": "CSRF token invalid"}, status_code=403)
         response = await call_next(request)
         return response
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to all responses.
+
+    CSP includes 'unsafe-inline' for scripts/styles:
+    - Vite injects inline scripts during dev/build
+    - Tailwind uses inline styles
+    TODO: tighten CSP by removing 'unsafe-inline' once Vite build is nonce/hash-based.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        # HSTS - HTTPS-only (Cloud Run terminates TLS)
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        # Prevent clickjacking
+        response.headers["X-Frame-Options"] = "DENY"
+        # Prevent MIME sniffing
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        # Content Security Policy
+        # Note: script-src/style-src 'unsafe-inline' needed for Vite/Tailwind.
+        # TODO: remove unsafe-inline and use nonces/hashes.
+        csp = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https:; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none';"
+        )
+        response.headers["Content-Security-Policy"] = csp
+        return response

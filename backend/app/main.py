@@ -26,7 +26,7 @@ from .api.members import router as members_router
 from .api.questions import router as questions_router
 from .api.rounds import router as rounds_router
 from .api.invites import router as invites_router
-from .middleware import CSRFMiddleware
+from .middleware import CSRFMiddleware, SecurityHeadersMiddleware
 
 # Create tables on startup (Alembic will handle migrations in prod)
 # Base.metadata.create_all(bind=engine)
@@ -56,6 +56,9 @@ async def assert_secure_cookies_in_prod():
 
 # CSRF + rate limiting middleware
 app.add_middleware(CSRFMiddleware)
+
+# Security headers (CSP, HSTS, etc.) - apply to all responses
+app.add_middleware(SecurityHeadersMiddleware)
 
 @app.middleware("http")
 async def csrf_cookie_middleware(request: Request, call_next):
