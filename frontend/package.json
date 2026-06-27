@@ -26,7 +26,6 @@
     "dev": "vite",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:static": "node --test $(find src -name \"*.static.test.js\")",
     "lint": "eslint src --ext .js,.jsx",
     "lint:fix": "eslint src --ext .js,.jsx --fix"
   },

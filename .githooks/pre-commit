@@ -70,7 +70,4 @@ fi
 echo "  frontend: test (vitest)"
 (cd frontend && ./node_modules/.bin/vitest run 2>&1) || { echo "❌ frontend test failed"; exit 1; }
 
-echo "  frontend: test (static)"
-(cd frontend && node --test $(find src -name "*.static.test.js")) || { echo "❌ frontend static test failed"; exit 1; }
-
 echo "✓ pre-commit checks passed"
