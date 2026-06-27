@@ -291,7 +291,10 @@ def test_callback_invalid_client_no_fallback(db_session):
         for client in _oauth_client(db_session):
             resp = client.get(f"/auth/discord/callback?error={err}&state={state_token}")
         assert resp.status_code == 400, f"{err} should 400, got {resp.status_code}"
-        assert "oauth error" in resp.text.lower() or err in resp.text.lower()
+        # OAuth errors are sanitized - client gets generic message, not raw error (GH #33)
+        assert "authentication failed" in resp.text.lower()
+        # Verify error is NOT leaked to client
+        assert err not in resp.text.lower(), f"OAuth error {err!r} leaked to client"
         db_session.query(models.OAuthState).delete()
         db_session.commit()
 
@@ -305,7 +308,8 @@ def test_callback_loop_protection(db_session):
         resp = client.get(f"/auth/discord/callback?error=consent_required&state={state_token}")
     # should 400, NOT redirect loop
     assert resp.status_code == 400
-    assert "consent_required" in resp.text.lower() or "oauth error" in resp.text.lower()
+    # OAuth errors are sanitized - generic message (GH #33)
+    assert "authentication failed" in resp.text.lower()
 
 def test_callback_interaction_required_triggers_fallback(db_session):
     db_session.query(models.OAuthState).delete()

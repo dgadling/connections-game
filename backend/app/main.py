@@ -77,10 +77,17 @@ async def csrf_cookie_middleware(request: Request, call_next):
 @app.post("/auth/discord/start")
 @app.get("/auth/discord/start")
 async def auth_discord_start(request: Request, db: Session = Depends(get_db), redirect_after: str = "/", force_consent: bool = False):
-    # Validate redirect_after - same-origin path only
-    if "://" in redirect_after or redirect_after.startswith("//"):
+    # Validate redirect_after - same-origin path only (GH #33)
+    # Use urllib.parse to catch edge cases string matching misses:
+    # //evil.com, /\\evil.com, javascript:…, etc.
+    from urllib.parse import urlparse
+    parsed = urlparse(redirect_after)
+    # Reject if: has scheme (https://...), has netloc (//evil.com, /\\evil.com),
+    # or doesn't start with /
+    if parsed.scheme or parsed.netloc or not redirect_after.startswith("/"):
         redirect_after = "/"
-    if not redirect_after.startswith("/"):
+    # Additional hardening: reject backslash-leading paths, control chars
+    if redirect_after.startswith("\\") or any(ord(c) < 32 for c in redirect_after):
         redirect_after = "/"
     state = secrets.token_urlsafe(32)
     use_prompt_none = not force_consent
@@ -110,10 +117,14 @@ async def auth_discord_callback(
     code: str | None = None,
     state: str | None = None,
 ):
+    import logging
+    logger = logging.getLogger("uvicorn")
     # OAuth error handling (prompt=none fallback)
+    # Sanitize error messages - log server-side, return generic message to client (GH #33)
     if error:
         if not state:
-            raise HTTPException(400, f"OAuth error: {error} (missing state)")
+            logger.warning(f"OAuth error from Discord (missing state): {error!r}")
+            raise HTTPException(400, "Authentication failed - please try again")
         # Verify state - DB is authoritative
         oauth_state = db.query(models.OAuthState).filter(models.OAuthState.state_token == state).first()
         if not oauth_state or oauth_state.expires_at < utcnow():
@@ -139,7 +150,9 @@ async def auth_discord_callback(
                 "<html><body><h1>Login cancelled</h1><p>You cancelled Discord login. <a href='/'>Return home</a></p></body></html>",
                 status_code=200,
             )
-        raise HTTPException(400, f"OAuth error: {error}")
+        # Sanitize OAuth error - log server-side, generic message to client (GH #33)
+        logger.warning(f"OAuth error from Discord: {error!r}")
+        raise HTTPException(400, "Authentication failed - please try again")
 
     # Normal success path - require code and state
     if not code or not state:
