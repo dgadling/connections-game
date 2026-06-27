@@ -79,15 +79,16 @@ async def csrf_cookie_middleware(request: Request, call_next):
 async def auth_discord_start(request: Request, db: Session = Depends(get_db), redirect_after: str = "/", force_consent: bool = False):
     # Validate redirect_after - same-origin path only (GH #33)
     # Use urllib.parse to catch edge cases string matching misses:
-    # //evil.com, /\\evil.com, javascript:…, etc.
+    # //evil.com, javascript:…, etc.
     from urllib.parse import urlparse
     parsed = urlparse(redirect_after)
-    # Reject if: has scheme (https://...), has netloc (//evil.com, /\\evil.com),
+    # Reject if: has scheme (https://...), has netloc (//evil.com),
     # or doesn't start with /
     if parsed.scheme or parsed.netloc or not redirect_after.startswith("/"):
         redirect_after = "/"
-    # Additional hardening: reject backslash-leading paths, control chars
-    if redirect_after.startswith("\\") or any(ord(c) < 32 for c in redirect_after):
+    # Additional hardening: reject backslashes anywhere (some browsers
+    # normalize \ to /, turning /\\evil.com into //evil.com), control chars
+    if "\\" in redirect_after or any(ord(c) < 32 for c in redirect_after):
         redirect_after = "/"
     state = secrets.token_urlsafe(32)
     use_prompt_none = not force_consent
