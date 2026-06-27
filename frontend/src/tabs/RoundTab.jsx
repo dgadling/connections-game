@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { api, toastErr } from '../api.js'
 import { TAG_COLORS, TAG_ICONS } from '../components/TagBadge.jsx'
 import { formatDiscordMention } from '../utils/discord.js'
+import { writeClipboard } from '../utils/clipboard.js'
 
 const arr = (d) => Array.isArray(d) ? d : []
 
@@ -50,7 +51,7 @@ export function RoundTab({ gameId, game, archived }) {
       const target = formatDiscordMention(p.target_discord_id, p.target_name, game?.discord_role_id)
       lines.push(`• ${asker} answers about ${target}`)
     })
-    navigator.clipboard.writeText(lines.join('\n')).then(()=>toast.success('Copied to clipboard')).catch(()=>toastErr(new Error('Copy failed')))
+    writeClipboard(lines.join('\n')).then(()=>toast.success('Copied to clipboard')).catch(()=>toastErr(new Error('Copy failed')))
     setCopied(true); setTimeout(()=>setCopied(false), 1500)
   }
 

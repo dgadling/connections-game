@@ -9,6 +9,12 @@ vi.mock('react-hot-toast', () => ({
   default: { success: vi.fn(), error: vi.fn() },
 }))
 
+// clipboard mock – jsdom's navigator.clipboard is read-only / non-configurable
+const writeClipboardMock = vi.fn((text) => Promise.resolve(text))
+vi.mock('../utils/clipboard.js', () => ({
+  writeClipboard: (...args) => writeClipboardMock(...args),
+}))
+
 const mockRoundData = {
   question: { text: 'What scares you?', tag: 'vulnerable' },
   pairings: [
@@ -17,20 +23,8 @@ const mockRoundData = {
 }
 
 describe('RoundTab – copyDiscord', () => {
-  let clipboardText = ''
-
   beforeEach(() => {
-    clipboardText = ''
-    const mockWrite = vi.fn((text) => { clipboardText = text; return Promise.resolve() })
-    // jsdom: window.navigator !== global.navigator, mock BOTH
-    global.navigator.clipboard.writeText = mockWrite
-    if (typeof window !== 'undefined' && window.navigator && window.navigator.clipboard) {
-      window.navigator.clipboard.writeText = mockWrite
-    }
-    // Also mock bare `navigator` (window.navigator in jsdom)
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText = mockWrite
-    }
+    writeClipboardMock.mockClear()
     toast.success.mockClear()
     toast.error.mockClear()
     global.fetch = vi.fn((url) => {
@@ -45,11 +39,7 @@ describe('RoundTab – copyDiscord', () => {
     })
   })
 
-  it.skip('role ping mode: suppresses individual mentions, includes role ping', async () => {
-    // TODO: clipboard mock infrastructure bug in jsdom – navigator.clipboard.writeText
-    // mock is not being called in role-ping mode (works in no-role-ping mode).
-    // Logic IS tested in src/utils/discord.test.js (5 tests, including role mode suppression).
-    // Component integration verified manually.
+  it('role ping mode: suppresses individual mentions, includes role ping', async () => {
     const user = userEvent.setup()
     render(<RoundTab gameId="test-game" game={{ discord_role_id: '999888777666555444' }} archived={false} />)
 
@@ -58,15 +48,15 @@ describe('RoundTab – copyDiscord', () => {
     const copyButton = screen.getByRole('button', { name: /copy/i })
     await user.click(copyButton)
 
-    await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalled(), { timeout: 500 })
+    await waitFor(() => expect(writeClipboardMock).toHaveBeenCalled())
+    const clipboardText = writeClipboardMock.mock.calls[0][0]
 
     expect(clipboardText).toContain('<@&999888777666555444>')
     expect(clipboardText).toContain('Alice answers about Bob')
     expect(clipboardText).not.toContain('<@123456789012345678>')
   })
 
-  it.skip('no role ping: includes individual Discord mentions', async () => {
-    // TODO: clipboard mock infrastructure bug – flaky in jsdom
+  it('no role ping: includes individual Discord mentions', async () => {
     const user = userEvent.setup()
     render(<RoundTab gameId="test-game" game={{ discord_role_id: null }} archived={false} />)
 
@@ -75,7 +65,8 @@ describe('RoundTab – copyDiscord', () => {
     const copyButton = screen.getByRole('button', { name: /copy/i })
     await user.click(copyButton)
 
-    await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalled())
+    await waitFor(() => expect(writeClipboardMock).toHaveBeenCalled())
+    const clipboardText = writeClipboardMock.mock.calls[0][0]
 
     expect(clipboardText).toContain('<@123456789012345678>')
     expect(clipboardText).toContain('<@987654321098765432>')

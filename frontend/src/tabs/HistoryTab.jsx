@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { api, toastErr } from '../api.js'
 import { TAG_COLORS, TAG_ICONS } from '../components/TagBadge.jsx'
 import { formatDiscordMention } from '../utils/discord.js'
+import { writeClipboard } from '../utils/clipboard.js'
 
 const arr = (d) => Array.isArray(d) ? d : []
 
@@ -30,7 +31,7 @@ export function HistoryTab({ gameId, game }) {
       const target = formatDiscordMention(p.target_discord_id, p.target_name, game?.discord_role_id)
       lines.push(`• ${asker} answers about ${target}`)
     })
-    navigator.clipboard.writeText(lines.join('\n')).then(()=>toast.success('Copied')).catch(()=>toastErr(new Error('Copy failed')))
+    writeClipboard(lines.join('\n')).then(()=>toast.success('Copied')).catch(()=>toastErr(new Error('Copy failed')))
     setCopiedRound(r.round_num); setTimeout(()=>setCopiedRound(null), 1500)
   }
 
