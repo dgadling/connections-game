@@ -82,6 +82,86 @@
     --tag-default-bg: #f5f5f5;
     --tag-default-text: #404040;
   }
+
+  /* Tavern theme – warm parchment / amber / brown ink */
+  [data-theme="tavern"] {
+    /* backgrounds */
+    --color-bg: #f5f0e6;               /* parchment */
+    --color-surface: #fdfbf5;          /* cream surface */
+    --color-surface-hover: #ebe4d3;    /* warm hover */
+    --color-surface-muted: #f0e8d5;    /* muted parchment */
+
+    /* borders */
+    --color-border: #d6c4a8;           /* light tan */
+    --color-border-strong: #bfa37a;    /* medium tan */
+    --color-border-faint: #e8dcc8;     /* faint parchment line */
+
+    /* text */
+    --color-text: #2c1a0e;             /* dark roast ink */
+    --color-text-secondary: #4a2f1a;   /* brown secondary */
+    --color-text-muted: #6b4a2a;       /* muted brown */
+    --color-text-subtle: #8b6540;      /* subtle tan */
+    --color-text-faint: #a8855a;       /* faint tan */
+
+    /* primary */
+    --color-primary: #b45309;          /* amber-700 */
+    --color-primary-hover: #92400e;    /* amber-800 */
+    --color-primary-text: #7c2d12;     /* amber-900 */
+    --color-primary-bg-subtle: #fef3e2; /* warm amber-50 */
+    --color-primary-border: #f59e0b;    /* amber-500 */
+    --color-primary-ring: #d97706;     /* amber-600 */
+
+    /* accent */
+    --color-accent-bg-subtle: #fdf6e8; /* warm cream */
+
+    /* success */
+    --color-success: #15803d;          /* green-700 */
+    --color-success-hover: #166534;    /* green-800 */
+
+    /* danger */
+    --color-danger: #b91c1c;           /* red-700 */
+    --color-danger-hover: #991b1b;     /* red-800 */
+    --color-danger-bg: #fef2f2;        /* red-50 */
+    --color-danger-border: #fca5a5;    /* red-300 */
+    --color-danger-border-strong: #f87171; /* red-400 */
+    --color-danger-text: #991b1b;      /* red-800 */
+    --color-danger-text-strong: #7f1d1d; /* red-900 */
+    --color-danger-text-emphasis: #450a0a; /* red-950 */
+
+    /* warning */
+    --color-warning-bg: #fffbeb;       /* amber-50 */
+    --color-warning-bg-hover: #fef3c7; /* amber-100 */
+    --color-warning-border: #fcd34d;   /* amber-300 */
+    --color-warning-text: #78350f;     /* amber-900 */
+
+    /* tag colors – tavern / parchment-friendly */
+    --tag-warm-bg: #fde68a;            /* amber-200 – deeper on parchment */
+    --tag-warm-text: #78350f;          /* amber-900 */
+    --tag-warm-ring: #fbbf24;          /* amber-400 */
+
+    --tag-secretive-bg: #ddd6fe;       /* violet-200 */
+    --tag-secretive-text: #4c1d95;     /* violet-900 */
+    --tag-secretive-ring: #c4b5fd;     /* violet-300 */
+
+    --tag-reflective-bg: #bae6fd;      /* sky-200 */
+    --tag-reflective-text: #0c4a6e;    /* sky-900 */
+    --tag-reflective-ring: #7dd3fc;    /* sky-300 */
+
+    --tag-tension-bg: #fecdd3;         /* rose-200 */
+    --tag-tension-text: #881337;       /* rose-900 */
+    --tag-tension-ring: #fda4af;       /* rose-300 */
+
+    --tag-vulnerable-bg: #fbcfe8;      /* pink-200 */
+    --tag-vulnerable-text: #831843;    /* pink-900 */
+    --tag-vulnerable-ring: #f9a8d4;    /* pink-300 */
+
+    --tag-loyal-bg: #a7f3d0;           /* emerald-200 */
+    --tag-loyal-text: #064e3b;         /* emerald-900 */
+    --tag-loyal-ring: #6ee7b7;         /* emerald-300 */
+
+    --tag-default-bg: #e8dcc8;
+    --tag-default-text: #4a2f1a;
+  }
 }
 
 @layer utilities {
