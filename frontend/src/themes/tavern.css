@@ -1,80 +1,256 @@
+@import url('https://fonts.googleapis.com/css2?family=Modern+Antiqua');
+
 @layer base {
   :root[data-theme="tavern"] {
-    /* backgrounds */
-    --color-bg: #f5f0e6;               /* parchment */
-    --color-surface: #fdfbf5;          /* cream surface */
-    --color-surface-hover: #ebe4d3;    /* warm hover */
-    --color-surface-muted: #f0e8d5;    /* muted parchment */
+    /* parchment paper palette */
+    --color-bg: #e6d3b0;
+    --color-surface: #f2e6cd;
+    --color-surface-hover: #e8d8b8;
+    --color-surface-muted: #e8dcc8;
 
-    /* borders */
-    --color-border: #d6c4a8;           /* light tan */
-    --color-border-strong: #bfa37a;    /* medium tan */
-    --color-border-faint: #e8dcc8;     /* faint parchment line */
+    /* ink / borders */
+    --color-border: #bfa37a;
+    --color-border-strong: #3a2314;
+    --color-border-faint: #d6c4a8;
 
-    /* text */
-    --color-text: #2c1a0e;             /* dark roast ink */
-    --color-text-secondary: #4a2f1a;   /* brown secondary */
-    --color-text-muted: #6b4a2a;       /* muted brown */
-    --color-text-subtle: #8b6540;      /* subtle tan */
-    --color-text-faint: #a8855a;       /* faint tan */
+    /* text – brown ink */
+    --color-text: #2c1a0e;
+    --color-text-secondary: #4a2f1a;
+    --color-text-muted: #5e3a1f;
+    --color-text-subtle: #7a5230;
+    --color-text-faint: #9a7048;
 
-    /* primary */
-    --color-primary: #b45309;          /* amber-700 */
-    --color-primary-hover: #92400e;    /* amber-800 */
-    --color-primary-text: #7c2d12;     /* amber-900 */
-    --color-primary-bg-subtle: #fef3e2; /* warm amber-50 */
-    --color-primary-border: #f59e0b;    /* amber-500 */
-    --color-primary-ring: #d97706;     /* amber-600 */
+    /* primary – ink brown */
+    --color-primary: #5b3520;
+    --color-primary-hover: #3a2314;
+    --color-primary-text: #2c1a0e;
+    --color-primary-bg-subtle: #f2e6cd;
+    --color-primary-border: #bfa37a;
+    --color-primary-ring: #7a5230;
 
-    /* accent */
-    --color-accent-bg-subtle: #fdf6e8; /* warm cream */
+    --color-accent-bg-subtle: #f2e6cd;
 
-    /* success */
-    --color-success: #15803d;          /* green-700 */
-    --color-success-hover: #166534;    /* green-800 */
+    /* success – watercolor green */
+    --color-success: #5a8a68;
+    --color-success-hover: #4a7a58;
 
     /* danger */
-    --color-danger: #b91c1c;           /* red-700 */
-    --color-danger-hover: #991b1b;     /* red-800 */
-    --color-danger-bg: #fef2f2;        /* red-50 */
-    --color-danger-border: #fca5a5;    /* red-300 */
-    --color-danger-border-strong: #f87171; /* red-400 */
-    --color-danger-text: #991b1b;      /* red-800 */
-    --color-danger-text-strong: #7f1d1d; /* red-900 */
-    --color-danger-text-emphasis: #450a0a; /* red-950 */
+    --color-danger: #a4342a;
+    --color-danger-hover: #8a2a22;
+    --color-danger-bg: #f5d8d0;
+    --color-danger-border: #d9a090;
+    --color-danger-border-strong: #c97a68;
+    --color-danger-text: #7a2218;
+    --color-danger-text-strong: #5a1a12;
+    --color-danger-text-emphasis: #3a1008;
 
     /* warning */
-    --color-warning-bg: #fffbeb;       /* amber-50 */
-    --color-warning-bg-hover: #fef3c7; /* amber-100 */
-    --color-warning-border: #fcd34d;   /* amber-300 */
-    --color-warning-text: #78350f;     /* amber-900 */
+    --color-warning-bg: #f5e6c8;
+    --color-warning-bg-hover: #ebd4a8;
+    --color-warning-border: #d4b478;
+    --color-warning-text: #5b3520;
 
-    /* tag colors – tavern / parchment-friendly */
-    --tag-warm-bg: #fde68a;            /* amber-200 – deeper on parchment */
-    --tag-warm-text: #78350f;          /* amber-900 */
-    --tag-warm-ring: #fbbf24;          /* amber-400 */
+    /* tags – watercolor washes */
+    --tag-warm-bg: #f0c890;
+    --tag-warm-text: #5b3520;
+    --tag-warm-ring: #d4a060;
 
-    --tag-secretive-bg: #ddd6fe;       /* violet-200 */
-    --tag-secretive-text: #4c1d95;     /* violet-900 */
-    --tag-secretive-ring: #c4b5fd;     /* violet-300 */
+    --tag-secretive-bg: #d4c8e8;
+    --tag-secretive-text: #3a2458;
+    --tag-secretive-ring: #b4a0d0;
 
-    --tag-reflective-bg: #bae6fd;      /* sky-200 */
-    --tag-reflective-text: #0c4a6e;    /* sky-900 */
-    --tag-reflective-ring: #7dd3fc;    /* sky-300 */
+    --tag-reflective-bg: #b8d8e8;
+    --tag-reflective-text: #1a3a48;
+    --tag-reflective-ring: #88b8c8;
 
-    --tag-tension-bg: #fecdd3;         /* rose-200 */
-    --tag-tension-text: #881337;       /* rose-900 */
-    --tag-tension-ring: #fda4af;       /* rose-300 */
+    --tag-tension-bg: #e8b8a8;
+    --tag-tension-text: #6a2018;
+    --tag-tension-ring: #d09078;
 
-    --tag-vulnerable-bg: #fbcfe8;      /* pink-200 */
-    --tag-vulnerable-text: #831843;    /* pink-900 */
-    --tag-vulnerable-ring: #f9a8d4;    /* pink-300 */
+    --tag-vulnerable-bg: #e8b8c8;
+    --tag-vulnerable-text: #5a1830;
+    --tag-vulnerable-ring: #d090a8;
 
-    --tag-loyal-bg: #a7f3d0;           /* emerald-200 */
-    --tag-loyal-text: #064e3b;         /* emerald-900 */
-    --tag-loyal-ring: #6ee7b7;         /* emerald-300 */
+    --tag-loyal-bg: #b8d8b8;
+    --tag-loyal-text: #1a4028;
+    --tag-loyal-ring: #88b888;
 
-    --tag-default-bg: #e8dcc8;
-    --tag-default-text: #4a2f1a;
+    --tag-default-bg: #dcc8a8;
+    --tag-default-text: #3a2314;
+
+    /* tavern extras */
+    --tavern-ink: #2c1a0e;
+    --tavern-paper: #f2e6cd;
+    --tavern-card-bg: #f5ead4;
   }
+}
+
+/* ── Tavern hand-drawn skin ── */
+@layer base {
+  [data-theme="tavern"] {
+    font-family:'Modern Antiqua',serif;
+    font-size: 18px;
+  }
+
+  [data-theme="tavern"] body,
+  [data-theme="tavern"] .bg-app,
+  [data-theme="tavern"] .bg-surface-muted {
+    background-color: #e6d3b0;
+    background-image: url('/themes/tavern/parchment-tile.jpg');
+    background-repeat: repeat;
+    background-size: 512px 512px;
+  }
+
+  /* header – sketched box */
+  [data-theme="tavern"] header.bg-surface {
+    background: #e8d8b8 !important;
+    background-image: url('/themes/tavern/parchment-tile.jpg');
+    background-repeat: repeat;
+    background-size: 512px 512px;
+    border-bottom: 2px solid var(--tavern-ink);
+    box-shadow: none;
+  }
+  [data-theme="tavern"] header .max-w-4xl {
+    border: 2px solid var(--tavern-ink);
+    border-radius: 6px 8px 7px 9px / 8px 6px 9px 7px;
+    padding: 8px 14px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+    background: rgba(245,234,212,0.55);
+  }
+
+  /* cards – hand-drawn parchment card */
+  [data-theme="tavern"] .bg-surface.rounded-xl {
+    background: var(--tavern-card-bg) !important;
+    border: 2.5px solid var(--tavern-ink);
+    border-radius: 18px 22px 16px 20px / 20px 16px 22px 18px;
+    box-shadow: 3px 4px 0 rgba(44,26,14,0.10), 0 1px 0 rgba(44,26,14,0.06);
+    position: relative;
+  }
+
+  /* question text – bigger, ink */
+  [data-theme="tavern"] .text-\[17px\],
+  [data-theme="tavern"] .sm\:text-lg {
+    font-family:'Modern Antiqua',serif;
+    font-size: 1.6rem !important;
+    line-height: 1.35;
+    font-weight: 600;
+    color: var(--tavern-ink);
+  }
+
+  /* pairing rows – sketched paper slips */
+  [data-theme="tavern"] .bg-surface-muted.rounded-lg {
+    background: #e8e0d0 !important;
+    border: 1.8px solid #5b4630;
+    border-radius: 10px 12px 11px 9px / 11px 9px 12px 10px;
+    box-shadow: 1px 2px 0 rgba(44,26,14,0.06);
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  /* tags – watercolor pill, sketch border */
+  [data-theme="tavern"] .tag-warm,
+  [data-theme="tavern"] .tag-secretive,
+  [data-theme="tavern"] .tag-reflective,
+  [data-theme="tavern"] .tag-tension,
+  [data-theme="tavern"] .tag-vulnerable,
+  [data-theme="tavern"] .tag-loyal,
+  [data-theme="tavern"] .tag-default {
+    border: 1.8px solid rgba(44,26,14,0.55);
+    border-radius: 12px 14px 13px 11px / 13px 11px 14px 12px;
+    font-family:'Modern Antiqua',serif;
+    font-weight: 600;
+    font-size: 1.05rem;
+    padding: 3px 12px;
+    box-shadow: 0 1px 0 rgba(44,26,14,0.08);
+  }
+
+  /* buttons – sketch pill */
+  [data-theme="tavern"] button,
+  [data-theme="tavern"] .bg-success,
+  [data-theme="tavern"] .bg-primary {
+    font-family:'Modern Antiqua',serif;
+    font-weight: 700;
+  }
+
+  /* success / "Mark round complete" – watercolor green */
+  [data-theme="tavern"] .bg-success {
+    background: #5e9d74 !important;
+    color: #fff !important;
+    border: 2.2px solid #2c4a34;
+    border-radius: 12px 14px 13px 15px / 14px 12px 15px 13px;
+    box-shadow: 0 2px 0 rgba(44,26,14,0.12);
+    font-size: 1.35rem;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    text-shadow: 0 1px 0 rgba(0,0,0,0.15);
+  }
+  [data-theme="tavern"] .bg-success:hover {
+    background: #4e8d64 !important;
+  }
+
+  /* small copy / secondary buttons */
+  [data-theme="tavern"] button.border {
+    border-width: 1.8px !important;
+    border-color: var(--tavern-ink) !important;
+    border-radius: 10px 12px 11px 10px / 11px 10px 12px 10px;
+    background: rgba(245,234,212,0.7);
+    font-weight: 600;
+  }
+
+  /* tab nav – hand-drawn */
+  [data-theme="tavern"] nav.border-b {
+    border-bottom-color: #a8855a !important;
+  }
+  [data-theme="tavern"] nav button {
+    font-family:'Modern Antiqua',serif;
+    font-size: 1.15rem;
+    border-radius: 6px 6px 0 0;
+    border-bottom-width: 2px !important;
+  }
+  [data-theme="tavern"] nav button[class*="border-primary"] {
+    border-bottom-color: #7a4020 !important;
+    color: var(--tavern-ink) !important;
+    background: rgba(245,234,212,0.5);
+  }
+  /* underline the active Ask tab like mockup */
+  [data-theme="tavern"] nav button[class*="border-primary"] span:last-child {
+    text-decoration: underline;
+    text-decoration-color: #a05a28;
+    text-decoration-thickness: 2.5px;
+    text-underline-offset: 3px;
+  }
+
+  /* inputs / textareas */
+  [data-theme="tavern"] input,
+  [data-theme="tavern"] textarea,
+  [data-theme="tavern"] select {
+    font-family:'Modern Antiqua',serif;
+    font-size: 1.15rem;
+    border: 1.8px solid #5b4630 !important;
+    border-radius: 9px 11px 10px 10px / 10px 10px 11px 9px;
+    background: rgba(245,234,212,0.85) !important;
+  }
+
+  /* make headings ink-heavy */
+  [data-theme="tavern"] h1, [data-theme="tavern"] h2, [data-theme="tavern"] h3 {
+    font-family:'Modern Antiqua',serif;
+    font-weight: 700;
+    color: var(--tavern-ink);
+  }
+
+  /* date label */
+  [data-theme="tavern"] h2.text-subtle {
+    font-size: 1.3rem;
+    color: var(--tavern-ink) !important;
+    font-weight: 600;
+  }
+
+  /* smooth out overly-round Tailwind corners to sketch style */
+  [data-theme="tavern"] .rounded-xl { border-radius: 18px 22px 16px 20px / 20px 16px 22px 18px; }
+  [data-theme="tavern"] .rounded-lg { border-radius: 10px 12px 11px 10px / 11px 10px 12px 10px; }
+  [data-theme="tavern"] .rounded-full { border-radius: 12px 14px 13px 11px / 13px 11px 14px 12px; }
+
+  /* remove clean shadows, add sketch shadow */
+  [data-theme="tavern"] .shadow-sm { box-shadow: 2px 3px 0 rgba(44,26,14,0.08); }
 }
