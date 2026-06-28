@@ -287,6 +287,26 @@ class InviteListItem(BaseModel):
     expires_at: datetime
     model_config = ConfigDict(extra='forbid')
 
+# --- auth / user ---
+
+class ThemeUpdateRequest(_BaseModel):
+    theme: str
+
+    @field_validator('theme')
+    @classmethod
+    def validate_theme(cls, v: str) -> str:
+        from .models import ALLOWED_THEMES
+        if v not in ALLOWED_THEMES:
+            raise ValueError(f'theme must be one of {sorted(ALLOWED_THEMES)}')
+        return v
+
+class UserOut(_OutModel):
+    discord_id: str
+    username: str
+    global_name: Optional[str] = None
+    avatar_hash: Optional[str] = None
+    theme: str
+
 # --- admin ---
 
 class AdminListItem(BaseModel):

@@ -11,7 +11,7 @@ import httpx
 from .timeutil import utcnow
 
 from .db import get_db
-from . import models
+from . import models, schemas
 from .auth import (
     require_user,
     create_session, hash_token,
@@ -284,14 +284,22 @@ def logout(request: Request, db: Session = Depends(get_db)):
     resp.delete_cookie("discord_id_hint", path="/")
     return resp
 
-@app.get("/auth/me")
+@app.get("/auth/me", response_model=schemas.UserOut)
 def auth_me(user: models.DiscordUser = Depends(require_user)):
-    return {
-        "discord_id": user.discord_id,
-        "username": user.username,
-        "global_name": user.global_name,
-        "avatar_hash": user.avatar_hash,
-    }
+    return user
+
+
+@app.patch("/auth/me", response_model=schemas.UserOut)
+def auth_me_patch(
+    body: schemas.ThemeUpdateRequest,
+    user: models.DiscordUser = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    user.theme = body.theme
+    db.commit()
+    db.refresh(user)
+    return user
+
 
 @app.post("/auth/refresh")
 async def auth_refresh(request: Request, db: Session = Depends(get_db)):
@@ -316,12 +324,7 @@ async def auth_refresh(request: Request, db: Session = Depends(get_db)):
     user = db.query(models.DiscordUser).filter(models.DiscordUser.discord_id == discord_id).first()
     if not user:
         raise HTTPException(401, "user not found")
-    resp = JSONResponse({
-        "discord_id": user.discord_id,
-        "username": user.username,
-        "global_name": user.global_name,
-        "avatar_hash": user.avatar_hash,
-    })
+    resp = JSONResponse(schemas.UserOut.model_validate(user).model_dump())
     resp.set_cookie(SESSION_COOKIE, session_token, max_age=30*86400, path="/", **SESSION_COOKIE_ATTRS)
     resp.set_cookie(CSRF_COOKIE, csrf_token, max_age=30*86400, path="/", **CSRF_COOKIE_ATTRS)
     # refresh hint cookie
