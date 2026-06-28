@@ -10,11 +10,11 @@ export const TAG_COLORS = {
 }
 
 export const TAG_ICONS = {
-  warm: '☀️',
+  warm: '🥰',
   secretive: '🤫',
-  reflective: '🔮',
+  reflective: '🤔',
   tension: '⚡',
-  vulnerable: '💧',
+  vulnerable: '🥺',
   loyal: '🤝',
 }
 
