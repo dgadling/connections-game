@@ -125,7 +125,6 @@
     border: 2.5px solid var(--tavern-ink);
     border-radius: 18px 22px 16px 20px / 20px 16px 22px 18px;
     box-shadow: 3px 4px 0 rgba(44,26,14,0.10), 0 1px 0 rgba(44,26,14,0.06);
-    position: relative;
   }
 
   /* question text – bigger, ink */
