@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { api, csrf, toastErr } from './api.js'
+import { applyTheme } from './theme.js'
 import { ErrorBoundary } from './components/ErrorBoundary.jsx'
 import { GameList } from './components/GameList.jsx'
 import { RoundTab } from './tabs/RoundTab.jsx'
@@ -23,6 +24,15 @@ export default function App() {
     try { await api('/auth/logout', { method: 'POST' }) } catch(e) { toastErr(e) }
     setUser(null); setGame(null)
   }
+
+  // Apply theme from user profile (per-user theme preference)
+  useEffect(() => {
+    if (user?.theme) {
+      applyTheme(user.theme)
+    } else {
+      applyTheme('default')
+    }
+  }, [user?.theme])
 
   useEffect(() => {
     api('/auth/me').then(setUser).catch(async () => {
