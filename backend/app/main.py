@@ -324,6 +324,28 @@ async def auth_refresh(request: Request, db: Session = Depends(get_db)):
     user = db.query(models.DiscordUser).filter(models.DiscordUser.discord_id == discord_id).first()
     if not user:
         raise HTTPException(401, "user not found")
+
+    # Refresh Discord avatar_hash - user may have changed their avatar since last login.
+    # Failure to fetch profile is non-fatal - keep stale avatar, auth must not break.
+    try:
+        import httpx
+        async with httpx.AsyncClient() as client:
+            r = await client.get(
+                "https://discord.com/api/v10/users/@me",
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=5.0,
+            )
+            if r.status_code == 200:
+                du = r.json()
+                new_avatar = du.get("avatar")  # can be None
+                if new_avatar != user.avatar_hash:
+                    user.avatar_hash = new_avatar
+                    db.commit()
+                    db.refresh(user)
+    except Exception:
+        # Profile fetch failed - continue with stale avatar_hash.
+        # Auth refresh must not fail due to transient Discord API issues.
+        pass
     resp = JSONResponse(schemas.UserOut.model_validate(user).model_dump())
     resp.set_cookie(SESSION_COOKIE, session_token, max_age=30*86400, path="/", **SESSION_COOKIE_ATTRS)
     resp.set_cookie(CSRF_COOKIE, csrf_token, max_age=30*86400, path="/", **CSRF_COOKIE_ATTRS)

@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { api, toastErr } from '../api.js'
+import { UserMenu } from './UserMenu.jsx'
 
 const arr = (d) => Array.isArray(d) ? d : []
 
-export function GameList({ user, games, gamesLoading, setGame, onRefresh, onLogout }) {
+export function GameList({ user, setUser, games, gamesLoading, setGame, onRefresh, onLogout }) {
   const [name, setName] = useState('')
   const [creating, setCreating] = useState(false)
   const [openingId, setOpeningId] = useState(null)
@@ -37,17 +38,9 @@ export function GameList({ user, games, gamesLoading, setGame, onRefresh, onLogo
   return (
     <div className="min-h-screen bg-surface-muted">
       <header className="bg-surface border-b border-default">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <h1 className="text-xl font-bold">🤝 Connections</h1>
-          <div className="flex items-center gap-2 text-sm text-muted">
-            <span>{user.global_name || user.username}</span>
-            {Boolean(onLogout) && (
-              <button type="button" onClick={onLogout} title="Log out" aria-label="Log out"
-                className="px-1.5 py-1 rounded hover:bg-surface-hover text-faint hover:text-secondary transition-colors text-base leading-none">
-                ⍈
-              </button>
-            )}
-          </div>
+          <UserMenu user={user} setUser={setUser} onLogout={onLogout} />
         </div>
       </header>
       <main className="max-w-3xl mx-auto px-4 py-6">

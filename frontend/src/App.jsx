@@ -4,6 +4,7 @@ import { api, csrf, toastErr } from './api.js'
 import { applyTheme } from './theme.js'
 import { ErrorBoundary } from './components/ErrorBoundary.jsx'
 import { GameList } from './components/GameList.jsx'
+import { UserMenu } from './components/UserMenu.jsx'
 import { RoundTab } from './tabs/RoundTab.jsx'
 import { QuestionsTab } from './tabs/QuestionsTab.jsx'
 import { MembersTab } from './tabs/MembersTab.jsx'
@@ -149,7 +150,7 @@ export default function App() {
     </div>
   )
 
-  if (!game) return <GameList user={user} games={games} gamesLoading={gamesLoading} setGame={setGame} onRefresh={loadGames} onLogout={doLogout} />
+  if (!game) return <GameList user={user} setUser={setUser} games={games} gamesLoading={gamesLoading} setGame={setGame} onRefresh={loadGames} onLogout={doLogout} />
 
   const tabs = [
     ['ask','Ask', '💬'],
@@ -165,12 +166,8 @@ export default function App() {
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
           <button type="button" onClick={()=>setGame(null)} className="text-sm text-subtle hover:text-foreground">← games</button>
           <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground truncate">{game.name}</h1>
-          <div className="ml-auto flex items-center gap-2 text-xs text-subtle">
-            <span>{user.global_name || user.username}</span>
-            <button type="button" onClick={doLogout} title="Log out" aria-label="Log out"
-              className="px-1.5 py-1 rounded hover:bg-surface-hover text-faint hover:text-secondary transition-colors text-base leading-none">
-              ⍈
-            </button>
+          <div className="ml-auto">
+            <UserMenu user={user} setUser={setUser} onLogout={doLogout} />
           </div>
         </div>
       </header>
