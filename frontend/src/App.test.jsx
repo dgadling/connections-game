@@ -85,7 +85,9 @@ describe('App', () => {
     await waitFor(() => {
       expect(screen.getByText(/gamelist/i)).toBeInTheDocument()
     })
-    expect(screen.getByText(/1 games/)).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText(/1 games/)).toBeInTheDocument()
+    })
   })
 
   it('applies theme from user profile', async () => {
