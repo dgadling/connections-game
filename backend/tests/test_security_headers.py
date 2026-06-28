@@ -12,7 +12,8 @@ def test_security_headers_present(client):
     # Check CSP contains required directives
     assert "default-src 'self'" in csp
     assert "script-src 'self' 'unsafe-inline'" in csp
-    assert "style-src 'self' 'unsafe-inline'" in csp
+    assert "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com" in csp
+    assert "font-src 'self' https://fonts.gstatic.com" in csp
     assert "img-src 'self' data: https:" in csp
     assert "connect-src 'self'" in csp
     assert "frame-ancestors 'none'" in csp

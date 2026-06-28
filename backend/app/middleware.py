@@ -125,7 +125,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         csp = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline'; "
-            "style-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
             "img-src 'self' data: https:; "
             "connect-src 'self'; "
             "frame-ancestors 'none';"
