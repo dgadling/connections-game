@@ -2,4 +2,158 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    /* Default theme – neutral/indigo */
+    /* backgrounds */
+    --color-bg: #fafafa;                /* neutral-50 */
+    --color-surface: #ffffff;            /* white */
+    --color-surface-hover: #f5f5f5;     /* neutral-100 */
+    --color-surface-muted: #fafafa;      /* neutral-50 */
+
+    /* borders */
+    --color-border: #e5e5e5;             /* neutral-200 */
+    --color-border-strong: #d4d4d4;      /* neutral-300 */
+    --color-border-faint: #f5f5f5;       /* neutral-100 */
+
+    /* text */
+    --color-text: #171717;               /* neutral-900 */
+    --color-text-secondary: #404040;     /* neutral-700 */
+    --color-text-muted: #525252;         /* neutral-600 */
+    --color-text-subtle: #737373;        /* neutral-500 */
+    --color-text-faint: #a3a3a3;         /* neutral-400 */
+
+    /* primary */
+    --color-primary: #4f46e5;            /* indigo-600 */
+    --color-primary-hover: #4338ca;      /* indigo-700 */
+    --color-primary-text: #3730a3;       /* indigo-700 */
+    --color-primary-bg-subtle: #eef2ff;  /* indigo-50 */
+    --color-primary-border: #a5b4fc;     /* indigo-300 */
+    --color-primary-ring: #6366f1;       /* indigo-500 */
+
+    /* accent – for gradients, secondary accents */
+    --color-accent-bg-subtle: #f5f3ff;   /* violet-50 */
+
+    /* success */
+    --color-success: #059669;            /* emerald-600 */
+    --color-success-hover: #047857;      /* emerald-700 */
+
+    /* danger */
+    --color-danger: #dc2626;             /* red-600 */
+    --color-danger-hover: #b91c1c;       /* red-700 */
+    --color-danger-bg: #fef2f2;          /* red-50 */
+    --color-danger-border: #fecaca;      /* red-200 */
+    --color-danger-border-strong: #fca5a5; /* red-300 */
+    --color-danger-text: #b91c1c;        /* red-700 */
+    --color-danger-text-strong: #991b1b; /* red-800 */
+    --color-danger-text-emphasis: #7f1d1d; /* red-900 */
+
+    /* warning */
+    --color-warning-bg: #fffbeb;         /* amber-50 */
+    --color-warning-bg-hover: #fef3c7;   /* amber-100 */
+    --color-warning-border: #fde68a;     /* amber-200 */
+    --color-warning-text: #78350f;       /* amber-900 */
+
+    /* tag colors – default theme */
+    --tag-warm-bg: #fef3c7;          /* amber-100 */
+    --tag-warm-text: #78350f;        /* amber-900 */
+    --tag-warm-ring: #fde68a;        /* amber-200 */
+
+    --tag-secretive-bg: #ede9fe;     /* violet-100 */
+    --tag-secretive-text: #5b21b6;   /* violet-900 */
+    --tag-secretive-ring: #ddd6fe;   /* violet-200 */
+
+    --tag-reflective-bg: #e0f2fe;    /* sky-100 */
+    --tag-reflective-text: #0c4a6e;  /* sky-900 */
+    --tag-reflective-ring: #bae6fd;  /* sky-200 */
+
+    --tag-tension-bg: #ffe4e6;       /* rose-100 */
+    --tag-tension-text: #881337;     /* rose-900 */
+    --tag-tension-ring: #fecdd3;     /* rose-200 */
+
+    --tag-vulnerable-bg: #fce7f3;    /* pink-100 */
+    --tag-vulnerable-text: #831843;  /* pink-900 */
+    --tag-vulnerable-ring: #fbcfe8;  /* pink-200 */
+
+    --tag-loyal-bg: #d1fae5;         /* emerald-100 */
+    --tag-loyal-text: #065f46;       /* emerald-900 */
+    --tag-loyal-ring: #a7f3d0;       /* emerald-200 */
+
+    --tag-default-bg: #f5f5f5;
+    --tag-default-text: #404040;
+  }
+}
+
+@layer utilities {
+  /* backgrounds */
+  .bg-app { background-color: var(--color-bg); }
+  .bg-surface { background-color: var(--color-surface); }
+  .bg-surface-hover { background-color: var(--color-surface-hover); }
+  .bg-surface-muted { background-color: var(--color-surface-muted); }
+
+  /* borders */
+  .border-default { border-color: var(--color-border); }
+  .border-strong { border-color: var(--color-border-strong); }
+  .border-faint { border-color: var(--color-border-faint); }
+  .divide-default > :not([hidden]) ~ :not([hidden]) { border-color: var(--color-border-faint); }
+
+  /* text */
+  .text-foreground { color: var(--color-text); }
+  .text-secondary { color: var(--color-text-secondary); }
+  .text-muted { color: var(--color-text-muted); }
+  .text-subtle { color: var(--color-text-subtle); }
+  .text-faint { color: var(--color-text-faint); }
+
+  /* primary */
+  .bg-primary { background-color: var(--color-primary); }
+  .hover\:bg-primary-hover:hover { background-color: var(--color-primary-hover); }
+  .text-primary { color: var(--color-primary-text); }
+  .border-primary { border-color: var(--color-primary-border); }
+  .border-primary-strong { border-color: var(--color-primary); }
+  .ring-primary { --tw-ring-color: var(--color-primary-ring); }
+  .focus\:ring-primary:focus { --tw-ring-color: var(--color-primary-ring); }
+
+  /* success */
+  .bg-success { background-color: var(--color-success); }
+  .hover\:bg-success-hover:hover { background-color: var(--color-success-hover); }
+
+  /* danger */
+  .bg-danger { background-color: var(--color-danger); }
+  .hover\:bg-danger-hover:hover { background-color: var(--color-danger-hover); }
+  .bg-danger-subtle { background-color: var(--color-danger-bg); }
+  .border-danger { border-color: var(--color-danger-border); }
+  .border-danger-strong { border-color: var(--color-danger-border-strong); }
+  .text-danger { color: var(--color-danger-text); }
+  .text-danger-strong { color: var(--color-danger-text-strong); }
+
+  /* warning */
+  .bg-warning-subtle { background-color: var(--color-warning-bg); }
+  .hover\:bg-warning-hover:hover { background-color: var(--color-warning-bg-hover); }
+  .border-warning { border-color: var(--color-warning-border); }
+  .text-warning { color: var(--color-warning-text); }
+
+  /* gradients */
+  .from-primary-subtle { --tw-gradient-from: var(--color-primary-bg-subtle) var(--tw-gradient-from-position); --tw-gradient-to: rgb(238 242 255 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+  .via-surface { --tw-gradient-to: rgb(255 255 255 / 0)  var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--color-surface) var(--tw-gradient-via-position), var(--tw-gradient-to); }
+  .to-accent-subtle { --tw-gradient-to: var(--color-accent-bg-subtle) var(--tw-gradient-to-position); }
+
+  /* tags */
+  .tag-warm { background-color: var(--tag-warm-bg); color: var(--tag-warm-text); --tw-ring-color: var(--tag-warm-ring); }
+  .tag-secretive { background-color: var(--tag-secretive-bg); color: var(--tag-secretive-text); --tw-ring-color: var(--tag-secretive-ring); }
+  .tag-reflective { background-color: var(--tag-reflective-bg); color: var(--tag-reflective-text); --tw-ring-color: var(--tag-reflective-ring); }
+  .tag-tension { background-color: var(--tag-tension-bg); color: var(--tag-tension-text); --tw-ring-color: var(--tag-tension-ring); }
+  .tag-vulnerable { background-color: var(--tag-vulnerable-bg); color: var(--tag-vulnerable-text); --tw-ring-color: var(--tag-vulnerable-ring); }
+  .tag-loyal { background-color: var(--tag-loyal-bg); color: var(--tag-loyal-text); --tw-ring-color: var(--tag-loyal-ring); }
+  .tag-default { background-color: var(--tag-default-bg); color: var(--tag-default-text); }
+
+  /* interactive states */
+  .hover\:bg-surface-hover:hover { background-color: var(--color-surface-hover); }
+  .hover\:bg-surface-muted:hover { background-color: var(--color-surface-muted); }
+  .hover\:text-foreground:hover { color: var(--color-text); }
+  .hover\:text-secondary:hover { color: var(--color-text-secondary); }
+
+  /* disabled state */
+  .disabled\:bg-surface-muted:disabled { background-color: var(--color-surface-muted); }
+}
+
 .scrollbar-hide::-webkit-scrollbar { display: none; }

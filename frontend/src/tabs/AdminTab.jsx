@@ -78,81 +78,81 @@ export function AdminTab({ gameId, game, onGameUpdate, onGamesRefresh, onGameDel
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5">
-        <div className="font-semibold mb-3 text-neutral-900">Game settings</div>
+      <div className="bg-surface rounded-xl shadow-sm border border-default p-4 sm:p-5">
+        <div className="font-semibold mb-3 text-foreground">Game settings</div>
         <div className="flex flex-col sm:flex-row gap-2 mb-3">
           <input value={rename} onChange={e=>setRename(e.target.value)} disabled={savingRename}
-            className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-neutral-50" />
+            className="flex-1 border border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-surface-muted" />
           <button type="button" onClick={doRename} disabled={savingRename || !rename.trim() || rename===game.name}
-            className="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50 disabled:opacity-60">
+            className="px-4 py-2 border border-strong rounded-lg text-sm hover:bg-surface-muted disabled:opacity-60">
             {savingRename ? 'Saving…' : 'Rename'}
           </button>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 mb-3">
           <input value={roleId} onChange={e=>setRoleId(e.target.value)} placeholder="Discord role ID (optional)" disabled={savingRole}
-            className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-neutral-50" />
+            className="flex-1 border border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-surface-muted" />
           <button type="button" onClick={doSaveRole} disabled={savingRole}
-            className="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50 disabled:opacity-60">
+            className="px-4 py-2 border border-strong rounded-lg text-sm hover:bg-surface-muted disabled:opacity-60">
             {savingRole ? 'Saving…' : 'Save role'}
           </button>
         </div>
-        <div className="text-xs text-neutral-500 mb-3">When set, Copy-to-Discord uses plain character names and prepends a role ping. Leave blank to use individual @mentions.</div>
+        <div className="text-xs text-subtle mb-3">When set, Copy-to-Discord uses plain character names and prepends a role ping. Leave blank to use individual @mentions.</div>
         <div className="flex flex-wrap gap-2">
         {!game.archived_at
-          ? <button type="button" onClick={()=>doArchive(true)} className="px-3 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Archive game</button>
+          ? <button type="button" onClick={()=>doArchive(true)} className="px-3 py-2 border border-strong rounded-lg text-sm hover:bg-surface-muted">Archive game</button>
           : <>
-              <button type="button" onClick={()=>doArchive(false)} className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm hover:bg-amber-100">Unarchive game</button>
-              <button type="button" onClick={doDelete} className="px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700">Delete game permanently</button>
+              <button type="button" onClick={()=>doArchive(false)} className="px-3 py-2 bg-warning-subtle border border-warning rounded-lg text-sm hover:bg-warning-hover">Unarchive game</button>
+              <button type="button" onClick={doDelete} className="px-3 py-2 bg-danger text-white rounded-lg text-sm hover:bg-danger-hover">Delete game permanently</button>
             </>
         }
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5">
-        <div className="font-semibold mb-3 text-neutral-900">Invite links</div>
+      <div className="bg-surface rounded-xl shadow-sm border border-default p-4 sm:p-5">
+        <div className="font-semibold mb-3 text-foreground">Invite links</div>
         <button type="button" onClick={createInvite} disabled={busy}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 mb-3 disabled:opacity-60">
+          className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover mb-3 disabled:opacity-60">
           {busy ? 'Generating…' : 'Generate invite'}
         </button>
         {Boolean(inviteUrl) && (
-          <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs">
+          <div className="mb-3 p-3 bg-warning-subtle border border-warning rounded-lg text-xs">
             <div className="font-mono break-all mb-1">{inviteUrl}</div>
             <div className="flex gap-3">
               <button type="button" onClick={()=>{navigator.clipboard.writeText(inviteUrl).then(()=>toast.success('Copied')).catch(()=>toastErr(new Error('Copy failed')))}} className="underline">copy</button>
               <button type="button" onClick={()=>setInviteUrl('')} className="underline">hide</button>
-              <span className="text-neutral-600 ml-auto">single-use · 1 day</span>
+              <span className="text-muted ml-auto">single-use · 1 day</span>
             </div>
           </div>
         )}
-        <ul className="space-y-1 text-xs divide-y divide-neutral-100">
-          {loading ? <li className="text-neutral-500 py-2">Loading…</li> : null}
+        <ul className="space-y-1 text-xs divide-y divide-default">
+          {loading ? <li className="text-subtle py-2">Loading…</li> : null}
           {!loading && arr(invites).map(inv => (
             <li key={inv.id} className="flex justify-between py-2">
-              <span className="text-neutral-600">{inv.token_prefix}… · expires {inv.expires_at ? new Date(inv.expires_at).toLocaleDateString() : ''}</span>
-              <button type="button" onClick={()=>revokeInvite(inv.id)} className="text-red-600 hover:underline">revoke</button>
+              <span className="text-muted">{inv.token_prefix}… · expires {inv.expires_at ? new Date(inv.expires_at).toLocaleDateString() : ''}</span>
+              <button type="button" onClick={()=>revokeInvite(inv.id)} className="text-danger hover:underline">revoke</button>
             </li>
           ))}
-          {!loading && arr(invites).length===0 && <li className="text-neutral-500 py-2">No pending invites.</li>}
+          {!loading && arr(invites).length===0 && <li className="text-subtle py-2">No pending invites.</li>}
         </ul>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-5">
-        <div className="font-semibold mb-3 text-neutral-900">Admins</div>
-        <ul className="space-y-2 text-sm divide-y divide-neutral-100">
-          {loading ? <li className="text-neutral-500 py-2">Loading…</li> : null}
+      <div className="bg-surface rounded-xl shadow-sm border border-default p-4 sm:p-5">
+        <div className="font-semibold mb-3 text-foreground">Admins</div>
+        <ul className="space-y-2 text-sm divide-y divide-default">
+          {loading ? <li className="text-subtle py-2">Loading…</li> : null}
           {!loading && arr(admins).map(a => (
             <li key={a.discord_id} className="flex justify-between py-2">
               <span>{a.global_name || a.username}</span>
               {Boolean(currentUserDiscordId && a.discord_id !== currentUserDiscordId) && (
-                <button type="button" onClick={()=>revokeAdmin(a.discord_id)} className="text-xs text-red-600 hover:underline">revoke</button>
+                <button type="button" onClick={()=>revokeAdmin(a.discord_id)} className="text-xs text-danger hover:underline">revoke</button>
               )}
             </li>
           ))}
         </ul>
       </div>
 
-      <div className="text-xs text-neutral-500 px-1">
-        <a href="/privacy" target="_blank" rel="noreferrer" className="underline hover:text-neutral-700">Privacy Policy</a>
+      <div className="text-xs text-subtle px-1">
+        <a href="/privacy" target="_blank" rel="noreferrer" className="underline hover:text-secondary">Privacy Policy</a>
       </div>
     </div>
   )

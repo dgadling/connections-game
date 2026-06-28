@@ -223,11 +223,11 @@ export function QuestionsTab({ gameId, archived }) {
         onTouchMove={onListTouchMove}
         onTouchEnd={onListTouchEnd}
       >
-        {loading ? <div className="text-sm text-neutral-500 px-1">Loading…</div> : null}
+        {loading ? <div className="text-sm text-subtle px-1">Loading…</div> : null}
         {!loading && qs.map((q, idx) => (
           <div key={q.id}>
             {showDropLine(idx) && (
-              <div className="h-0.5 mx-3 rounded-full bg-indigo-600" />
+              <div className="h-0.5 mx-3 rounded-full bg-primary" />
             )}
             <QuestionItem
               q={q}
@@ -255,20 +255,20 @@ export function QuestionsTab({ gameId, archived }) {
           </div>
         ))}
         {showDropLine(qs.length) && (
-          <div className="h-0.5 mx-3 rounded-full bg-indigo-600" />
+          <div className="h-0.5 mx-3 rounded-full bg-primary" />
         )}
         {!loading && qs.length===0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-8 text-center">
+          <div className="bg-surface rounded-xl shadow-sm border border-default p-8 text-center">
             <div className="text-3xl mb-2">📝</div>
-            <div className="text-neutral-700 font-medium mb-1">No {status} questions yet</div>
+            <div className="text-secondary font-medium mb-1">No {status} questions yet</div>
             {status === 'upcoming' && !archived && (
               usedCount > 0 ? (
                 <div className="space-y-2">
-                  <div className="text-sm text-neutral-500">{usedCount} question{usedCount===1?'':'s'} in used pool</div>
-                  <button type="button" onClick={recycleQuestions} disabled={busy} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">♻️ Recycle used questions ({usedCount})</button>
+                  <div className="text-sm text-subtle">{usedCount} question{usedCount===1?'':'s'} in used pool</div>
+                  <button type="button" onClick={recycleQuestions} disabled={busy} className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-50">♻️ Recycle used questions ({usedCount})</button>
                 </div>
               ) : (
-                <div className="text-sm text-neutral-500">Add one above, or load the 38-question starter pack.</div>
+                <div className="text-sm text-subtle">Add one above, or load the 38-question starter pack.</div>
               )
             )}
           </div>

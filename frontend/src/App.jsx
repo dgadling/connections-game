@@ -95,28 +95,28 @@ export default function App() {
   }, [user, loadGames])
 
   if (user === undefined) return (
-    <div className="min-h-screen flex items-center justify-center bg-neutral-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-surface-muted px-4">
       <div className="text-center">
         <div className="text-4xl mb-2 animate-pulse">🤝</div>
-        <p className="text-sm text-neutral-500">Loading…</p>
+        <p className="text-sm text-subtle">Loading…</p>
       </div>
     </div>
   )
 
   if (user === null) return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-violet-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-subtle via-surface to-accent-subtle px-4">
       <div className="text-center max-w-sm w-full">
         {signingIn ? (
           <>
             <div className="text-5xl mb-3 animate-pulse">🤝</div>
-            <h1 className="text-2xl font-bold tracking-tight text-neutral-900 mb-2">Signing in with Discord…</h1>
-            <p className="text-neutral-600 text-sm">Redirecting you to Discord</p>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground mb-2">Signing in with Discord…</h1>
+            <p className="text-muted text-sm">Redirecting you to Discord</p>
           </>
         ) : (
           <>
             <div className="text-5xl mb-3">🤝</div>
-            <h1 className="text-2xl font-bold tracking-tight text-neutral-900 mb-2">Connections</h1>
-            <p className="text-neutral-600 text-sm mb-6">The character bonding game for your table</p>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground mb-2">Connections</h1>
+            <p className="text-muted text-sm mb-6">The character bonding game for your table</p>
             <button type="button"
               onClick={async () => {
                 setSigningIn(true)
@@ -131,7 +131,7 @@ export default function App() {
                 }
               }}
               disabled={signingIn}
-              className="w-full px-4 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium shadow-sm disabled:opacity-60"
+              className="w-full px-4 py-3 bg-primary text-white rounded-xl hover:bg-primary-hover font-medium shadow-sm disabled:opacity-60"
             >{signingIn ? 'Signing in…' : 'Sign in with Discord'}</button>
           </>
         )}
@@ -150,15 +150,15 @@ export default function App() {
   ]
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <header className="bg-white border-b border-neutral-200 sticky top-0 z-30">
+    <div className="min-h-screen bg-surface-muted">
+      <header className="bg-surface border-b border-default sticky top-0 z-30">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
-          <button type="button" onClick={()=>setGame(null)} className="text-sm text-neutral-500 hover:text-neutral-900">← games</button>
-          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-neutral-900 truncate">{game.name}</h1>
-          <div className="ml-auto flex items-center gap-2 text-xs text-neutral-500">
+          <button type="button" onClick={()=>setGame(null)} className="text-sm text-subtle hover:text-foreground">← games</button>
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground truncate">{game.name}</h1>
+          <div className="ml-auto flex items-center gap-2 text-xs text-subtle">
             <span>{user.global_name || user.username}</span>
             <button type="button" onClick={doLogout} title="Log out" aria-label="Log out"
-              className="px-1.5 py-1 rounded hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 transition-colors text-base leading-none">
+              className="px-1.5 py-1 rounded hover:bg-surface-hover text-faint hover:text-secondary transition-colors text-base leading-none">
               ⍈
             </button>
           </div>
@@ -166,17 +166,17 @@ export default function App() {
       </header>
 
       {Boolean(game.archived_at) && (
-        <div className="bg-amber-50 border-b border-amber-200 text-amber-900 text-sm px-4 py-2 text-center">
+        <div className="bg-warning-subtle border-b border-warning text-warning text-sm px-4 py-2 text-center">
           📦 This game is archived – read-only
         </div>
       )}
 
       <div className="max-w-4xl mx-auto px-4 pt-3">
-        <nav className="flex gap-0.5 sm:gap-2 text-[11px] sm:text-sm overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pb-0 border-b border-neutral-200">
+        <nav className="flex gap-0.5 sm:gap-2 text-[11px] sm:text-sm overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pb-0 border-b border-default">
           {tabs.map(([t,label,icon]) => (
             <button type="button" key={t} onClick={()=>setTab(t)}
               className={`flex items-center gap-0.5 sm:gap-1.5 px-1.5 sm:px-3 py-2 sm:py-2.5 whitespace-nowrap rounded-t-lg border-b-2 -mb-px transition-colors ${
-                tab===t ? 'border-indigo-600 text-indigo-700 font-semibold bg-white' : 'border-transparent text-neutral-600 hover:text-neutral-900'
+                tab===t ? 'border-primary-strong text-primary font-semibold bg-surface' : 'border-transparent text-muted hover:text-foreground'
               }`}>
               <span>{icon}</span><span>{label}</span>
             </button>
