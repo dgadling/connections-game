@@ -6,6 +6,8 @@ from sqlalchemy import (
 from .db import Base
 from .timeutil import utcnow as now
 
+ALLOWED_THEMES = {"default", "tavern", "discord", "tarot", "campfire", "brutalist"}
+
 class DiscordUser(Base):
     __tablename__ = "discord_users"
     discord_id = Column(String, primary_key=True)
@@ -14,6 +16,7 @@ class DiscordUser(Base):
     avatar_hash = Column(String, nullable=True)
     last_seen = Column(TIMESTAMP, default=now, nullable=False)
     created_at = Column(TIMESTAMP, default=now, nullable=False)
+    theme = Column(String, default="default", nullable=False)
 
 class AuthSession(Base):
     __tablename__ = "auth_sessions"
