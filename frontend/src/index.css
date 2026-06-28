@@ -402,6 +402,95 @@
     --tag-default-bg: #f0e4d5;
     --tag-default-text: #4a3020;
   }
+
+  /* Brutalist theme – black/white, 0 radius, 2px borders */
+  [data-theme="brutalist"] {
+    /* 0 radius everywhere */
+    *, *::before, *::after { border-radius: 0 !important; }
+    /* 2px borders – override Tailwind's 1px .border utilities */
+    .border { border-width: 2px !important; }
+    .border-t { border-top-width: 2px !important; }
+    .border-b { border-bottom-width: 2px !important; }
+    .border-l { border-left-width: 2px !important; }
+    .border-r { border-right-width: 2px !important; }
+
+    /* backgrounds */
+    --color-bg: #ffffff;               /* white */
+    --color-surface: #ffffff;          /* white surface */
+    --color-surface-hover: #f5f5f5;    /* neutral-100 hover */
+    --color-surface-muted: #f5f5f5;    /* neutral-100 muted */
+
+    /* borders – 2px, high contrast black */
+    --color-border: #000000;           /* black */
+    --color-border-strong: #000000;    /* black */
+    --color-border-faint: #737373;     /* neutral-500 faint */
+
+    /* text */
+    --color-text: #000000;             /* black */
+    --color-text-secondary: #262626;   /* neutral-800 */
+    --color-text-muted: #404040;       /* neutral-700 */
+    --color-text-subtle: #525252;      /* neutral-600 */
+    --color-text-faint: #737373;       /* neutral-500 */
+
+    /* primary */
+    --color-primary: #000000;          /* black */
+    --color-primary-hover: #262626;    /* neutral-800 hover */
+    --color-primary-text: #ffffff;     /* white on black */
+    --color-primary-bg-subtle: #f5f5f5; /* neutral-100 */
+    --color-primary-border: #000000;    /* black */
+    --color-primary-ring: #000000;     /* black */
+
+    /* accent */
+    --color-accent-bg-subtle: #f5f5f5; /* neutral-100 */
+
+    /* success */
+    --color-success: #000000;          /* black – brutalism is monochrome */
+    --color-success-hover: #262626;    /* neutral-800 */
+
+    /* danger */
+    --color-danger: #000000;           /* black */
+    --color-danger-hover: #262626;     /* neutral-800 */
+    --color-danger-bg: #ffffff;        /* white */
+    --color-danger-border: #000000;    /* black */
+    --color-danger-border-strong: #000000; /* black */
+    --color-danger-text: #000000;      /* black */
+    --color-danger-text-strong: #000000; /* black */
+    --color-danger-text-emphasis: #000000; /* black */
+
+    /* warning */
+    --color-warning-bg: #ffffff;       /* white */
+    --color-warning-bg-hover: #f5f5f5; /* neutral-100 */
+    --color-warning-border: #000000;   /* black */
+    --color-warning-text: #000000;     /* black */
+
+    /* tag colors – high-contrast black/white with distinct fills */
+    --tag-warm-bg: #ffffff;            /* white */
+    --tag-warm-text: #000000;          /* black */
+    --tag-warm-ring: #000000;          /* black */
+
+    --tag-secretive-bg: #e5e5e5;       /* neutral-200 */
+    --tag-secretive-text: #000000;     /* black */
+    --tag-secretive-ring: #000000;     /* black */
+
+    --tag-reflective-bg: #d4d4d4;      /* neutral-300 */
+    --tag-reflective-text: #000000;    /* black */
+    --tag-reflective-ring: #000000;    /* black */
+
+    --tag-tension-bg: #a3a3a3;         /* neutral-400 */
+    --tag-tension-text: #000000;       /* black */
+    --tag-tension-ring: #000000;       /* black */
+
+    --tag-vulnerable-bg: #737373;      /* neutral-500 */
+    --tag-vulnerable-text: #ffffff;    /* white on dark gray */
+    --tag-vulnerable-ring: #000000;    /* black */
+
+    --tag-loyal-bg: #404040;           /* neutral-700 */
+    --tag-loyal-text: #ffffff;         /* white on dark gray */
+    --tag-loyal-ring: #000000;         /* black */
+
+    --tag-default-bg: #ffffff;
+    --tag-default-text: #000000;
+  }
 }
 
 @layer utilities {
