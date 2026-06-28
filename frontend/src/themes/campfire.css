@@ -1,0 +1,80 @@
+@layer base {
+  [data-theme="campfire"] {
+    /* backgrounds */
+    --color-bg: #fdf8f0;               /* cream */
+    --color-surface: #fffcf7;          /* warm white surface */
+    --color-surface-hover: #f5ebe0;    /* warm hover */
+    --color-surface-muted: #f0e4d5;    /* muted cream */
+
+    /* borders */
+    --color-border: #e0c9b5;           /* light tan */
+    --color-border-strong: #c9a888;    /* medium tan */
+    --color-border-faint: #f0e4d5;     /* faint cream line */
+
+    /* text */
+    --color-text: #2a1810;             /* ember dark */
+    --color-text-secondary: #4a3020;   /* brown secondary */
+    --color-text-muted: #6b4a30;       /* muted brown */
+    --color-text-subtle: #9a6b4a;      /* subtle tan */
+    --color-text-faint: #c48960;       /* faint tan */
+
+    /* primary */
+    --color-primary: #d45a20;          /* firelight orange */
+    --color-primary-hover: #b84a18;    /* orange hover */
+    --color-primary-text: #8b2e0a;     /* deep ember text */
+    --color-primary-bg-subtle: #fff0e6; /* warm orange-50 */
+    --color-primary-border: #f08a50;    /* orange-400 */
+    --color-primary-ring: #d45a20;     /* firelight */
+
+    /* accent */
+    --color-accent-bg-subtle: #fff7f0; /* warm cream accent */
+
+    /* success */
+    --color-success: #166534;          /* green-800 */
+    --color-success-hover: #14532d;    /* green-900 */
+
+    /* danger */
+    --color-danger: #b91c1c;           /* red-700 */
+    --color-danger-hover: #991b1b;     /* red-800 */
+    --color-danger-bg: #fef2f2;        /* red-50 */
+    --color-danger-border: #fca5a5;    /* red-300 */
+    --color-danger-border-strong: #f87171; /* red-400 */
+    --color-danger-text: #991b1b;      /* red-800 */
+    --color-danger-text-strong: #7f1d1d; /* red-900 */
+    --color-danger-text-emphasis: #450a0a; /* red-950 */
+
+    /* warning */
+    --color-warning-bg: #fffbeb;       /* amber-50 */
+    --color-warning-bg-hover: #fef3c7; /* amber-100 */
+    --color-warning-border: #fcd34d;   /* amber-300 */
+    --color-warning-text: #78350f;     /* amber-900 */
+
+    /* tag colors – campfire / cream-friendly */
+    --tag-warm-bg: #fed7aa;            /* orange-200 */
+    --tag-warm-text: #7c2d12;          /* orange-900 */
+    --tag-warm-ring: #fb923c;          /* orange-400 */
+
+    --tag-secretive-bg: #e9d5ff;       /* purple-200 */
+    --tag-secretive-text: #581c87;     /* purple-900 */
+    --tag-secretive-ring: #c084fc;     /* purple-400 */
+
+    --tag-reflective-bg: #bae6fd;      /* sky-200 */
+    --tag-reflective-text: #0c4a6e;    /* sky-900 */
+    --tag-reflective-ring: #38bdf8;    /* sky-400 */
+
+    --tag-tension-bg: #fecdd3;         /* rose-200 */
+    --tag-tension-text: #881337;       /* rose-900 */
+    --tag-tension-ring: #fb7185;       /* rose-400 */
+
+    --tag-vulnerable-bg: #fbcfe8;      /* pink-200 */
+    --tag-vulnerable-text: #831843;    /* pink-900 */
+    --tag-vulnerable-ring: #f472b6;    /* pink-400 */
+
+    --tag-loyal-bg: #a7f3d0;           /* emerald-200 */
+    --tag-loyal-text: #064e3b;         /* emerald-900 */
+    --tag-loyal-ring: #34d399;         /* emerald-400 */
+
+    --tag-default-bg: #f0e4d5;
+    --tag-default-text: #4a3020;
+  }
+}

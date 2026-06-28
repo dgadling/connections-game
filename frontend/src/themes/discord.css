@@ -1,0 +1,80 @@
+@layer base {
+  [data-theme="discord"] {
+    /* backgrounds */
+    --color-bg: #313338;               /* discord bg */
+    --color-surface: #2b2d31;          /* card bg */
+    --color-surface-hover: #35363c;    /* hover */
+    --color-surface-muted: #1e1f22;    /* muted / darker */
+
+    /* borders */
+    --color-border: #3f4147;           /* default border */
+    --color-border-strong: #4e5058;    /* strong */
+    --color-border-faint: #383a40;     /* faint */
+
+    /* text */
+    --color-text: #f2f3f5;             /* primary text */
+    --color-text-secondary: #b5bac1;   /* secondary */
+    --color-text-muted: #949ba4;       /* muted */
+    --color-text-subtle: #7a8088;      /* subtle */
+    --color-text-faint: #5a5f66;       /* faint */
+
+    /* primary */
+    --color-primary: #5865f2;          /* blurple */
+    --color-primary-hover: #4752c4;    /* blurple hover */
+    --color-primary-text: #b8c0ff;     /* light blurple text */
+    --color-primary-bg-subtle: #262840; /* dark blurple tint */
+    --color-primary-border: #5865f2;    /* blurple */
+    --color-primary-ring: #5865f2;     /* blurple */
+
+    /* accent */
+    --color-accent-bg-subtle: #2b2d31; /* matches surface */
+
+    /* success */
+    --color-success: #23a559;          /* discord green */
+    --color-success-hover: #1a8a48;    /* green hover */
+
+    /* danger */
+    --color-danger: #f23f42;           /* discord red */
+    --color-danger-hover: #d53032;     /* red hover */
+    --color-danger-bg: #3c1f23;        /* dark red bg */
+    --color-danger-border: #5a2a30;    /* red border */
+    --color-danger-border-strong: #7a3440; /* strong red border */
+    --color-danger-text: #fa777c;      /* light red text */
+    --color-danger-text-strong: #ff9aa0; /* stronger red text */
+    --color-danger-text-emphasis: #ffb6b9; /* emphasis */
+
+    /* warning */
+    --color-warning-bg: #3d3415;       /* dark amber bg */
+    --color-warning-bg-hover: #4d4220; /* amber hover */
+    --color-warning-border: #796128;   /* amber border */
+    --color-warning-text: #f0b132;     /* amber text */
+
+    /* tag colors – discord dark / high contrast */
+    --tag-warm-bg: #5c3a10;            /* dark amber */
+    --tag-warm-text: #ffca7a;          /* light amber */
+    --tag-warm-ring: #8a5a20;          /* amber ring */
+
+    --tag-secretive-bg: #3d2a5c;       /* dark violet */
+    --tag-secretive-text: #c9b3ff;     /* light violet */
+    --tag-secretive-ring: #5d3f8a;     /* violet ring */
+
+    --tag-reflective-bg: #1a3a4d;      /* dark sky */
+    --tag-reflective-text: #7dd3fc;    /* light sky */
+    --tag-reflective-ring: #2a5a7a;    /* sky ring */
+
+    --tag-tension-bg: #5c1a2a;         /* dark rose */
+    --tag-tension-text: #ff8fa3;       /* light rose */
+    --tag-tension-ring: #8a2a40;       /* rose ring */
+
+    --tag-vulnerable-bg: #5c2244;      /* dark pink */
+    --tag-vulnerable-text: #ffb3d9;    /* light pink */
+    --tag-vulnerable-ring: #8a3266;    /* pink ring */
+
+    --tag-loyal-bg: #124030;           /* dark emerald */
+    --tag-loyal-text: #6ee7b7;         /* light emerald */
+    --tag-loyal-ring: #1e6a52;         /* emerald ring */
+
+    --tag-default-bg: #3f4147;
+    --tag-default-text: #b5bac1;
+  }
+}

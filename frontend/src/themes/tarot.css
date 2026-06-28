@@ -1,0 +1,80 @@
+@layer base {
+  [data-theme="tarot"] {
+    /* backgrounds */
+    --color-bg: #1a1028;               /* deep purple */
+    --color-surface: #241538;          /* card surface */
+    --color-surface-hover: #2d1b45;    /* hover */
+    --color-surface-muted: #150b22;    /* muted / darker */
+
+    /* borders */
+    --color-border: #3d2a52;            /* default border */
+    --color-border-strong: #4f3a68;    /* strong */
+    --color-border-faint: #2a1d3d;     /* faint */
+
+    /* text */
+    --color-text: #f5f0e6;             /* parchment light */
+    --color-text-secondary: #d4c4a8;   /* gold-tinted secondary */
+    --color-text-muted: #b8a088;       /* muted gold */
+    --color-text-subtle: #8a6d4b;      /* subtle */
+    --color-text-faint: #5a4530;       /* faint */
+
+    /* primary */
+    --color-primary: #c9a84c;          /* tarot gold */
+    --color-primary-hover: #b89638;    /* gold hover */
+    --color-primary-text: #f5e6b8;     /* light gold text */
+    --color-primary-bg-subtle: #2a1f0f; /* dark gold tint */
+    --color-primary-border: #c9a84c;    /* gold */
+    --color-primary-ring: #c9a84c;     /* gold */
+
+    /* accent */
+    --color-accent-bg-subtle: #241538; /* matches surface */
+
+    /* success */
+    --color-success: #3a9e6a;          /* muted green */
+    --color-success-hover: #2d7a52;    /* green hover */
+
+    /* danger */
+    --color-danger: #d64550;           /* tarot red */
+    --color-danger-hover: #b83842;     /* red hover */
+    --color-danger-bg: #2a1218;        /* dark red bg */
+    --color-danger-border: #4a1e28;    /* red border */
+    --color-danger-border-strong: #6a2a38; /* strong red border */
+    --color-danger-text: #f08a92;      /* light red text */
+    --color-danger-text-strong: #ffb6bc; /* stronger red text */
+    --color-danger-text-emphasis: #ffd6da; /* emphasis */
+
+    /* warning */
+    --color-warning-bg: #2a1f0a;       /* dark gold bg */
+    --color-warning-bg-hover: #3a2a10; /* gold hover */
+    --color-warning-border: #5a4220;   /* gold border */
+    --color-warning-text: #e8c468;     /* gold text */
+
+    /* tag colors – tarot / dark purple / high contrast */
+    --tag-warm-bg: #4a3008;            /* dark amber */
+    --tag-warm-text: #f0c468;          /* light amber */
+    --tag-warm-ring: #6a4510;          /* amber ring */
+
+    --tag-secretive-bg: #3d1a5c;       /* dark violet */
+    --tag-secretive-text: #d4b0ff;     /* light violet */
+    --tag-secretive-ring: #5a2a80;     /* violet ring */
+
+    --tag-reflective-bg: #1a3a52;      /* dark sky */
+    --tag-reflective-text: #8ac8ff;    /* light sky */
+    --tag-reflective-ring: #2a5a7a;    /* sky ring */
+
+    --tag-tension-bg: #4a1a28;         /* dark rose */
+    --tag-tension-text: #ff8fa8;       /* light rose */
+    --tag-tension-ring: #6a2a3a;       /* rose ring */
+
+    --tag-vulnerable-bg: #4a1a3a;      /* dark pink */
+    --tag-vulnerable-text: #ffb0d8;    /* light pink */
+    --tag-vulnerable-ring: #6a2a52;    /* pink ring */
+
+    --tag-loyal-bg: #0f3a28;           /* dark emerald */
+    --tag-loyal-text: #6ee7b7;         /* light emerald */
+    --tag-loyal-ring: #1a5a3d;         /* emerald ring */
+
+    --tag-default-bg: #2d1b45;
+    --tag-default-text: #d4c4a8;
+  }
+}
