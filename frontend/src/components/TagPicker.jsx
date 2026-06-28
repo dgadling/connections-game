@@ -26,7 +26,7 @@ export function TagPicker({ tag, onChange, disabled }) {
   }, [open])
 
   return (
-    <div className="relative shrink-0" ref={wrapperRef}>
+    <div className="relative shrink-0 text-foreground" ref={wrapperRef}>
       <button type="button"
         disabled={disabled}
         onClick={(e) => { e.stopPropagation(); if (!disabled) setOpen(o => !o) }}
@@ -37,7 +37,7 @@ export function TagPicker({ tag, onChange, disabled }) {
       </button>
       {Boolean(open) && (
         <div
-          className="absolute z-50 mt-1 left-0 bg-surface border border-default rounded-xl shadow-lg w-[170px] py-1"
+          className="absolute z-50 mt-1 left-0 bg-surface border border-default rounded-xl shadow-lg w-[170px] py-1 text-foreground"
           onClick={e => e.stopPropagation()}
         >
           {TAGS.map(t => (

@@ -9,11 +9,6 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    color: var(--color-text);
-    background-color: var(--color-bg);
-  }
-
   :root {
     /* Default theme – neutral/indigo */
     /* backgrounds */

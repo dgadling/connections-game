@@ -56,16 +56,16 @@ export function RoundTab({ gameId, game, archived }) {
   }
 
   if (loading) return <div className="text-subtle">Loading…</div>
-  if (!data) return <div className="bg-surface rounded-xl shadow-sm border border-danger p-4 text-sm text-danger">Failed to load round. <button type="button" onClick={load} className="underline">Retry</button></div>
+  if (!data) return <div className="bg-surface rounded-xl shadow-sm border border-danger p-4 text-sm text-danger">Failed to load round. <button type="button" onClick={load} className="underline text-danger">Retry</button></div>
 
   const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
   return (
-    <div className="space-y-4">
-      <div className="bg-surface rounded-xl shadow-sm border border-default p-4 sm:p-5">
+    <div className="space-y-4 text-foreground">
+      <div className="bg-surface rounded-xl shadow-sm border border-default p-4 sm:p-5 text-foreground">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-foreground text-sm text-subtle">{todayStr}</h2>
-          <button type="button" onClick={copyDiscord} disabled={!data.question || arr(data.pairings).length === 0} className="text-xs px-2.5 py-1.5 border border-strong rounded-lg hover:bg-surface-muted disabled:opacity-50 disabled:cursor-not-allowed">{copied ? 'Copied!' : 'Copy'}</button>
+          <h2 className="font-semibold text-sm text-subtle">{todayStr}</h2>
+          <button type="button" onClick={copyDiscord} disabled={!data.question || arr(data.pairings).length === 0} className="text-xs px-2.5 py-1.5 border border-strong rounded-lg hover:bg-surface-muted disabled:opacity-50 disabled:cursor-not-allowed text-foreground">{copied ? 'Copied!' : 'Copy'}</button>
         </div>
         {data.question ? (
           <>
@@ -79,8 +79,8 @@ export function RoundTab({ gameId, game, archived }) {
         )}
         <div className="space-y-2">
           {arr(data.pairings).map(p => (
-            <div key={`${p.asker_id}-${p.target_id}`} className="flex items-center gap-2 text-sm py-2 px-3 bg-surface-muted rounded-lg">
-              <span className="font-medium">{p.asker_name}</span>
+            <div key={`${p.asker_id}-${p.target_id}`} className="flex items-center gap-2 text-sm py-2 px-3 bg-surface-muted rounded-lg text-foreground">
+              <span className="font-medium text-foreground">{p.asker_name}</span>
               <span className="text-faint">→</span>
               <span className="text-secondary">{p.target_name}</span>
             </div>

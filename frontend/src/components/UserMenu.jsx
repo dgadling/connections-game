@@ -79,7 +79,7 @@ export function UserMenu({ user, setUser, onLogout }) {
   }
 
   return (
-    <div className="relative">
+    <div className="relative text-foreground">
       <button
         ref={buttonRef}
         type="button"
@@ -87,7 +87,7 @@ export function UserMenu({ user, setUser, onLogout }) {
         aria-label="User menu"
         aria-expanded={open}
         aria-haspopup="true"
-        className="flex items-center gap-2 px-1.5 py-1 rounded-lg hover:bg-surface-hover transition-colors"
+        className="flex items-center gap-2 px-1.5 py-1 rounded-lg hover:bg-surface-hover transition-colors text-foreground"
       >
         <div className="w-7 h-7 rounded-full overflow-hidden bg-surface-muted flex items-center justify-center text-xs font-semibold text-secondary flex-shrink-0">
           {avatarUrl && !imgError ? (
@@ -109,7 +109,7 @@ export function UserMenu({ user, setUser, onLogout }) {
         <div
           ref={menuRef}
           role="menu"
-          className="absolute right-0 mt-2 w-56 bg-surface rounded-xl shadow-lg border border-default py-1 z-50"
+          className="absolute right-0 mt-2 w-56 bg-surface rounded-xl shadow-lg border border-default py-1 z-50 text-foreground"
         >
           <div className="px-3 py-2 text-xs font-semibold text-muted uppercase tracking-wider">
             Theme

@@ -1,5 +1,5 @@
 @layer base {
-  [data-theme="brutalist"] {
+  :root[data-theme="brutalist"] {
     /* 0 radius everywhere */
     *, *::before, *::after { border-radius: 0 !important; }
     /* 2px borders – override Tailwind's 1px .border utilities */

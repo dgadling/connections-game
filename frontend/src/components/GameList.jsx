@@ -36,10 +36,10 @@ export function GameList({ user, setUser, games, gamesLoading, setGame, onRefres
     }
   }
   return (
-    <div className="min-h-screen bg-surface-muted">
-      <header className="bg-surface border-b border-default">
+    <div className="min-h-screen bg-surface-muted text-foreground">
+      <header className="bg-surface border-b border-default text-foreground">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-xl font-bold">🤝 Connections</h1>
+          <h1 className="text-xl font-bold text-foreground">🤝 Connections</h1>
           <UserMenu user={user} setUser={setUser} onLogout={onLogout} />
         </div>
       </header>
@@ -50,18 +50,18 @@ export function GameList({ user, setUser, games, gamesLoading, setGame, onRefres
         <div className="space-y-2 mb-6">
           {arr(games).filter(g=>!g.archived_at).map(g => (
             <button type="button" key={g.id} onClick={()=>openGame(g.id)} disabled={!!openingId}
-              className="w-full text-left bg-surface rounded-xl shadow-sm border border-default p-4 hover:border-primary transition-colors disabled:opacity-60">
-              <div className="font-medium">{g.name}{openingId===g.id ? ' …' : ''}</div>
+              className="w-full text-left bg-surface rounded-xl shadow-sm border border-default p-4 hover:border-primary transition-colors disabled:opacity-60 text-foreground">
+              <div className="font-medium text-foreground">{g.name}{openingId===g.id ? ' …' : ''}</div>
             </button>
           ))}
           {!gamesLoading && arr(games).filter(g=>!g.archived_at).length===0 && <div className="text-subtle text-sm bg-surface rounded-xl shadow-sm border border-default p-4">No active games — create one below, or follow an invite link to join.</div>}
         </div>
 
-        <div className="bg-surface rounded-xl shadow-sm border border-default p-4 sm:p-5 mb-5">
-          <div className="font-semibold mb-2">New game</div>
+        <div className="bg-surface rounded-xl shadow-sm border border-default p-4 sm:p-5 mb-5 text-foreground">
+          <div className="font-semibold mb-2 text-foreground">New game</div>
           <div className="flex gap-2">
             <input value={name} onChange={e=>setName(e.target.value)} placeholder="Campaign name…" disabled={creating}
-              className="flex-1 border border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-surface-muted"
+              className="flex-1 border border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-surface-muted text-foreground bg-surface"
               onKeyDown={e=>e.key==='Enter'&&createGame()} />
             <button type="button" onClick={createGame} disabled={creating || !name.trim()}
               className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover whitespace-nowrap disabled:opacity-60">
@@ -76,7 +76,7 @@ export function GameList({ user, setUser, games, gamesLoading, setGame, onRefres
             <div className="space-y-2">
               {arr(games).filter(g=>g.archived_at).map(g => (
                 <button type="button" key={g.id} onClick={()=>openGame(g.id)} disabled={!!openingId}
-                  className="w-full text-left bg-surface rounded-xl shadow-sm border border-default p-4 hover:border-strong transition-colors opacity-75 disabled:opacity-40">
+                  className="w-full text-left bg-surface rounded-xl shadow-sm border border-default p-4 hover:border-strong transition-colors opacity-75 disabled:opacity-40 text-foreground">
                   <div className="font-medium text-secondary">{g.name}{openingId===g.id ? ' …' : ''}</div>
                 </button>
               ))}

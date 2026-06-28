@@ -203,7 +203,7 @@ export function QuestionsTab({ gameId, archived }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 text-foreground">
       <QuestionToolbar
         status={status} setStatus={setStatus} loading={loading} qsCount={qs.length}
         archived={archived}
@@ -258,7 +258,7 @@ export function QuestionsTab({ gameId, archived }) {
           <div className="h-0.5 mx-3 rounded-full bg-primary" />
         )}
         {!loading && qs.length===0 && (
-          <div className="bg-surface rounded-xl shadow-sm border border-default p-8 text-center">
+          <div className="bg-surface rounded-xl shadow-sm border border-default p-8 text-center text-foreground">
             <div className="text-3xl mb-2">📝</div>
             <div className="text-secondary font-medium mb-1">No {status} questions yet</div>
             {status === 'upcoming' && !archived && (

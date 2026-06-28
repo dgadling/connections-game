@@ -77,49 +77,49 @@ export function AdminTab({ gameId, game, onGameUpdate, onGamesRefresh, onGameDel
   }
 
   return (
-    <div className="space-y-4">
-      <div className="bg-surface rounded-xl shadow-sm border border-default p-4 sm:p-5">
+    <div className="space-y-4 text-foreground">
+      <div className="bg-surface rounded-xl shadow-sm border border-default p-4 sm:p-5 text-foreground">
         <div className="font-semibold mb-3 text-foreground">Game settings</div>
         <div className="flex flex-col sm:flex-row gap-2 mb-3">
           <input value={rename} onChange={e=>setRename(e.target.value)} disabled={savingRename}
-            className="flex-1 border border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-surface-muted" />
+            className="flex-1 border border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-surface-muted text-foreground bg-surface" />
           <button type="button" onClick={doRename} disabled={savingRename || !rename.trim() || rename===game.name}
-            className="px-4 py-2 border border-strong rounded-lg text-sm hover:bg-surface-muted disabled:opacity-60">
+            className="px-4 py-2 border border-strong rounded-lg text-sm hover:bg-surface-muted disabled:opacity-60 text-foreground">
             {savingRename ? 'Saving…' : 'Rename'}
           </button>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 mb-3">
           <input value={roleId} onChange={e=>setRoleId(e.target.value)} placeholder="Discord role ID (optional)" disabled={savingRole}
-            className="flex-1 border border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-surface-muted" />
+            className="flex-1 border border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-surface-muted text-foreground bg-surface" />
           <button type="button" onClick={doSaveRole} disabled={savingRole}
-            className="px-4 py-2 border border-strong rounded-lg text-sm hover:bg-surface-muted disabled:opacity-60">
+            className="px-4 py-2 border border-strong rounded-lg text-sm hover:bg-surface-muted disabled:opacity-60 text-foreground">
             {savingRole ? 'Saving…' : 'Save role'}
           </button>
         </div>
         <div className="text-xs text-subtle mb-3">When set, Copy-to-Discord uses plain character names and prepends a role ping. Leave blank to use individual @mentions.</div>
         <div className="flex flex-wrap gap-2">
         {!game.archived_at
-          ? <button type="button" onClick={()=>doArchive(true)} className="px-3 py-2 border border-strong rounded-lg text-sm hover:bg-surface-muted">Archive game</button>
+          ? <button type="button" onClick={()=>doArchive(true)} className="px-3 py-2 border border-strong rounded-lg text-sm hover:bg-surface-muted text-foreground">Archive game</button>
           : <>
-              <button type="button" onClick={()=>doArchive(false)} className="px-3 py-2 bg-warning-subtle border border-warning rounded-lg text-sm hover:bg-warning-hover">Unarchive game</button>
+              <button type="button" onClick={()=>doArchive(false)} className="px-3 py-2 bg-warning-subtle border border-warning rounded-lg text-sm hover:bg-warning-hover text-warning">Unarchive game</button>
               <button type="button" onClick={doDelete} className="px-3 py-2 bg-danger text-white rounded-lg text-sm hover:bg-danger-hover">Delete game permanently</button>
             </>
         }
         </div>
       </div>
 
-      <div className="bg-surface rounded-xl shadow-sm border border-default p-4 sm:p-5">
+      <div className="bg-surface rounded-xl shadow-sm border border-default p-4 sm:p-5 text-foreground">
         <div className="font-semibold mb-3 text-foreground">Invite links</div>
         <button type="button" onClick={createInvite} disabled={busy}
           className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover mb-3 disabled:opacity-60">
           {busy ? 'Generating…' : 'Generate invite'}
         </button>
         {Boolean(inviteUrl) && (
-          <div className="mb-3 p-3 bg-warning-subtle border border-warning rounded-lg text-xs">
+          <div className="mb-3 p-3 bg-warning-subtle border border-warning rounded-lg text-xs text-warning">
             <div className="font-mono break-all mb-1">{inviteUrl}</div>
             <div className="flex gap-3">
-              <button type="button" onClick={()=>{navigator.clipboard.writeText(inviteUrl).then(()=>toast.success('Copied')).catch(()=>toastErr(new Error('Copy failed')))}} className="underline">copy</button>
-              <button type="button" onClick={()=>setInviteUrl('')} className="underline">hide</button>
+              <button type="button" onClick={()=>{navigator.clipboard.writeText(inviteUrl).then(()=>toast.success('Copied')).catch(()=>toastErr(new Error('Copy failed')))}} className="underline text-warning hover:text-foreground">copy</button>
+              <button type="button" onClick={()=>setInviteUrl('')} className="underline text-warning hover:text-foreground">hide</button>
               <span className="text-muted ml-auto">single-use · 1 day</span>
             </div>
           </div>
@@ -136,13 +136,13 @@ export function AdminTab({ gameId, game, onGameUpdate, onGamesRefresh, onGameDel
         </ul>
       </div>
 
-      <div className="bg-surface rounded-xl shadow-sm border border-default p-4 sm:p-5">
+      <div className="bg-surface rounded-xl shadow-sm border border-default p-4 sm:p-5 text-foreground">
         <div className="font-semibold mb-3 text-foreground">Admins</div>
         <ul className="space-y-2 text-sm divide-y divide-default">
           {loading ? <li className="text-subtle py-2">Loading…</li> : null}
           {!loading && arr(admins).map(a => (
-            <li key={a.discord_id} className="flex justify-between py-2">
-              <span>{a.global_name || a.username}</span>
+            <li key={a.discord_id} className="flex justify-between py-2 text-foreground">
+              <span className="text-foreground">{a.global_name || a.username}</span>
               {Boolean(currentUserDiscordId && a.discord_id !== currentUserDiscordId) && (
                 <button type="button" onClick={()=>revokeAdmin(a.discord_id)} className="text-xs text-danger hover:underline">revoke</button>
               )}

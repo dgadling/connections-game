@@ -10,18 +10,18 @@ export function QuestionItem({ q, idx, status, editing, editText, setEditText, o
       onDragStart={status === 'upcoming' ? onDragStart(idx) : undefined}
       onDragOver={status === 'upcoming' ? onDragOver(idx) : undefined}
       onDragEnd={onDragEnd}
-      className={`bg-surface rounded-lg shadow-sm border border-default px-3 py-2.5 transition-all ${isDragging ? 'opacity-40' : ''}`}>
+      className={`bg-surface rounded-lg shadow-sm border border-default px-3 py-2.5 transition-all text-foreground ${isDragging ? 'opacity-40' : ''}`}>
       {editing === q.id ? (
         <div className="flex flex-col sm:flex-row gap-2">
           <input value={editText} onChange={e=>setEditText(e.target.value)} maxLength={500} placeholder="Edit question…" disabled={saving}
-            className="flex-1 border border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-surface-muted" autoFocus />
+            className="flex-1 border border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-surface-muted text-foreground bg-surface" autoFocus />
           <div className="flex gap-2">
             <button type="button" onClick={()=>onSaveEdit(q)} disabled={saving}
               className="flex-1 sm:flex-initial px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium disabled:opacity-60">
               {saving ? 'Saving…' : 'Save'}
             </button>
             <button type="button" onClick={onCancelEdit} disabled={saving}
-              className="flex-1 sm:flex-initial px-3 py-2 border border-strong rounded-lg text-sm disabled:opacity-60">Cancel</button>
+              className="flex-1 sm:flex-initial px-3 py-2 border border-strong rounded-lg text-sm disabled:opacity-60 text-foreground hover:bg-surface-muted">Cancel</button>
           </div>
         </div>
       ) : (

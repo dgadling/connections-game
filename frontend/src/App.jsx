@@ -106,7 +106,7 @@ export default function App() {
   }, [user, loadGames])
 
   if (user === undefined) return (
-    <div className="min-h-screen flex items-center justify-center bg-surface-muted px-4">
+    <div className="min-h-screen flex items-center justify-center bg-surface-muted px-4 text-foreground">
       <div className="text-center">
         <div className="text-4xl mb-2 animate-pulse">🤝</div>
         <p className="text-sm text-subtle">Loading…</p>
@@ -115,7 +115,7 @@ export default function App() {
   )
 
   if (user === null) return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-subtle via-surface to-accent-subtle px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-subtle via-surface to-accent-subtle px-4 text-foreground">
       <div className="text-center max-w-sm w-full">
         {signingIn ? (
           <>
@@ -161,8 +161,8 @@ export default function App() {
   ]
 
   return (
-    <div className="min-h-screen bg-surface-muted">
-      <header className="bg-surface border-b border-default sticky top-0 z-30">
+    <div className="min-h-screen bg-surface-muted text-foreground">
+      <header className="bg-surface border-b border-default sticky top-0 z-30 text-foreground">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
           <button type="button" onClick={()=>setGame(null)} className="text-sm text-subtle hover:text-foreground">← games</button>
           <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground truncate">{game.name}</h1>

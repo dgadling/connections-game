@@ -4,8 +4,8 @@ export function QuestionHistoryModal({ question, history, onClose }) {
   if (!question) return null
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-40" onClick={onClose}>
-      <div role="dialog" aria-label="Edit history" className="bg-surface rounded-xl shadow-xl p-4 sm:p-5 max-w-lg w-full text-sm" onClick={e=>e.stopPropagation()}>
-        <div className="font-semibold mb-3">Edit history</div>
+      <div role="dialog" aria-label="Edit history" className="bg-surface rounded-xl shadow-xl p-4 sm:p-5 max-w-lg w-full text-sm text-foreground" onClick={e=>e.stopPropagation()}>
+        <div className="font-semibold mb-3 text-foreground">Edit history</div>
         <div className="text-xs text-subtle mb-2 truncate">Current: [{question.tag}] {question.text}</div>
         {arr(history).length===0 ? <div className="text-subtle">No edits yet.</div> : (
           <ul className="space-y-2 max-h-64 overflow-auto">
@@ -24,7 +24,7 @@ export function QuestionHistoryModal({ question, history, onClose }) {
             })}
           </ul>
         )}
-        <button type="button" onClick={onClose} className="mt-3 px-3 py-2 border border-strong rounded-lg text-sm w-full sm:w-auto">Close</button>
+        <button type="button" onClick={onClose} className="mt-3 px-3 py-2 border border-strong rounded-lg text-sm w-full sm:w-auto text-foreground hover:bg-surface-muted">Close</button>
       </div>
     </div>
   )

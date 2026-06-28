@@ -36,16 +36,16 @@ export function HistoryTab({ gameId, game }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 text-foreground">
       <div className="text-sm text-muted">{loading ? 'Loading…' : `${rowList.length} played`}</div>
       {rowList.map(r => (
-        <div key={r.round_num} className="bg-surface rounded-xl shadow-sm border border-default p-4">
+        <div key={r.round_num} className="bg-surface rounded-xl shadow-sm border border-default p-4 text-foreground">
           <div className="flex justify-between items-start mb-2 gap-2">
             <div className="font-semibold text-foreground">{r.played_at ? new Date(r.played_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}</div>
-            <button type="button" onClick={()=>copyDiscord(r)} className="text-xs px-2.5 py-1.5 border border-strong rounded-lg hover:bg-surface-muted whitespace-nowrap shrink-0">{copiedRound === r.round_num ? 'Copied!' : 'Copy'}</button>
+            <button type="button" onClick={()=>copyDiscord(r)} className="text-xs px-2.5 py-1.5 border border-strong rounded-lg hover:bg-surface-muted whitespace-nowrap shrink-0 text-foreground">{copiedRound === r.round_num ? 'Copied!' : 'Copy'}</button>
           </div>
           <div className="flex items-start gap-2 mb-2">
-            {Boolean(r.question_tag) && <span className={`text-[11px] px-2 py-1 rounded-full font-medium ${TAG_COLORS[r.question_tag]||'bg-surface-hover'}`}>{r.question_tag}</span>}
+            {Boolean(r.question_tag) && <span className={`text-[11px] px-2 py-1 rounded-full font-medium ${TAG_COLORS[r.question_tag]||'bg-surface-hover text-secondary'}`}>{r.question_tag}</span>}
             <span className="text-secondary flex-1">{r.question_text || <em>question deleted</em>}</span>
           </div>
           {arr(r.pairings).length > 0 && (

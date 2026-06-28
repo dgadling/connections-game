@@ -1,5 +1,5 @@
 @layer base {
-  [data-theme="tarot"] {
+  :root[data-theme="tarot"] {
     /* backgrounds */
     --color-bg: #1a1028;               /* deep purple */
     --color-surface: #241538;          /* card surface */

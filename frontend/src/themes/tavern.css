@@ -1,5 +1,5 @@
 @layer base {
-  [data-theme="tavern"] {
+  :root[data-theme="tavern"] {
     /* backgrounds */
     --color-bg: #f5f0e6;               /* parchment */
     --color-surface: #fdfbf5;          /* cream surface */

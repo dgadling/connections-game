@@ -1,5 +1,5 @@
 @layer base {
-  [data-theme="campfire"] {
+  :root[data-theme="campfire"] {
     /* backgrounds */
     --color-bg: #fdf8f0;               /* cream */
     --color-surface: #fffcf7;          /* warm white surface */

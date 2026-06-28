@@ -1,5 +1,5 @@
 @layer base {
-  [data-theme="discord"] {
+  :root[data-theme="discord"] {
     /* backgrounds */
     --color-bg: #313338;               /* discord bg */
     --color-surface: #2b2d31;          /* card bg */
