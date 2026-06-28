@@ -25,7 +25,7 @@ export function HistoryTab({ gameId, game }) {
     }
     const qEmoji = TAG_ICONS[r.question_tag] || ''
     const qText = r.question_text || '(no question)'
-    lines.push(`🤝 Connections${dateStr ? ' — ' + dateStr : ''}`, '', `> ${qEmoji}${qText}`, '')
+    lines.push(`🤝 Connections${dateStr ? ' — ' + dateStr : ''}`, '', `> ${qEmoji ? qEmoji + ' ' : ''}${qText}`, '')
     arr(r.pairings).forEach(p => {
       const asker = formatDiscordMention(p.asker_discord_id, p.asker_name, game?.discord_role_id)
       const target = formatDiscordMention(p.target_discord_id, p.target_name, game?.discord_role_id)

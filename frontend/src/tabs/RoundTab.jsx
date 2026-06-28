@@ -45,7 +45,7 @@ export function RoundTab({ gameId, game, archived }) {
     const qTag = data.question?.tag
     const qEmoji = TAG_ICONS[qTag] || ''
     const qText = data.question?.text || '(no question)'
-    lines.push(`🤝 Connections — ${dateStr}`, '', `> ${qEmoji}${qText}`, '')
+    lines.push(`🤝 Connections — ${dateStr}`, '', `> ${qEmoji ? qEmoji + ' ' : ''}${qText}`, '')
     arr(data.pairings).forEach(p => {
       const asker = formatDiscordMention(p.asker_discord_id, p.asker_name, game?.discord_role_id)
       const target = formatDiscordMention(p.target_discord_id, p.target_name, game?.discord_role_id)
