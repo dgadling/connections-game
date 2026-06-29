@@ -3,89 +3,81 @@
 @layer base {
   :root[data-theme="tarot"] {
     /* backgrounds */
-    --color-bg: #1a1028;               /* deep purple */
-    --color-surface: #241538;          /* card surface */
-    --color-surface-hover: #2d1b45;    /* hover */
-    --color-surface-muted: #150b22;    /* muted / darker */
+    --color-bg: #1a1028;
+    --color-surface: #241538;
+    --color-surface-hover: #2d1b45;
+    --color-surface-muted: #150b22;
 
     /* borders */
-    --color-border: #3d2a52;            /* default border */
-    --color-border-strong: #4f3a68;    /* strong */
-    --color-border-faint: #2a1d3d;     /* faint */
+    --color-border: #3d2a52;
+    --color-border-strong: #4f3a68;
+    --color-border-faint: #2a1d3d;
 
     /* text */
-    --color-text: #f5f0e6;             /* parchment light */
-    --color-text-secondary: #d4c4a8;   /* gold-tinted secondary */
-    --color-text-muted: #b8a088;       /* muted gold */
-    --color-text-subtle: #c4a87a;      /* subtle – AA 4.5:1 on #241538 */
-    --color-text-faint: #a68860;       /* faint – AA 4.5:1 on #1a1028 */
+    --color-text: #f5f0e6;
+    --color-text-secondary: #d4c4a8;
+    --color-text-muted: #b8a088;
+    --color-text-subtle: #c4a87a;
+    --color-text-faint: #a68860;
 
     /* primary */
-    --color-primary: #c9a84c;          /* tarot gold */
-    --color-primary-hover: #b89638;    /* gold hover */
-    --color-primary-text: #1a1028;     /* dark purple text on gold */
-    --color-primary-bg-subtle: #2a1f0f; /* dark gold tint */
-    --color-primary-border: #c9a84c;    /* gold */
-    --color-primary-ring: #c9a84c;     /* gold */
+    --color-primary: #c9a84c;
+    --color-primary-hover: #b89638;
+    --color-primary-text: #1a1028;
+    --color-primary-bg-subtle: #2a1f0f;
+    --color-primary-border: #c9a84c;
+    --color-primary-ring: #c9a84c;
 
     /* accent */
-    --color-accent-bg-subtle: #241538; /* matches surface */
+    --color-accent-bg-subtle: #241538;
 
     /* success */
-    --color-success: #3a9e6a;          /* muted green */
-    --color-success-hover: #2d7a52;    /* green hover */
+    --color-success: #3a9e6a;
+    --color-success-hover: #2d7a52;
 
     /* danger */
-    --color-danger: #d64550;           /* tarot red */
-    --color-danger-hover: #b83842;     /* red hover */
-    --color-danger-bg: #2a1218;        /* dark red bg */
-    --color-danger-border: #4a1e28;    /* red border */
-    --color-danger-border-strong: #6a2a38; /* strong red border */
-    --color-danger-text: #f08a92;      /* light red text */
-    --color-danger-text-strong: #ffb6bc; /* stronger red text */
-    --color-danger-text-emphasis: #ffd6da; /* emphasis */
+    --color-danger: #d64550;
+    --color-danger-hover: #b83842;
+    --color-danger-bg: #2a1218;
+    --color-danger-border: #4a1e28;
+    --color-danger-border-strong: #6a2a38;
+    --color-danger-text: #f08a92;
+    --color-danger-text-strong: #ffb6bc;
+    --color-danger-text-emphasis: #ffd6da;
 
     /* warning */
-    --color-warning-bg: #2a1f0a;       /* dark gold bg */
-    --color-warning-bg-hover: #3a2a10; /* gold hover */
-    --color-warning-border: #5a4220;   /* gold border */
-    --color-warning-text: #e8c468;     /* gold text */
+    --color-warning-bg: #2a1f0a;
+    --color-warning-bg-hover: #3a2a10;
+    --color-warning-border: #5a4220;
+    --color-warning-text: #e8c468;
 
-    /* tag colors – tarot / dark purple / high contrast */
-    --tag-warm-bg: #4a3008;            /* dark amber */
-    --tag-warm-text: #f0c468;          /* light amber */
-    --tag-warm-ring: #6a4510;          /* amber ring */
+    /* tag colors */
+    --tag-warm-bg: #4a3008;
+    --tag-warm-text: #f0c468;
+    --tag-warm-ring: #6a4510;
 
-    --tag-secretive-bg: #3d1a5c;       /* dark violet */
-    --tag-secretive-text: #d4b0ff;     /* light violet */
-    --tag-secretive-ring: #5a2a80;     /* violet ring */
+    --tag-secretive-bg: #3d1a5c;
+    --tag-secretive-text: #d4b0ff;
+    --tag-secretive-ring: #5a2a80;
 
-    --tag-reflective-bg: #1a3a52;      /* dark sky */
-    --tag-reflective-text: #8ac8ff;    /* light sky */
-    --tag-reflective-ring: #2a5a7a;    /* sky ring */
+    --tag-reflective-bg: #1a3a52;
+    --tag-reflective-text: #8ac8ff;
+    --tag-reflective-ring: #2a5a7a;
 
-    --tag-tension-bg: #4a1a28;         /* dark rose */
-    --tag-tension-text: #ff8fa8;       /* light rose */
-    --tag-tension-ring: #6a2a3a;       /* rose ring */
+    --tag-tension-bg: #4a1a28;
+    --tag-tension-text: #ff8fa8;
+    --tag-tension-ring: #6a2a3a;
 
-    --tag-vulnerable-bg: #4a1a3a;      /* dark pink */
-    --tag-vulnerable-text: #ffb0d8;    /* light pink */
-    --tag-vulnerable-ring: #6a2a52;    /* pink ring */
+    --tag-vulnerable-bg: #4a1a3a;
+    --tag-vulnerable-text: #ffb0d8;
+    --tag-vulnerable-ring: #6a2a52;
 
-    --tag-loyal-bg: #0f3a28;           /* dark emerald */
-    --tag-loyal-text: #6ee7b7;         /* light emerald */
-    --tag-loyal-ring: #1a5a3d;         /* emerald ring */
+    --tag-loyal-bg: #0f3a28;
+    --tag-loyal-text: #6ee7b7;
+    --tag-loyal-ring: #1a5a3d;
 
     --tag-default-bg: #2d1b45;
     --tag-default-text: #d4c4a8;
-
-    /* tarot extras */
-    --tarot-gold: #c9a84c;
-    --tarot-gold-bright: #e8c468;
-    --tarot-purple-deep: #1a1028;
-    --tarot-purple-card: #241538;
-    --tarot-purple-mid: #2d1b45;
-    --tarot-text-light: #f5f0e6;
   }
 }
 
@@ -93,7 +85,7 @@
 @layer base {
   [data-theme="tarot"] {
     font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 18px;
+    font-size: 16px;
   }
 
   [data-theme="tarot"] body,
@@ -106,13 +98,12 @@
   }
 
   /* header – gold ornate bar */
-  [data-theme="tarot"] header.bg-surface {
-    background: #1f1538 !important;
-    background-image: linear-gradient(180deg, rgba(201,168,76,0.08), transparent 60%),
-                      url('/themes/tarot/starfield-tile.webp');
+  [data-theme="tarot"][data-theme="tarot"] header.bg-surface {
+    background: #1f1538;
+    background-image: linear-gradient(180deg, rgba(201,168,76,0.08), transparent 60%), url('/themes/tarot/starfield-tile.webp');
     background-repeat: repeat;
     background-size: auto, 512px 512px;
-    border-bottom: 2px solid var(--tarot-gold);
+    border-bottom: 2px solid var(--color-primary);
     box-shadow: 0 2px 12px rgba(0,0,0,0.4), 0 0 20px rgba(201,168,76,0.15);
   }
   [data-theme="tarot"] header .max-w-4xl {
@@ -121,38 +112,32 @@
   [data-theme="tarot"] header button,
   [data-theme="tarot"] header a {
     font-family: 'Cinzel', serif;
-    color: var(--tarot-gold-bright);
+    color: var(--color-warning-text);
   }
 
   /* main card – ornate tarot card frame – NO position:relative (dropdown-safe) */
   [data-theme="tarot"] .bg-surface.rounded-xl {
     background:
-      /* corner flourishes – TL */
-      linear-gradient(to right, rgba(232,196,104,0.85) 0, rgba(232,196,104,0.85) 28px, transparent 28px) top left / 52px 2px no-repeat,
-      linear-gradient(to bottom, rgba(232,196,104,0.85) 0, rgba(232,196,104,0.85) 28px, transparent 28px) top left / 2px 52px no-repeat,
-      /* TR */
-      linear-gradient(to left, rgba(232,196,104,0.85) 0, rgba(232,196,104,0.85) 28px, transparent 28px) top right / 52px 2px no-repeat,
-      linear-gradient(to bottom, rgba(232,196,104,0.85) 0, rgba(232,196,104,0.85) 28px, transparent 28px) top right / 2px 52px no-repeat,
-      /* BL */
-      linear-gradient(to right, rgba(232,196,104,0.85) 0, rgba(232,196,104,0.85) 28px, transparent 28px) bottom left / 52px 2px no-repeat,
-      linear-gradient(to top, rgba(232,196,104,0.85) 0, rgba(232,196,104,0.85) 28px, transparent 28px) bottom left / 2px 52px no-repeat,
-      /* BR */
-      linear-gradient(to left, rgba(232,196,104,0.85) 0, rgba(232,196,104,0.85) 28px, transparent 28px) bottom right / 52px 2px no-repeat,
-      linear-gradient(to top, rgba(232,196,104,0.85) 0, rgba(232,196,104,0.85) 28px, transparent 28px) bottom right / 2px 52px no-repeat,
-      /* inner corner dots */
-      radial-gradient(circle 2px at 18px 18px, rgba(232,196,104,0.7), transparent 2.5px),
-      radial-gradient(circle 2px at calc(100% - 18px) 18px, rgba(232,196,104,0.7), transparent 2.5px),
-      radial-gradient(circle 2px at 18px calc(100% - 18px), rgba(232,196,104,0.7), transparent 2.5px),
-      radial-gradient(circle 2px at calc(100% - 18px) calc(100% - 18px), rgba(232,196,104,0.7), transparent 2.5px),
-      /* top/bottom center ornaments */
-      radial-gradient(ellipse 80px 18px at 50% 22px, rgba(201,168,76,0.18), transparent 70%),
-      radial-gradient(ellipse 80px 18px at 50% calc(100% - 22px), rgba(201,168,76,0.12), transparent 70%),
-      radial-gradient(ellipse 44px 10px at 50% 12px, rgba(232,196,104,0.35), transparent 70%),
-      radial-gradient(ellipse 44px 10px at 50% calc(100% - 12px), rgba(232,196,104,0.25), transparent 70%),
+      /* corner TL */
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 90' fill='none'%3E%3Cg stroke='%23e8c468' stroke-width='1'%3E%3Cpath d='M3 62V12C3 7 7 3 12 3h50'/%3E%3Cpath d='M3 48V18c0-5 5-10 12-10h28'/%3E%3C/g%3E%3Cg fill='%23e8c468' opacity='.85'%3E%3Cellipse cx='28' cy='18' rx='7' ry='2.2' transform='rotate(-45 28 18)'/%3E%3Cellipse cx='22' cy='24' rx='7' ry='2.2' transform='rotate(-45 22 24)'/%3E%3Cellipse cx='18' cy='30' rx='6' ry='2' transform='rotate(-45 18 30)'/%3E%3C/g%3E%3Cpath fill='%23e8c468' opacity='.9' d='M3 3h16l-4 4H8v7l-5 5V3z'/%3E%3Cg stroke='%23e8c468' opacity='.6'%3E%3Cpath d='M14 76L24 66M24 76L34 66M34 76L44 56'/%3E%3C/g%3E%3C/svg%3E") top left / 72px 72px no-repeat,
+      /* corner TR */
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 90' fill='none'%3E%3Cg stroke='%23e8c468' stroke-width='1'%3E%3Cpath d='M87 62V12c0-5-4-9-9-9H28'/%3E%3Cpath d='M87 48V18c0-5-5-10-12-10H40'/%3E%3C/g%3E%3Cg fill='%23e8c468' opacity='.85'%3E%3Cellipse cx='62' cy='18' rx='7' ry='2.2' transform='rotate(45 62 18)'/%3E%3Cellipse cx='68' cy='24' rx='7' ry='2.2' transform='rotate(45 68 24)'/%3E%3Cellipse cx='72' cy='30' rx='6' ry='2' transform='rotate(45 72 30)'/%3E%3C/g%3E%3Cpath fill='%23e8c468' opacity='.9' d='M87 3H71l4 4h7v7l5 5V3z'/%3E%3Cg stroke='%23e8c468' opacity='.6'%3E%3Cpath d='M76 76L66 66M66 76L56 66M56 76L46 56'/%3E%3C/g%3E%3C/svg%3E") top right / 72px 72px no-repeat,
+      /* corner BL */
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 90' fill='none'%3E%3Cg stroke='%23e8c468' stroke-width='1'%3E%3Cpath d='M3 28V78c0 5 4 9 9 9h50'/%3E%3Cpath d='M3 42V72c0 5 5 10 12 10h28'/%3E%3C/g%3E%3Cg fill='%23e8c468' opacity='.85'%3E%3Cellipse cx='28' cy='72' rx='7' ry='2.2' transform='rotate(45 28 72)'/%3E%3Cellipse cx='22' cy='66' rx='7' ry='2.2' transform='rotate(45 22 66)'/%3E%3Cellipse cx='18' cy='60' rx='6' ry='2' transform='rotate(45 18 60)'/%3E%3C/g%3E%3Cpath fill='%23e8c468' opacity='.9' d='M3 87h16l-4-4H8v-7l-5-5v16z'/%3E%3Cg stroke='%23e8c468' opacity='.6'%3E%3Cpath d='M14 14L24 24M24 14L34 24M34 14L44 34'/%3E%3C/g%3E%3C/svg%3E") bottom left / 72px 72px no-repeat,
+      /* corner BR */
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 90' fill='none'%3E%3Cg stroke='%23e8c468' stroke-width='1'%3E%3Cpath d='M87 28v50c0 5-4 9-9 9H28'/%3E%3Cpath d='M87 42v30c0 5-5 10-12 10H40'/%3E%3C/g%3E%3Cg fill='%23e8c468' opacity='.85'%3E%3Cellipse cx='62' cy='72' rx='7' ry='2.2' transform='rotate(-45 62 72)'/%3E%3Cellipse cx='68' cy='66' rx='7' ry='2.2' transform='rotate(-45 68 66)'/%3E%3Cellipse cx='72' cy='60' rx='6' ry='2' transform='rotate(-45 72 60)'/%3E%3C/g%3E%3Cpath fill='%23e8c468' opacity='.9' d='M87 87H71l4-4h7v-7l5-5v16z'/%3E%3Cg stroke='%23e8c468' opacity='.6'%3E%3Cpath d='M76 14L66 24M66 14L56 24M56 14L46 34'/%3E%3C/g%3E%3C/svg%3E") bottom right / 72px 72px no-repeat,
+      /* top center fan */
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 36' fill='none'%3E%3Cg stroke='%23e8c468' opacity='.9'%3E%3Cpath d='M70 30L45 4M70 30L55 4M70 30L65 4M70 30L75 4M70 30L85 4M70 30L95 4'/%3E%3Cpath d='M20 14h100M35 22h70'/%3E%3C/g%3E%3Cg fill='%23e8c468' opacity='.7'%3E%3Cellipse cx='70' cy='28' rx='38' ry='3'/%3E%3C/g%3E%3C/svg%3E") top center / 140px 36px no-repeat,
+      /* bottom center fan */
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 36' fill='none'%3E%3Cg stroke='%23e8c468' opacity='.7'%3E%3Cpath d='M70 6L45 32M70 6L55 32M70 6L65 32M70 6L75 32M70 6L85 32M70 6L95 32'/%3E%3Cpath d='M20 22h100M35 14h70'/%3E%3C/g%3E%3Cg fill='%23e8c468' opacity='.5'%3E%3Cellipse cx='70' cy='8' rx='38' ry='3'/%3E%3C/g%3E%3C/svg%3E") bottom center / 140px 36px no-repeat,
+      /* left diamond */
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 44' fill='none'%3E%3Cpath fill='%23e8c468' opacity='.85' d='M11 2L20 22 11 42 2 22z'/%3E%3Cpath fill='%23241538' d='M11 10L15 22 11 34 7 22z'/%3E%3Cg stroke='%23e8c468' opacity='.5'%3E%3Cpath d='M11 2v40M2 22h18'/%3E%3C/g%3E%3C/svg%3E") left 6px center / 18px 44px no-repeat,
+      /* right diamond */
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 44' fill='none'%3E%3Cpath fill='%23e8c468' opacity='.85' d='M11 2L20 22 11 42 2 22z'/%3E%3Cpath fill='%23241538' d='M11 10L15 22 11 34 7 22z'/%3E%3Cg stroke='%23e8c468' opacity='.5'%3E%3Cpath d='M11 2v40M2 22h18'/%3E%3C/g%3E%3C/svg%3E") right 6px center / 18px 44px no-repeat,
       /* base card gradient */
       linear-gradient(160deg, #2e1d4a 0%, #241538 40%, #1e1235 100%);
     background-color: #241538;
-    border: 2px solid var(--tarot-gold);
+    border: 2px solid var(--color-primary);
     border-radius: 16px;
     box-shadow:
       0 0 0 1px rgba(201,168,76,0.35),
@@ -163,29 +148,29 @@
       inset 0 1px 0 rgba(232,196,104,0.15);
   }
 
-  /* question text – elegant serif, larger */
-  [data-theme="tarot"] .text-\[17px\],
-  [data-theme="tarot"] .sm\:text-lg {
+  /* question text */
+  [data-theme="tarot"][data-theme="tarot"] .text-\[17px\],
+  [data-theme="tarot"][data-theme="tarot"] .sm\:text-lg {
     font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 1.55rem !important;
+    font-size: 1.3rem;
     line-height: 1.45;
     font-weight: 600;
-    color: var(--tarot-text-light);
+    color: var(--color-text);
     text-shadow: 0 1px 8px rgba(0,0,0,0.3);
   }
 
-  /* pairing rows – mystical purple slips */
-  [data-theme="tarot"] .bg-surface-muted.rounded-lg {
-    background: rgba(45,27,69,0.7) !important;
+  /* pairing rows */
+  [data-theme="tarot"][data-theme="tarot"] .bg-surface-muted.rounded-lg {
+    background: rgba(45,27,69,0.7);
     border: 1px solid rgba(201,168,76,0.25);
     border-radius: 10px;
     box-shadow: inset 0 1px 0 rgba(232,196,104,0.06);
     font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 1.15rem;
+    font-size: 1rem;
     font-weight: 500;
   }
 
-  /* tags – mystical pill */
+  /* tags */
   [data-theme="tarot"] .tag-warm,
   [data-theme="tarot"] .tag-secretive,
   [data-theme="tarot"] .tag-reflective,
@@ -195,22 +180,22 @@
   [data-theme="tarot"] .tag-default {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 0.8rem;
     border-radius: 20px;
     padding: 3px 14px;
     box-shadow: 0 1px 6px rgba(0,0,0,0.25);
   }
 
-  /* buttons */
+  /* buttons base */
   [data-theme="tarot"] button {
     font-family: 'Cinzel', serif;
     font-weight: 500;
   }
 
-  /* success / "Mark round complete" – gold ornate plaque */
-  [data-theme="tarot"] .bg-success {
-    background: linear-gradient(180deg, #e8c468 0%, #c9a84c 50%, #b89638 100%) !important;
-    color: #1a1028 !important;
+  /* success / "Mark round complete" */
+  [data-theme="tarot"][data-theme="tarot"] .bg-success {
+    background: linear-gradient(180deg, #e8c468 0%, #c9a84c 50%, #b89638 100%);
+    color: #1a1028;
     border: 2px solid #f0d47a;
     border-radius: 12px;
     box-shadow:
@@ -218,15 +203,16 @@
       0 2px 8px rgba(0,0,0,0.4),
       inset 0 1px 0 rgba(255,255,255,0.25);
     font-family: 'Cinzel', serif;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 600;
     padding-top: 12px;
     padding-bottom: 12px;
     text-shadow: 0 1px 0 rgba(255,255,255,0.15);
     letter-spacing: 0.02em;
   }
-  [data-theme="tarot"] .bg-success:hover {
-    background: linear-gradient(180deg, #f0d47a 0%, #d4b44c 50%, #c9a84c 100%) !important;
+  [data-theme="tarot"][data-theme="tarot"] .bg-success:hover,
+  [data-theme="tarot"][data-theme="tarot"] .hover\:bg-success-hover:hover {
+    background: linear-gradient(180deg, #f0d47a 0%, #d4b44c 50%, #c9a84c 100%);
     box-shadow:
       0 0 20px rgba(201,168,76,0.5),
       0 2px 12px rgba(0,0,0,0.4),
@@ -234,80 +220,102 @@
   }
 
   /* secondary / copy buttons */
-  [data-theme="tarot"] button.border {
-    border-color: rgba(201,168,76,0.5) !important;
+  [data-theme="tarot"][data-theme="tarot"] button.border {
+    border-color: rgba(201,168,76,0.5);
     background: rgba(36,21,56,0.6);
-    color: var(--tarot-gold-bright);
+    color: var(--color-warning-text);
     border-radius: 8px;
     font-family: 'Cinzel', serif;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
   }
-  [data-theme="tarot"] button.border:hover {
+  [data-theme="tarot"][data-theme="tarot"] button.border:hover {
     background: rgba(45,27,69,0.8);
-    border-color: var(--tarot-gold) !important;
+    border-color: var(--color-primary);
   }
 
-  /* tab nav – mystical */
+  /* tab nav */
   [data-theme="tarot"] nav.border-b {
-    border-bottom-color: rgba(201,168,76,0.25) !important;
+    border-bottom-color: rgba(201,168,76,0.25);
+  }
+  [data-theme="tarot"] nav.flex {
+    gap: 1px;
   }
   [data-theme="tarot"] nav button {
     font-family: 'Cinzel', serif;
-    font-size: 0.95rem;
+    font-size: 11px;
     font-weight: 500;
-    letter-spacing: 0.03em;
+    letter-spacing: 0;
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
   }
-  [data-theme="tarot"] nav button[class*="border-primary"] {
-    border-bottom-color: var(--tarot-gold-bright) !important;
-    color: var(--tarot-gold-bright) !important;
+  /* hide tab labels on very narrow screens – icons only */
+  @media (max-width: 439px) {
+    [data-theme="tarot"] nav button span + span { display: none; }
+    [data-theme="tarot"] nav button { padding-left: 0.55rem; padding-right: 0.55rem; font-size: 16px; }
+  }
+  @media (min-width: 440px) and (max-width: 639px) {
+    [data-theme="tarot"] nav button { font-size: 11px; }
+  }
+  @media (min-width: 640px) {
+    [data-theme="tarot"] nav button {
+      font-size: 0.8125rem;
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
+      letter-spacing: 0.01em;
+    }
+  }
+  /* active tab – robust selector */
+  [data-theme="tarot"] nav button.border-primary-strong {
+    border-bottom-color: var(--color-warning-text);
+    color: var(--color-warning-text);
   }
 
   /* inputs */
-  [data-theme="tarot"] input,
-  [data-theme="tarot"] textarea,
-  [data-theme="tarot"] select {
+  [data-theme="tarot"][data-theme="tarot"] input,
+  [data-theme="tarot"][data-theme="tarot"] textarea,
+  [data-theme="tarot"][data-theme="tarot"] select {
     font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 1.1rem;
-    background: rgba(21,11,34,0.7) !important;
-    border-color: rgba(201,168,76,0.35) !important;
-    color: var(--tarot-text-light);
+    font-size: 1rem;
+    background: rgba(21,11,34,0.7);
+    border-color: rgba(201,168,76,0.35);
+    color: var(--color-text);
     border-radius: 8px;
   }
-  [data-theme="tarot"] input:focus,
-  [data-theme="tarot"] textarea:focus,
-  [data-theme="tarot"] select:focus {
-    border-color: var(--tarot-gold) !important;
+  [data-theme="tarot"][data-theme="tarot"] input:focus,
+  [data-theme="tarot"][data-theme="tarot"] textarea:focus,
+  [data-theme="tarot"][data-theme="tarot"] select:focus {
+    border-color: var(--color-primary);
     box-shadow: 0 0 0 2px rgba(201,168,76,0.2);
     outline: none;
   }
 
-  /* headings – Cinzel */
+  /* headings */
   [data-theme="tarot"] h1, [data-theme="tarot"] h2, [data-theme="tarot"] h3 {
     font-family: 'Cinzel', serif;
     font-weight: 600;
-    color: var(--tarot-gold-bright);
+    color: var(--color-warning-text);
   }
 
   /* links */
   [data-theme="tarot"] a {
-    color: var(--tarot-gold-bright);
+    color: var(--color-warning-text);
   }
   [data-theme="tarot"] a:hover {
     color: #f0d47a;
   }
 
-  /* card hover / interactive surface */
-  [data-theme="tarot"] .hover\:bg-surface-hover:hover {
-    background-color: #2d1b45 !important;
+  /* card hover */
+  [data-theme="tarot"][data-theme="tarot"] .hover\:bg-surface-hover:hover {
+    background-color: #2d1b45;
   }
 
-  /* TagPicker / UserMenu dropdowns – ensure they float above card flourishes */
+  /* TagPicker / UserMenu dropdowns */
   [data-theme="tarot"] .absolute.z-50,
   [data-theme="tarot"] [class*="absolute"][class*="z-"] {
     z-index: 50;
   }
 
-  /* Danger / warning buttons keep their colors but with tarot styling */
+  /* Danger buttons */
   [data-theme="tarot"] .bg-danger {
     border-radius: 8px;
     font-family: 'Cinzel', serif;
@@ -317,4 +325,8 @@
   [data-theme="tarot"] button:not(.border):not(.bg-success):not(.bg-danger):hover {
     box-shadow: 0 0 8px rgba(201,168,76,0.15);
   }
+
+  /* smaller UI text scale */
+  [data-theme="tarot"] .text-sm { font-size: 0.875rem; }
+  [data-theme="tarot"] .text-xs { font-size: 0.75rem; }
 }
