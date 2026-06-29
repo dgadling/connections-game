@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
+
 @layer base {
   :root[data-theme="tarot"] {
     /* backgrounds */
@@ -76,5 +78,272 @@
 
     --tag-default-bg: #2d1b45;
     --tag-default-text: #d4c4a8;
+
+    /* tarot extras */
+    --tarot-gold: #c9a84c;
+    --tarot-gold-bright: #e8c468;
+    --tarot-purple-deep: #1a1028;
+    --tarot-purple-card: #241538;
+    --tarot-purple-mid: #2d1b45;
+    --tarot-text-light: #f5f0e6;
+  }
+}
+
+/* ── Tarot mystical skin ── */
+@layer base {
+  [data-theme="tarot"] {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 18px;
+  }
+
+  [data-theme="tarot"] body,
+  [data-theme="tarot"] .bg-app,
+  [data-theme="tarot"] .bg-surface-muted {
+    background-color: #1a1028;
+    background-image: url('/themes/tarot/starfield-tile.webp');
+    background-repeat: repeat;
+    background-size: 512px 512px;
+  }
+
+  /* header – gold ornate bar */
+  [data-theme="tarot"] header.bg-surface {
+    background: #1f1538 !important;
+    background-image: linear-gradient(180deg, rgba(201,168,76,0.08), transparent 60%),
+                      url('/themes/tarot/starfield-tile.webp');
+    background-repeat: repeat;
+    background-size: auto, 512px 512px;
+    border-bottom: 2px solid var(--tarot-gold);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4), 0 0 20px rgba(201,168,76,0.15);
+  }
+  [data-theme="tarot"] header .max-w-4xl {
+    font-family: 'Cinzel', serif;
+  }
+  [data-theme="tarot"] header button,
+  [data-theme="tarot"] header a {
+    font-family: 'Cinzel', serif;
+    color: var(--tarot-gold-bright);
+  }
+
+  /* main card – ornate tarot card frame */
+  [data-theme="tarot"] .bg-surface.rounded-xl {
+    background:
+      /* top center ornament */
+      radial-gradient(ellipse 80px 18px at 50% 22px, rgba(201,168,76,0.18), transparent 70%),
+      /* bottom center ornament */
+      radial-gradient(ellipse 80px 18px at 50% calc(100% - 22px), rgba(201,168,76,0.12), transparent 70%),
+      linear-gradient(160deg, #2e1d4a 0%, #241538 40%, #1e1235 100%) !important;
+    border: 2px solid var(--tarot-gold);
+    border-radius: 16px;
+    box-shadow:
+      0 0 0 1px rgba(201,168,76,0.35),
+      0 0 0 4px rgba(36,21,56,0.8),
+      0 0 0 5px rgba(201,168,76,0.15),
+      0 0 30px rgba(201,168,76,0.12),
+      0 8px 32px rgba(0,0,0,0.5),
+      inset 0 1px 0 rgba(232,196,104,0.15);
+    position: relative;
+    overflow: visible;
+  }
+  /* ornate corner flourishes – all 4 corners, double-layered */
+  [data-theme="tarot"] .bg-surface.rounded-xl::before,
+  [data-theme="tarot"] .bg-surface.rounded-xl::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    z-index: 1;
+  }
+  /* top-left + bottom-right corners */
+  [data-theme="tarot"] .bg-surface.rounded-xl::before {
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: 14px;
+    background:
+      /* top-left */
+      linear-gradient(to right, var(--tarot-gold-bright) 0, var(--tarot-gold-bright) 28px, transparent 28px) top left / 52px 2px no-repeat,
+      linear-gradient(to bottom, var(--tarot-gold-bright) 0, var(--tarot-gold-bright) 28px, transparent 28px) top left / 2px 52px no-repeat,
+      /* top-right */
+      linear-gradient(to left, var(--tarot-gold-bright) 0, var(--tarot-gold-bright) 28px, transparent 28px) top right / 52px 2px no-repeat,
+      linear-gradient(to bottom, var(--tarot-gold-bright) 0, var(--tarot-gold-bright) 28px, transparent 28px) top right / 2px 52px no-repeat,
+      /* bottom-left */
+      linear-gradient(to right, var(--tarot-gold-bright) 0, var(--tarot-gold-bright) 28px, transparent 28px) bottom left / 52px 2px no-repeat,
+      linear-gradient(to top, var(--tarot-gold-bright) 0, var(--tarot-gold-bright) 28px, transparent 28px) bottom left / 2px 52px no-repeat,
+      /* bottom-right */
+      linear-gradient(to left, var(--tarot-gold-bright) 0, var(--tarot-gold-bright) 28px, transparent 28px) bottom right / 52px 2px no-repeat,
+      linear-gradient(to top, var(--tarot-gold-bright) 0, var(--tarot-gold-bright) 28px, transparent 28px) bottom right / 2px 52px no-repeat;
+    opacity: 0.9;
+  }
+  /* top/bottom center ornaments + inner corner dots */
+  [data-theme="tarot"] .bg-surface.rounded-xl::after {
+    top: 8px; left: 12px; right: 12px; bottom: 8px;
+    border-radius: 10px;
+    pointer-events: none;
+    background:
+      /* top center diamond/fan */
+      radial-gradient(ellipse 44px 10px at 50% 4px, rgba(232,196,104,0.45), transparent 70%),
+      /* bottom center */
+      radial-gradient(ellipse 44px 10px at 50% calc(100% - 4px), rgba(232,196,104,0.3), transparent 70%),
+      /* corner inner dots – TL */
+      radial-gradient(circle 2px at 18px 18px, rgba(232,196,104,0.7), transparent 2.5px),
+      /* TR */
+      radial-gradient(circle 2px at calc(100% - 18px) 18px, rgba(232,196,104,0.7), transparent 2.5px),
+      /* BL */
+      radial-gradient(circle 2px at 18px calc(100% - 18px), rgba(232,196,104,0.7), transparent 2.5px),
+      /* BR */
+      radial-gradient(circle 2px at calc(100% - 18px) calc(100% - 18px), rgba(232,196,104,0.7), transparent 2.5px);
+    opacity: 1;
+  }
+
+  /* question text – elegant serif, larger */
+  [data-theme="tarot"] .text-\[17px\],
+  [data-theme="tarot"] .sm\:text-lg {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.55rem !important;
+    line-height: 1.45;
+    font-weight: 600;
+    color: var(--tarot-text-light);
+    text-shadow: 0 1px 8px rgba(0,0,0,0.3);
+  }
+
+  /* pairing rows – mystical purple slips */
+  [data-theme="tarot"] .bg-surface-muted.rounded-lg {
+    background: rgba(45,27,69,0.7) !important;
+    border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 10px;
+    box-shadow: inset 0 1px 0 rgba(232,196,104,0.06);
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.15rem;
+    font-weight: 500;
+  }
+
+  /* tags – mystical pill */
+  [data-theme="tarot"] .tag-warm,
+  [data-theme="tarot"] .tag-secretive,
+  [data-theme="tarot"] .tag-reflective,
+  [data-theme="tarot"] .tag-tension,
+  [data-theme="tarot"] .tag-vulnerable,
+  [data-theme="tarot"] .tag-loyal,
+  [data-theme="tarot"] .tag-default {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border-radius: 20px;
+    padding: 3px 14px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.25);
+  }
+
+  /* buttons */
+  [data-theme="tarot"] button {
+    font-family: 'Cinzel', serif;
+    font-weight: 500;
+  }
+
+  /* success / "Mark round complete" – gold ornate plaque */
+  [data-theme="tarot"] .bg-success {
+    background: linear-gradient(180deg, #e8c468 0%, #c9a84c 50%, #b89638 100%) !important;
+    color: #1a1028 !important;
+    border: 2px solid #f0d47a;
+    border-radius: 12px;
+    box-shadow:
+      0 0 12px rgba(201,168,76,0.35),
+      0 2px 8px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.25);
+    font-family: 'Cinzel', serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.15);
+    letter-spacing: 0.02em;
+  }
+  [data-theme="tarot"] .bg-success:hover {
+    background: linear-gradient(180deg, #f0d47a 0%, #d4b44c 50%, #c9a84c 100%) !important;
+    box-shadow:
+      0 0 20px rgba(201,168,76,0.5),
+      0 2px 12px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.3);
+  }
+
+  /* secondary / copy buttons */
+  [data-theme="tarot"] button.border {
+    border-color: rgba(201,168,76,0.5) !important;
+    background: rgba(36,21,56,0.6);
+    color: var(--tarot-gold-bright);
+    border-radius: 8px;
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+  }
+  [data-theme="tarot"] button.border:hover {
+    background: rgba(45,27,69,0.8);
+    border-color: var(--tarot-gold) !important;
+  }
+
+  /* tab nav – mystical */
+  [data-theme="tarot"] nav.border-b {
+    border-bottom-color: rgba(201,168,76,0.25) !important;
+  }
+  [data-theme="tarot"] nav button {
+    font-family: 'Cinzel', serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+  }
+  [data-theme="tarot"] nav button[class*="border-primary"] {
+    border-bottom-color: var(--tarot-gold-bright) !important;
+    color: var(--tarot-gold-bright) !important;
+  }
+
+  /* inputs */
+  [data-theme="tarot"] input,
+  [data-theme="tarot"] textarea,
+  [data-theme="tarot"] select {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.1rem;
+    background: rgba(21,11,34,0.7) !important;
+    border-color: rgba(201,168,76,0.35) !important;
+    color: var(--tarot-text-light);
+    border-radius: 8px;
+  }
+  [data-theme="tarot"] input:focus,
+  [data-theme="tarot"] textarea:focus,
+  [data-theme="tarot"] select:focus {
+    border-color: var(--tarot-gold) !important;
+    box-shadow: 0 0 0 2px rgba(201,168,76,0.2);
+    outline: none;
+  }
+
+  /* headings – Cinzel */
+  [data-theme="tarot"] h1, [data-theme="tarot"] h2, [data-theme="tarot"] h3 {
+    font-family: 'Cinzel', serif;
+    font-weight: 600;
+    color: var(--tarot-gold-bright);
+  }
+
+  /* links */
+  [data-theme="tarot"] a {
+    color: var(--tarot-gold-bright);
+  }
+  [data-theme="tarot"] a:hover {
+    color: #f0d47a;
+  }
+
+  /* card hover / interactive surface */
+  [data-theme="tarot"] .hover\:bg-surface-hover:hover {
+    background-color: #2d1b45 !important;
+  }
+
+  /* TagPicker / UserMenu dropdowns – ensure they float above card flourishes */
+  [data-theme="tarot"] .absolute.z-50,
+  [data-theme="tarot"] [class*="absolute"][class*="z-"] {
+    z-index: 50;
+  }
+
+  /* Danger / warning buttons keep their colors but with tarot styling */
+  [data-theme="tarot"] .bg-danger {
+    border-radius: 8px;
+    font-family: 'Cinzel', serif;
+  }
+
+  /* subtle gold glow on interactive elements */
+  [data-theme="tarot"] button:not(.border):not(.bg-success):not(.bg-danger):hover {
+    box-shadow: 0 0 8px rgba(201,168,76,0.15);
   }
 }
