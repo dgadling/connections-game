@@ -17,13 +17,13 @@
     --color-text: #f5f0e6;             /* parchment light */
     --color-text-secondary: #d4c4a8;   /* gold-tinted secondary */
     --color-text-muted: #b8a088;       /* muted gold */
-    --color-text-subtle: #8a6d4b;      /* subtle */
-    --color-text-faint: #5a4530;       /* faint */
+    --color-text-subtle: #c4a87a;      /* subtle – AA 4.5:1 on #241538 */
+    --color-text-faint: #a68860;       /* faint – AA 4.5:1 on #1a1028 */
 
     /* primary */
     --color-primary: #c9a84c;          /* tarot gold */
     --color-primary-hover: #b89638;    /* gold hover */
-    --color-primary-text: #f5e6b8;     /* light gold text */
+    --color-primary-text: #1a1028;     /* dark purple text on gold */
     --color-primary-bg-subtle: #2a1f0f; /* dark gold tint */
     --color-primary-border: #c9a84c;    /* gold */
     --color-primary-ring: #c9a84c;     /* gold */
@@ -124,14 +124,34 @@
     color: var(--tarot-gold-bright);
   }
 
-  /* main card – ornate tarot card frame */
+  /* main card – ornate tarot card frame – NO position:relative (dropdown-safe) */
   [data-theme="tarot"] .bg-surface.rounded-xl {
     background:
-      /* top center ornament */
+      /* corner flourishes – TL */
+      linear-gradient(to right, rgba(232,196,104,0.85) 0, rgba(232,196,104,0.85) 28px, transparent 28px) top left / 52px 2px no-repeat,
+      linear-gradient(to bottom, rgba(232,196,104,0.85) 0, rgba(232,196,104,0.85) 28px, transparent 28px) top left / 2px 52px no-repeat,
+      /* TR */
+      linear-gradient(to left, rgba(232,196,104,0.85) 0, rgba(232,196,104,0.85) 28px, transparent 28px) top right / 52px 2px no-repeat,
+      linear-gradient(to bottom, rgba(232,196,104,0.85) 0, rgba(232,196,104,0.85) 28px, transparent 28px) top right / 2px 52px no-repeat,
+      /* BL */
+      linear-gradient(to right, rgba(232,196,104,0.85) 0, rgba(232,196,104,0.85) 28px, transparent 28px) bottom left / 52px 2px no-repeat,
+      linear-gradient(to top, rgba(232,196,104,0.85) 0, rgba(232,196,104,0.85) 28px, transparent 28px) bottom left / 2px 52px no-repeat,
+      /* BR */
+      linear-gradient(to left, rgba(232,196,104,0.85) 0, rgba(232,196,104,0.85) 28px, transparent 28px) bottom right / 52px 2px no-repeat,
+      linear-gradient(to top, rgba(232,196,104,0.85) 0, rgba(232,196,104,0.85) 28px, transparent 28px) bottom right / 2px 52px no-repeat,
+      /* inner corner dots */
+      radial-gradient(circle 2px at 18px 18px, rgba(232,196,104,0.7), transparent 2.5px),
+      radial-gradient(circle 2px at calc(100% - 18px) 18px, rgba(232,196,104,0.7), transparent 2.5px),
+      radial-gradient(circle 2px at 18px calc(100% - 18px), rgba(232,196,104,0.7), transparent 2.5px),
+      radial-gradient(circle 2px at calc(100% - 18px) calc(100% - 18px), rgba(232,196,104,0.7), transparent 2.5px),
+      /* top/bottom center ornaments */
       radial-gradient(ellipse 80px 18px at 50% 22px, rgba(201,168,76,0.18), transparent 70%),
-      /* bottom center ornament */
       radial-gradient(ellipse 80px 18px at 50% calc(100% - 22px), rgba(201,168,76,0.12), transparent 70%),
-      linear-gradient(160deg, #2e1d4a 0%, #241538 40%, #1e1235 100%) !important;
+      radial-gradient(ellipse 44px 10px at 50% 12px, rgba(232,196,104,0.35), transparent 70%),
+      radial-gradient(ellipse 44px 10px at 50% calc(100% - 12px), rgba(232,196,104,0.25), transparent 70%),
+      /* base card gradient */
+      linear-gradient(160deg, #2e1d4a 0%, #241538 40%, #1e1235 100%);
+    background-color: #241538;
     border: 2px solid var(--tarot-gold);
     border-radius: 16px;
     box-shadow:
@@ -141,55 +161,6 @@
       0 0 30px rgba(201,168,76,0.12),
       0 8px 32px rgba(0,0,0,0.5),
       inset 0 1px 0 rgba(232,196,104,0.15);
-    position: relative;
-    overflow: visible;
-  }
-  /* ornate corner flourishes – all 4 corners, double-layered */
-  [data-theme="tarot"] .bg-surface.rounded-xl::before,
-  [data-theme="tarot"] .bg-surface.rounded-xl::after {
-    content: '';
-    position: absolute;
-    pointer-events: none;
-    z-index: 1;
-  }
-  /* top-left + bottom-right corners */
-  [data-theme="tarot"] .bg-surface.rounded-xl::before {
-    top: 0; left: 0; right: 0; bottom: 0;
-    border-radius: 14px;
-    background:
-      /* top-left */
-      linear-gradient(to right, var(--tarot-gold-bright) 0, var(--tarot-gold-bright) 28px, transparent 28px) top left / 52px 2px no-repeat,
-      linear-gradient(to bottom, var(--tarot-gold-bright) 0, var(--tarot-gold-bright) 28px, transparent 28px) top left / 2px 52px no-repeat,
-      /* top-right */
-      linear-gradient(to left, var(--tarot-gold-bright) 0, var(--tarot-gold-bright) 28px, transparent 28px) top right / 52px 2px no-repeat,
-      linear-gradient(to bottom, var(--tarot-gold-bright) 0, var(--tarot-gold-bright) 28px, transparent 28px) top right / 2px 52px no-repeat,
-      /* bottom-left */
-      linear-gradient(to right, var(--tarot-gold-bright) 0, var(--tarot-gold-bright) 28px, transparent 28px) bottom left / 52px 2px no-repeat,
-      linear-gradient(to top, var(--tarot-gold-bright) 0, var(--tarot-gold-bright) 28px, transparent 28px) bottom left / 2px 52px no-repeat,
-      /* bottom-right */
-      linear-gradient(to left, var(--tarot-gold-bright) 0, var(--tarot-gold-bright) 28px, transparent 28px) bottom right / 52px 2px no-repeat,
-      linear-gradient(to top, var(--tarot-gold-bright) 0, var(--tarot-gold-bright) 28px, transparent 28px) bottom right / 2px 52px no-repeat;
-    opacity: 0.9;
-  }
-  /* top/bottom center ornaments + inner corner dots */
-  [data-theme="tarot"] .bg-surface.rounded-xl::after {
-    top: 8px; left: 12px; right: 12px; bottom: 8px;
-    border-radius: 10px;
-    pointer-events: none;
-    background:
-      /* top center diamond/fan */
-      radial-gradient(ellipse 44px 10px at 50% 4px, rgba(232,196,104,0.45), transparent 70%),
-      /* bottom center */
-      radial-gradient(ellipse 44px 10px at 50% calc(100% - 4px), rgba(232,196,104,0.3), transparent 70%),
-      /* corner inner dots – TL */
-      radial-gradient(circle 2px at 18px 18px, rgba(232,196,104,0.7), transparent 2.5px),
-      /* TR */
-      radial-gradient(circle 2px at calc(100% - 18px) 18px, rgba(232,196,104,0.7), transparent 2.5px),
-      /* BL */
-      radial-gradient(circle 2px at 18px calc(100% - 18px), rgba(232,196,104,0.7), transparent 2.5px),
-      /* BR */
-      radial-gradient(circle 2px at calc(100% - 18px) calc(100% - 18px), rgba(232,196,104,0.7), transparent 2.5px);
-    opacity: 1;
   }
 
   /* question text – elegant serif, larger */
